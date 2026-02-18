@@ -22,6 +22,14 @@ export interface Profile {
   easterEggLink?: { triggerWord: string; url: string; popupUrl?: string };
   /** When true, render the banner with an animated fire gradient. */
   bannerAnimatedFire?: boolean;
+  /** Banner gradient/style: accent (default), fire, cyan, green, purple, orange, rose. */
+  bannerStyle?: string;
+  /** When true, render the profile as a command window with custom commands. */
+  useTerminalLayout?: boolean;
+  /** Command window title (e.g. user@slug:~). */
+  terminalTitle?: string;
+  /** Custom command/output lines for terminal layout. */
+  terminalCommands?: { command: string; output: string }[];
   /** When true, render the banner at a smaller font size (e.g. for dense ASCII). */
   bannerSmall?: boolean;
   /** Short tags/pills (e.g. "Vibe Coder", "LOTR"). */
@@ -36,6 +44,34 @@ export interface Profile {
   ogImageUrl?: string;
   /** When set, show "Last updated …" on the profile (member profiles only). */
   updatedAt?: string;
+  /** Accent/theme color preset (member profiles only): cyan, green, purple, orange, rose. */
+  accentColor?: string;
+  /** Terminal prompt character(s) (e.g. $, >, λ, ❯). */
+  terminalPrompt?: string;
+  /** Short greeting before name (e.g. "hi i'm", "aka"). */
+  nameGreeting?: string;
+  /** Card style: default, sharp, glass. */
+  cardStyle?: string;
+  /** User-chosen status indicator (online, idle, busy, offline). Not synced with Discord. */
+  displayStatus?: string;
+  /** Pronouns (e.g. they/them). */
+  pronouns?: string;
+  /** Location or "Based in" (e.g. NYC, Berlin). */
+  location?: string;
+  /** IANA timezone (e.g. America/New_York) for local time display. */
+  timezone?: string;
+  /** Avatar shape: circle (default) or rounded. */
+  avatarShape?: string;
+  /** Layout density: default, compact, spacious. */
+  layoutDensity?: string;
+  /** When true, ask search engines not to index this profile. */
+  noindex?: boolean;
+  /** Override meta/OG description for social sharing. */
+  metaDescription?: string;
+  /** Admin-granted verified badge (member profiles only). */
+  verified?: boolean;
+  /** Admin-granted staff badge (member profiles only). */
+  staff?: boolean;
 }
 
 export const PROFILES: Profile[] = [

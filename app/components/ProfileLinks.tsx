@@ -1,12 +1,27 @@
 "use client";
 
-import { DiscordLogo, Cube, Link as LinkIcon } from "@phosphor-icons/react";
+import {
+  DiscordLogo,
+  Cube,
+  Link as LinkIcon,
+  GithubLogo,
+  TwitterLogo,
+  YoutubeLogo,
+} from "@phosphor-icons/react";
 import CopyButton from "@/app/components/CopyButton";
 
 const iconProps = { size: 20, weight: "regular" as const, className: "shrink-0 text-current" };
 
 const linkButtonClass =
   "inline-flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/70 px-3 py-2.5 text-[var(--muted)] transition-all duration-200 hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 hover:shadow-[0_0_14px_rgba(6,182,212,0.12)] active:scale-[0.98] active:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]";
+
+function LinkIconForLabel({ label }: { label: string }) {
+  const lower = label.toLowerCase();
+  if (lower.includes("github")) return <GithubLogo {...iconProps} />;
+  if (lower.includes("twitter") || lower.includes("x.com")) return <TwitterLogo {...iconProps} />;
+  if (lower.includes("youtube")) return <YoutubeLogo {...iconProps} />;
+  return <LinkIcon {...iconProps} />;
+}
 
 interface ProfileLinksProps {
   discord?: string;
@@ -51,7 +66,7 @@ export default function ProfileLinks({ discord, roblox, links }: ProfileLinksPro
             className={linkButtonClass}
             aria-label={`Open ${label} (opens in new tab)`}
           >
-            <LinkIcon {...iconProps} />
+            <LinkIconForLabel label={label} />
             <span className="text-xs">{label}</span>
           </a>
         ))}

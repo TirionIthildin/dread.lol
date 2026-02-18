@@ -41,6 +41,7 @@ const HELP_LINES = [
   "help — show this message",
   "cat intro.txt — show intro",
   ...PROFILES.map((p) => `open ${p.slug} — ${p.name}'s profile`),
+  "login — sign in with Discord",
   "whoami — current user",
   "ls — list files",
   "clear — clear screen",
@@ -63,18 +64,19 @@ const INTRO_OUTPUT = (
 
 type LineEntry = { type: "command" | "output"; content: ReactNode };
 
-function runCommand(cmd: string): { output: ReactNode; navigate?: string } | null {
+function runCommand(cmd: string): { output: ReactNode; navigate?: string; redirect?: string } | null {
   const c = cmd.trim().toLowerCase();
   if (c === "help" || c === "?") return { output: HELP_OUTPUT };
   if (c === "cat intro.txt" || c === "cat intro") return { output: INTRO_OUTPUT };
   const profile = PROFILES.find((p) => c === `open ${p.slug}` || c === p.slug);
   if (profile) return { output: `Opening ${profile.name}...`, navigate: `/${profile.slug}` };
+  if (c === "login") return { output: "Redirecting to sign in...", redirect: "/api/auth/discord" };
   if (c === "whoami") return { output: "guest" };
   if (c === "ls" || c === "ls -la" || c === "ls -l") {
     return {
       output: (
         <span className="text-[var(--foreground)]">
-          {[...PROFILES.map((p) => p.slug), "intro.txt", "help"].join("  ")}
+          {[...PROFILES.map((p) => p.slug), "intro.txt", "help", "login"].join("  ")}
         </span>
       ),
     };
@@ -120,7 +122,9 @@ export default function WelcomeTerminal() {
       }
       if (result) {
         setLines((prev) => [...prev, { type: "output", content: result.output }]);
-        if (result.navigate) {
+        if (result.redirect) {
+          setTimeout(() => { window.location.href = result.redirect!; }, 400);
+        } else if (result.navigate) {
           setTimeout(() => router.push(result.navigate!), 400);
         }
         return;

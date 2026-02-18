@@ -1,6 +1,9 @@
 "use client";
 
+import { DiscordLogo, SignOut } from "@phosphor-icons/react";
 import type { SessionUser } from "@/lib/auth/session";
+
+const iconSize = 20;
 
 interface DashboardAuthProps {
   user: SessionUser | null;
@@ -21,23 +24,24 @@ export default function DashboardAuth({ user, error, message }: DashboardAuthPro
 
   if (user) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
         <div className="flex items-center gap-3">
           {user.picture && (
             <img
               src={user.picture}
               alt=""
-              className="h-9 w-9 rounded-full border border-[var(--border)]"
-              width={36}
-              height={36}
+              className="h-10 w-10 rounded-full border-2 border-[var(--border)] ring-2 ring-[var(--accent)]/20 transition-transform duration-200 hover:scale-105"
+              width={40}
+              height={40}
             />
           )}
           <div>
             <p className="text-sm font-medium text-[var(--foreground)]">
               {user.name ?? user.preferred_username ?? `Discord user ${user.sub}`}
             </p>
-            <p className="text-xs text-[var(--muted)]">
-              Discord ID: {user.sub}
+            <p className="text-xs text-[var(--muted)] flex items-center gap-1 flex-wrap">
+              <DiscordLogo size={14} weight="fill" className="shrink-0 text-[#5865F2]" />
+              {user.sub}
               {user.profile && (
                 <>
                   {" · "}
@@ -45,7 +49,7 @@ export default function DashboardAuth({ user, error, message }: DashboardAuthPro
                     href={user.profile}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[var(--accent)] hover:underline"
+                    className="text-[var(--accent)] hover:underline transition-colors"
                   >
                     Profile
                   </a>
@@ -57,8 +61,9 @@ export default function DashboardAuth({ user, error, message }: DashboardAuthPro
         <form action="/api/auth/logout" method="post">
           <button
             type="submit"
-            className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--warning)]/50 hover:text-[var(--warning)] focus:outline-none focus:ring-2 focus:ring-[var(--warning)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition-all duration-200 hover:border-[var(--warning)]/50 hover:text-[var(--warning)] hover:bg-[var(--warning)]/5 focus:outline-none focus:ring-2 focus:ring-[var(--warning)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
           >
+            <SignOut size={16} weight="regular" />
             Log out
           </button>
         </form>
@@ -70,20 +75,21 @@ export default function DashboardAuth({ user, error, message }: DashboardAuthPro
     <div className="space-y-2">
       {errorText && (
         <div
-          className="rounded-lg border border-[var(--warning)]/50 bg-[var(--warning)]/10 px-4 py-2 text-sm text-[var(--warning)]"
+          className="rounded-lg border border-[var(--warning)]/50 bg-[var(--warning)]/10 px-4 py-2 text-sm text-[var(--warning)] animate-fade-in"
           role="alert"
         >
           {errorText}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 shadow-sm">
         <p className="text-sm text-[var(--muted)]">
           Sign in with your Discord account to manage the dashboard.
         </p>
         <a
           href="/api/auth/discord"
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+          className="inline-flex items-center gap-2.5 rounded-lg border border-[var(--border)] bg-[#5865F2]/10 px-4 py-2.5 text-sm font-medium text-[var(--foreground)] transition-all duration-200 hover:bg-[#5865F2]/20 hover:border-[#5865F2]/50 focus:outline-none focus:ring-2 focus:ring-[#5865F2] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
         >
+          <DiscordLogo size={iconSize} weight="fill" className="shrink-0 text-[#5865F2]" />
           Log in with Discord
         </a>
       </div>

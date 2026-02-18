@@ -8,6 +8,7 @@ import {
 } from "@/lib/member-profiles";
 import DashboardAuth from "@/app/dashboard/DashboardAuth";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
+import UnapprovedMessage from "@/app/components/UnapprovedMessage";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -28,22 +29,40 @@ function slugFromUsername(username: string): string {
 export default async function DashboardPage({ searchParams }: Props) {
   const session = await getSession();
   const { error, message } = await searchParams;
+  const user = session ? await getOrCreateUser(session) : null;
+  const canUseDashboard = user && (user.approved || user.isAdmin);
 
   return (
     <div className="space-y-6">
-      <DashboardAuth user={session} error={error} message={message} />
+      <div className="animate-fade-in-up">
+        <DashboardAuth user={session} error={error} message={message} />
+      </div>
 
-      {session && (
+      {session && !canUseDashboard && (
+        <div className="animate-fade-in-up animate-delay-100">
+          <UnapprovedMessage />
+        </div>
+      )}
+
+      {session && canUseDashboard && (
         <>
-          <div>
-            <h1 id="my-profile-heading" className="text-xl font-semibold text-[var(--foreground)]">
+          <div className="animate-fade-in-up animate-delay-100">
+            <h1 id="my-profile-heading" className="text-xl font-semibold text-[var(--foreground)] inline-flex items-center gap-2">
+              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-[var(--accent)]/15 text-[var(--accent)]" aria-hidden>
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </span>
               My profile
             </h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               Edit your page and see who viewed it (IP and time).
             </p>
           </div>
-          <MemberProfileSection session={session} />
+          <div className="animate-fade-in-up animate-delay-200">
+            <MemberProfileSection session={session} />
+          </div>
         </>
       )}
     </div>

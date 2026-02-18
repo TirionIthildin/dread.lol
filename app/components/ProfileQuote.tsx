@@ -1,3 +1,5 @@
+import ProfileMarkdown from "@/app/components/ProfileMarkdown";
+
 interface ProfileQuoteProps {
   quote: string;
 }
@@ -8,7 +10,7 @@ export default function ProfileQuote({ quote }: ProfileQuoteProps) {
       <span className="text-[var(--accent)]/70 select-none text-base leading-none" aria-hidden>
         "
       </span>
-      {quote}
+      <ProfileMarkdown content={quote} inline />
       <span className="text-[var(--accent)]/70 select-none text-base leading-none" aria-hidden>
         "
       </span>

@@ -306,8 +306,114 @@
     color: transparent;
   }
 
+  /* Profile ASCII banner gradient options */
+  .banner-style-accent {
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+  }
+  .banner-style-fire {
+    background: linear-gradient(90deg, #fef08a, #fde047, #fbbf24, #f97316, #ea580c, #dc2626, #f97316, #fbbf24, #fef08a);
+    background-size: 200% 100%;
+    animation: fire-gradient 4s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-cyan {
+    background: linear-gradient(90deg, #67e8f9, #22d3ee, #06b6d4, #0891b2, #06b6d4, #22d3ee, #67e8f9);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-green {
+    background: linear-gradient(90deg, #86efac, #4ade80, #22c55e, #16a34a, #22c55e, #4ade80, #86efac);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-purple {
+    background: linear-gradient(90deg, #e9d5ff, #d8b4fe, #a855f7, #7e22ce, #a855f7, #d8b4fe, #e9d5ff);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-orange {
+    background: linear-gradient(90deg, #fed7aa, #fdba74, #f97316, #ea580c, #f97316, #fdba74, #fed7aa);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-rose {
+    background: linear-gradient(90deg, #fecdd3, #fda4af, #f43f5e, #e11d48, #f43f5e, #fda4af, #fecdd3);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
   .donut-glow {
     box-shadow: 0 0 30px rgba(6, 182, 212, 0.15), inset 0 0 60px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Profile fun customization: accent theme (member profiles) */
+  .profile-theme-cyan { --accent: #06b6d4; --terminal: #22c55e; }
+  .profile-theme-green { --accent: #22c55e; --terminal: #16a34a; }
+  .profile-theme-purple { --accent: #a855f7; --terminal: #c084fc; }
+  .profile-theme-orange { --accent: #f97316; --terminal: #fb923c; }
+  .profile-theme-rose { --accent: #f43f5e; --terminal: #fb7185; }
+
+  .profile-card-sharp {
+    border-radius: 4px;
+  }
+  .profile-card-glass {
+    background: rgba(13, 15, 18, 0.75);
+    backdrop-blur: 12px;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  }
+
+  .profile-density-compact .profile-content-inner {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    gap: 0.5rem;
+  }
+  .profile-density-compact .profile-content-inner .profile-name-block h1 { font-size: 1rem; }
+  .profile-density-compact .profile-content-inner .profile-avatar { width: 2.5rem; height: 2.5rem; }
+
+  .profile-density-spacious .profile-content-inner {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    gap: 0.75rem;
+  }
+  .profile-density-spacious .profile-content-inner .profile-name-block h1 { font-size: 1.375rem; }
+  .profile-density-spacious .profile-content-inner .profile-avatar { width: 5rem; height: 5rem; }
+
+  @keyframes dashboard-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-dashboard-panel {
+    animation: dashboard-panel-in 0.35s ease-out both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-dashboard-panel {
+      animation: fadeIn 0.2s ease-out both;
+    }
   }
 }
 

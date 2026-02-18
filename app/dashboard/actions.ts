@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
-import { updateMemberProfile } from "@/lib/member-profiles";
+import { updateMemberProfile, getOrCreateUser, approveUser, setUserBadges, getProfileSlugByUserId } from "@/lib/member-profiles";
 
-export type ProfileFormState = { error?: string; success?: boolean } | null;
+export type ProfileFormState = { error?: string; success?: boolean; savedAt?: string } | null;
 
 function normalizeSlug(raw: string): string {
   return raw
@@ -21,12 +21,14 @@ export async function updateProfileAction(
 ): Promise<ProfileFormState> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const id = parseInt(profileId, 10);
   if (Number.isNaN(id)) return { error: "Invalid profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
-  const slug = rawSlug ? normalizeSlug(rawSlug) : undefined;
+  const slug = rawSlug ? normalizeSlug(rawSlug).slice(0, 64) : undefined;
   const linksRaw = (formData.get("links") as string)?.trim();
   const linksJson =
     linksRaw &&
@@ -46,9 +48,9 @@ export async function updateProfileAction(
   try {
     await updateMemberProfile(id, session.sub, {
       slug,
-      name: (formData.get("name") as string)?.trim() || undefined,
-      tagline: (formData.get("tagline") as string)?.trim() || undefined,
-      description: (formData.get("description") as string) ?? undefined,
+      name: ((formData.get("name") as string)?.trim() || undefined)?.slice(0, 100),
+      tagline: ((formData.get("tagline") as string)?.trim() || undefined)?.slice(0, 120),
+      description: ((formData.get("description") as string) ?? undefined)?.slice(0, 2000) ?? undefined,
       avatarUrl: (formData.get("avatarUrl") as string)?.trim() || undefined,
       status: (formData.get("status") as string)?.trim() || undefined,
       quote: (formData.get("quote") as string)?.trim() || undefined,
@@ -63,14 +65,25 @@ export async function updateProfileAction(
       banner: (formData.get("banner") as string)?.trim() || undefined,
       bannerSmall: formData.get("bannerSmall") === "on",
       bannerAnimatedFire: formData.get("bannerAnimatedFire") === "on",
-      easterEgg: formData.get("easterEgg") === "on",
-      easterEggTaglineWord: (formData.get("easterEggTaglineWord") as string)?.trim() || undefined,
-      easterEggLinkTrigger: (formData.get("easterEggLinkTrigger") as string)?.trim() || undefined,
-      easterEggLinkUrl: (formData.get("easterEggLinkUrl") as string)?.trim() || undefined,
-      easterEggLinkPopupUrl: (formData.get("easterEggLinkPopupUrl") as string)?.trim() || undefined,
+      bannerStyle: (formData.get("bannerStyle") as string)?.trim() || undefined,
+      useTerminalLayout: formData.get("useTerminalLayout") === "on",
+      terminalTitle: (formData.get("terminalTitle") as string)?.trim() || undefined,
+      terminalCommands: (formData.get("terminalCommands") as string)?.trim() || null,
       links: linksJson ?? null,
       ogImageUrl: (formData.get("ogImageUrl") as string)?.trim() || undefined,
       showUpdatedAt: formData.get("showUpdatedAt") === "on",
+      accentColor: (formData.get("accentColor") as string)?.trim() || undefined,
+      terminalPrompt: (formData.get("terminalPrompt") as string)?.trim() || undefined,
+      nameGreeting: (formData.get("nameGreeting") as string)?.trim() || undefined,
+      cardStyle: (formData.get("cardStyle") as string)?.trim() || undefined,
+      displayStatus: (formData.get("displayStatus") as string)?.trim() || undefined,
+      pronouns: ((formData.get("pronouns") as string)?.trim() || undefined)?.slice(0, 40),
+      location: ((formData.get("location") as string)?.trim() || undefined)?.slice(0, 80),
+      timezone: ((formData.get("timezone") as string)?.trim() || undefined)?.slice(0, 64),
+      avatarShape: (formData.get("avatarShape") as string)?.trim() || undefined,
+      layoutDensity: (formData.get("layoutDensity") as string)?.trim() || undefined,
+      noindex: formData.get("noindex") === "on",
+      metaDescription: ((formData.get("metaDescription") as string)?.trim() || undefined)?.slice(0, 200),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";
@@ -78,5 +91,42 @@ export async function updateProfileAction(
   }
   revalidatePath("/dashboard");
   if (slug) revalidatePath(`/${slug}`);
-  return { success: true };
+  return { success: true, savedAt: new Date().toISOString() };
+}
+
+/** Ensure current user is admin; returns error string or null if allowed. */
+export async function requireAdmin(): Promise<string | null> {
+  const session = await getSession();
+  if (!session) return "Not signed in";
+  const user = await getOrCreateUser(session);
+  if (!user.isAdmin) return "Access denied";
+  return null;
+}
+
+export async function approveUserAction(userId: string): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  if (!userId?.trim()) return { error: "Missing user" };
+  const ok = await approveUser(userId.trim());
+  if (!ok) return { error: "User not found or already approved" };
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+export async function setUserBadgesAction(
+  userId: string,
+  badges: { verified?: boolean; staff?: boolean }
+): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const id = userId?.trim();
+  if (!id) return { error: "Missing user" };
+  const ok = await setUserBadges(id, badges);
+  if (!ok) return { error: "User not found" };
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard");
+  const slug = await getProfileSlugByUserId(id);
+  if (slug) revalidatePath(`/${slug}`);
+  return {};
 }

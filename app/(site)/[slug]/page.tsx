@@ -6,6 +6,7 @@ import {
   getMemberProfileBySlug,
   recordProfileView,
   memberProfileToProfile,
+  getUserBadges,
 } from "@/lib/member-profiles";
 import { getClientIp, getUserAgent } from "@/lib/request";
 import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
@@ -27,13 +28,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
   if (!profile) return { title: "Not found" };
   const title = profile.name;
-  const description = profile.tagline ?? profile.description ?? `${profile.name} on ${SITE_NAME}`;
+  const description =
+    profile.metaDescription?.trim() ||
+    profile.tagline ||
+    profile.description ||
+    `${profile.name} on ${SITE_NAME}`;
   const canonicalUrl = `${SITE_URL}/${slug}`;
   const ogImage = profile.ogImageUrl ?? profile.avatar ?? SITE_OG_IMAGE;
+  const noindex = Boolean(profile.noindex);
   return {
     title,
     description,
     alternates: { canonical: canonicalUrl },
+    ...(noindex && { robots: { index: false, follow: true } }),
     openGraph: {
       type: "website",
       url: canonicalUrl,
@@ -60,6 +67,7 @@ function ProfileJsonLd({ profile }: { profile: Profile }) {
     url: `${SITE_URL}/${profile.slug}`,
     ...(profile.avatar && { image: profile.avatar }),
     ...(profile.discord && { identifier: profile.discord }),
+    ...(profile.location?.trim() && { address: { "@type": "Place", name: profile.location.trim() } }),
   };
   return (
     <script
@@ -82,9 +90,13 @@ export default async function ProfilePage({ params }: Props) {
   }
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
-  const [ip, userAgent] = await Promise.all([getClientIp(), getUserAgent()]);
+  const [ip, userAgent, badges] = await Promise.all([
+    getClientIp(),
+    getUserAgent(),
+    getUserBadges(memberRow.userId),
+  ]);
   await recordProfileView(memberRow.id, ip, userAgent);
-  const profile = memberProfileToProfile(memberRow);
+  const profile = memberProfileToProfile(memberRow, badges);
   return (
     <>
       <ProfileJsonLd profile={profile} />
