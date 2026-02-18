@@ -13,14 +13,54 @@ const SLIDES = [
 const YOUTUBE_EMBED_URL = "https://www.youtube.com/embed/bFY_7g3hfb8?autoplay=1&start=8";
 const DONUT_ARTICLE_URL = "https://www.a1k0n.net/2011/07/20/donut-math.html";
 
-/** Built-in trigger words: ithildin → donut popup, insanity → slides overlay */
-const TRIGGER_REGEX = /(ithildin|insanity)/gi;
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Build regex that matches built-in words plus optional profile trigger words (case-insensitive). */
+function buildTriggerRegex(
+  easterEggTaglineWord?: string,
+  easterEggLinkTrigger?: string
+): RegExp {
+  const parts: string[] = ["ithildin", "insanity"];
+  if (easterEggTaglineWord?.trim()) parts.push(escapeRegex(easterEggTaglineWord.trim()));
+  if (easterEggLinkTrigger?.trim()) {
+    const escaped = escapeRegex(easterEggLinkTrigger.trim());
+    if (!parts.includes(escaped)) parts.push(escaped);
+  }
+  return new RegExp(`(${parts.join("|")})`, "gi");
+}
+
+type TriggerKind = "overlay" | "donut" | "link";
+
+function getTriggerKind(
+  part: string,
+  easterEggTaglineWord?: string,
+  easterEggLink?: { triggerWord: string; url: string; popupUrl?: string }
+): TriggerKind | null {
+  const lower = part.toLowerCase();
+  if (easterEggTaglineWord && lower === easterEggTaglineWord.trim().toLowerCase()) return "overlay";
+  if (easterEggLink && lower === easterEggLink.triggerWord.trim().toLowerCase()) {
+    return easterEggLink.popupUrl ? "donut" : "link";
+  }
+  if (lower === "insanity") return "overlay";
+  if (lower === "ithildin") return "donut";
+  return null;
+}
 
 interface TaglineWithEasterEggProps {
   tagline: string;
+  /** Word in tagline that triggers the scary overlay (e.g. "sanity"). */
+  easterEggTaglineWord?: string;
+  /** Word in tagline that opens a link or donut popup. */
+  easterEggLink?: { triggerWord: string; url: string; popupUrl?: string };
 }
 
-export default function TaglineWithEasterEgg({ tagline }: TaglineWithEasterEggProps) {
+export default function TaglineWithEasterEgg({
+  tagline,
+  easterEggTaglineWord,
+  easterEggLink,
+}: TaglineWithEasterEggProps) {
   const [showOverlay, setShowOverlay] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
@@ -51,48 +91,66 @@ export default function TaglineWithEasterEgg({ tagline }: TaglineWithEasterEggPr
     }
   }, [slideIndex]);
 
-  const handleIthildinClick = useCallback(() => {
+  const handleDonutClick = useCallback(() => {
     setShowPopup(true);
   }, []);
 
-  const handleInsanityClick = useCallback(() => {
+  const handleOverlayWordClick = useCallback(() => {
     setShowOverlay(true);
     setVideoSrc(YOUTUBE_EMBED_URL);
   }, []);
 
-  const lower = tagline.toLowerCase();
-  const hasTrigger = lower.includes("ithildin") || lower.includes("insanity");
-  if (!hasTrigger) {
+  const handleLinkClick = useCallback((url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
+
+  const triggerRegex = buildTriggerRegex(easterEggTaglineWord, easterEggLink?.triggerWord);
+  const parts = tagline.split(triggerRegex);
+  if (parts.length <= 1) {
     return <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">{tagline}</p>;
   }
+  const buttonClass =
+    "cursor-pointer underline decoration-dashed decoration-[var(--accent)]/60 underline-offset-3 hover:text-[var(--foreground)] hover:decoration-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded transition-colors";
 
-  const parts = tagline.split(TRIGGER_REGEX);
   return (
     <>
       <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">
         {parts.map((part, i) => {
-          const pl = part.toLowerCase();
-          if (pl === "ithildin") {
+          const kind = getTriggerKind(part, easterEggTaglineWord, easterEggLink);
+          if (kind === "overlay") {
             return (
               <button
                 key={i}
                 type="button"
-                onClick={handleIthildinClick}
-                className="cursor-pointer underline decoration-dashed decoration-[var(--accent)]/60 underline-offset-3 hover:text-[var(--foreground)] hover:decoration-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded transition-colors"
+                onClick={handleOverlayWordClick}
+                className={buttonClass}
                 aria-label="Easter egg"
               >
                 {part}
               </button>
             );
           }
-          if (pl === "insanity") {
+          if (kind === "donut") {
             return (
               <button
                 key={i}
                 type="button"
-                onClick={handleInsanityClick}
-                className="cursor-pointer underline decoration-dashed decoration-[var(--accent)]/60 underline-offset-3 hover:text-[var(--foreground)] hover:decoration-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded transition-colors"
+                onClick={handleDonutClick}
+                className={buttonClass}
                 aria-label="Easter egg"
+              >
+                {part}
+              </button>
+            );
+          }
+          if (kind === "link" && easterEggLink?.url) {
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleLinkClick(easterEggLink.url)}
+                className={buttonClass}
+                aria-label="Open link"
               >
                 {part}
               </button>

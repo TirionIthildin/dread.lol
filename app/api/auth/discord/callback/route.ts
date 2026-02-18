@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       preferred_username: userInfo.username,
       profile: `https://discord.com/users/${userInfo.id}`,
       picture,
+      ...(userInfo.public_flags != null && { public_flags: userInfo.public_flags }),
     });
     const config = getSessionCookieConfig(sessionValue);
     const res = NextResponse.redirect(new URL(DASHBOARD_PATH, origin));

@@ -18,6 +18,8 @@ export interface SessionUser {
   preferred_username?: string;
   profile?: string;
   picture?: string | null;
+  /** Discord public_flags (badge bitfield). Used to store badges on user. */
+  public_flags?: number;
 }
 
 function getSecret(): string {

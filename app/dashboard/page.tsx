@@ -5,6 +5,7 @@ import {
   getOrCreateUser,
   getOrCreateMemberProfile,
   getProfileViews,
+  getGalleryForProfile,
 } from "@/lib/member-profiles";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardAuth from "@/app/dashboard/DashboardAuth";
@@ -76,12 +77,16 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const { viewCount, recentViews } = await getProfileViews(profile.id);
+    const [{ viewCount, recentViews }, gallery] = await Promise.all([
+      getProfileViews(profile.id),
+      getGalleryForProfile(profile.id),
+    ]);
     return (
       <DashboardMyProfile
         profile={profile}
         viewCount={viewCount}
         recentViews={recentViews}
+        gallery={gallery}
       />
     );
   } catch (err) {

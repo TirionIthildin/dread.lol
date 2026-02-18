@@ -1,31 +1,27 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProfileContent from "@/app/components/ProfileContent";
-import { getProfileBySlug, getProfileSlugs } from "@/lib/profiles";
 import {
   getMemberProfileBySlug,
   recordProfileView,
   memberProfileToProfile,
   getUserBadges,
+  getUserDiscordFlags,
+  getVouchesForProfile,
+  hasUserVouched,
+  getGalleryForProfile,
 } from "@/lib/member-profiles";
+import { getSession } from "@/lib/auth/session";
 import { getClientIp, getUserAgent } from "@/lib/request";
 import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export async function generateStaticParams() {
-  return getProfileSlugs().map((slug) => ({ slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const staticProfile = getProfileBySlug(slug);
-  let profile: Profile | null = staticProfile ?? null;
-  if (!profile) {
-    const memberRow = await getMemberProfileBySlug(slug);
-    profile = memberRow ? memberProfileToProfile(memberRow) : null;
-  }
+  const memberRow = await getMemberProfileBySlug(slug);
+  const profile: Profile | null = memberRow ? memberProfileToProfile(memberRow) : null;
   if (!profile) return { title: "Not found" };
   const title = profile.name;
   const description =
@@ -79,28 +75,43 @@ function ProfileJsonLd({ profile }: { profile: Profile }) {
 
 export default async function ProfilePage({ params }: Props) {
   const { slug } = await params;
-  const staticProfile = getProfileBySlug(slug);
-  if (staticProfile) {
-    return (
-      <>
-        <ProfileJsonLd profile={staticProfile} />
-        <ProfileContent profile={staticProfile} />
-      </>
-    );
-  }
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
-  const [ip, userAgent, badges] = await Promise.all([
+  const [ip, userAgent, badges, discordFlags, vouchesData, session, gallery] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getUserBadges(memberRow.userId),
+    getUserDiscordFlags(memberRow.userId),
+    getVouchesForProfile(memberRow.id),
+    getSession(),
+    getGalleryForProfile(memberRow.id),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent);
-  const profile = memberProfileToProfile(memberRow, badges);
+  const currentUserHasVouched = session
+    ? await hasUserVouched(memberRow.id, session.sub)
+    : false;
+  const canVouch = session != null && session.sub !== memberRow.userId;
+  const profile = memberProfileToProfile(memberRow, badges, discordFlags);
+  if (gallery.length > 0) {
+    profile.gallery = gallery.map(({ id, imageUrl, title, description, sortOrder }) => ({
+      id,
+      imageUrl,
+      ...(title != null && { title }),
+      ...(description != null && { description }),
+      sortOrder,
+    }));
+  }
+  const vouches = {
+    slug,
+    count: vouchesData.count,
+    vouchedBy: vouchesData.vouchedBy,
+    currentUserHasVouched,
+    canVouch,
+  };
   return (
     <>
       <ProfileJsonLd profile={profile} />
-      <ProfileContent profile={profile} />
+      <ProfileContent profile={profile} vouches={vouches} />
     </>
   );
 }

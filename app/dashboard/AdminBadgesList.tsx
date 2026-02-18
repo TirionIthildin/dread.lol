@@ -2,7 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { setUserBadgesAction } from "@/app/dashboard/actions";
-import type { AdminUser } from "@/app/dashboard/DashboardNavAdmin";
+import type { AdminUser } from "@/app/dashboard/AdminUserModal";
 
 type Props = {
   users: AdminUser[];

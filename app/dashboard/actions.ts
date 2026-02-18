@@ -2,10 +2,36 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
-import { updateMemberProfile, getOrCreateUser, approveUser, setUserBadges, getProfileSlugByUserId } from "@/lib/member-profiles";
+import {
+  updateMemberProfile,
+  getOrCreateUser,
+  approveUser,
+  setUserBadges,
+  getProfileSlugByUserId,
+  addGalleryItem,
+  updateGalleryItem,
+  deleteGalleryItem,
+  setGalleryOrder,
+} from "@/lib/member-profiles";
 import { normalizeSlug } from "@/lib/slug";
+import { getProfileTemplate } from "@/lib/profile-templates";
 
 export type ProfileFormState = { error?: string; success?: boolean; savedAt?: string } | null;
+
+/** Parse birthday from form (month + day only). Returns "MM-DD" or undefined to clear. */
+function parseBirthdayForm(formData: FormData): string | undefined {
+  const monthRaw = (formData.get("birthdayMonth") as string)?.trim();
+  const dayRaw = (formData.get("birthdayDay") as string)?.trim();
+  if (!monthRaw || !dayRaw) return undefined;
+  const month = parseInt(monthRaw, 10);
+  const day = parseInt(dayRaw, 10);
+  if (Number.isNaN(month) || Number.isNaN(day)) return undefined;
+  if (month < 1 || month > 12) return undefined;
+  if (day < 1 || day > 31) return undefined;
+  const daysInMonth = new Date(2000, month, 0).getDate();
+  if (day > daysInMonth) return undefined;
+  return `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 function parseLinksValue(linksRaw: string | null | undefined): string | null {
   if (!linksRaw?.trim()) return null;
@@ -100,6 +126,132 @@ export async function updateProfileAction(
   revalidatePath("/dashboard");
   if (slug) revalidatePath(`/${slug}`);
   return { success: true, savedAt: new Date().toISOString() };
+}
+
+/** Apply a profile template to the user's profile. Replaces content fields (tagline, description, banner, etc.). */
+export async function applyTemplateAction(
+  profileId: number,
+  templateId: string
+): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const template = getProfileTemplate(templateId);
+  if (!template) return { error: "Template not found" };
+  const d = template.data;
+  const update: Parameters<typeof updateMemberProfile>[2] = {};
+  if (d.tagline !== undefined) update.tagline = d.tagline;
+  if (d.description !== undefined) update.description = d.description;
+  if (d.banner !== undefined) update.banner = d.banner;
+  if (d.discord !== undefined) update.discord = d.discord;
+  if (d.roblox !== undefined) update.roblox = d.roblox;
+  if (d.bannerSmall !== undefined) update.bannerSmall = d.bannerSmall;
+  if (d.bannerAnimatedFire !== undefined) update.bannerAnimatedFire = d.bannerAnimatedFire;
+  if (d.bannerStyle !== undefined) update.bannerStyle = d.bannerStyle;
+  if (d.useTerminalLayout !== undefined) update.useTerminalLayout = d.useTerminalLayout;
+  if (d.terminalTitle !== undefined) update.terminalTitle = d.terminalTitle;
+  if (d.terminalCommands !== undefined) update.terminalCommands = d.terminalCommands;
+  if (d.easterEgg !== undefined) update.easterEgg = d.easterEgg;
+  if (d.easterEggTaglineWord !== undefined) update.easterEggTaglineWord = d.easterEggTaglineWord;
+  if (d.easterEggLinkTrigger !== undefined) update.easterEggLinkTrigger = d.easterEggLinkTrigger;
+  if (d.easterEggLinkUrl !== undefined) update.easterEggLinkUrl = d.easterEggLinkUrl;
+  if (d.easterEggLinkPopupUrl !== undefined) update.easterEggLinkPopupUrl = d.easterEggLinkPopupUrl;
+  if (d.tags !== undefined) update.tags = d.tags;
+  if (d.links !== undefined) update.links = typeof d.links === "string" ? d.links : (d.links ? JSON.stringify(d.links) : null);
+  if (d.status !== undefined) update.status = d.status;
+  if (d.quote !== undefined) update.quote = d.quote;
+  try {
+    await updateMemberProfile(profileId, session.sub, update);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to apply template" };
+  }
+  revalidatePath("/dashboard");
+  const slug = await getProfileSlugByUserId(session.sub);
+  if (slug) revalidatePath(`/${slug}`);
+  return {};
+}
+
+/** Add a gallery item (image URL, optional title/description). */
+export async function addGalleryItemAction(
+  profileId: number,
+  data: { imageUrl: string; title?: string; description?: string }
+): Promise<{ error?: string; id?: number }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  if (!data.imageUrl?.trim()) return { error: "Image URL required" };
+  try {
+    const item = await addGalleryItem(profileId, session.sub, {
+      imageUrl: data.imageUrl.trim(),
+      title: data.title?.trim() || null,
+      description: data.description?.trim() || null,
+    });
+    revalidatePath("/dashboard");
+    const slug = await getProfileSlugByUserId(session.sub);
+    if (slug) revalidatePath(`/${slug}`);
+    return { id: item.id };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to add" };
+  }
+}
+
+/** Update a gallery item (title/description). */
+export async function updateGalleryItemAction(
+  itemId: number,
+  data: { title?: string; description?: string }
+): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  try {
+    await updateGalleryItem(itemId, session.sub, {
+      title: data.title !== undefined ? (data.title?.trim() || null) : undefined,
+      description: data.description !== undefined ? (data.description?.trim() || null) : undefined,
+    });
+    revalidatePath("/dashboard");
+    const slug = await getProfileSlugByUserId(session.sub);
+    if (slug) revalidatePath(`/${slug}`);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to update" };
+  }
+}
+
+/** Delete a gallery item. */
+export async function deleteGalleryItemAction(itemId: number): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  try {
+    await deleteGalleryItem(itemId, session.sub);
+    revalidatePath("/dashboard");
+    const slug = await getProfileSlugByUserId(session.sub);
+    if (slug) revalidatePath(`/${slug}`);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to delete" };
+  }
+}
+
+/** Reorder gallery items. */
+export async function setGalleryOrderAction(profileId: number, orderedIds: number[]): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  try {
+    await setGalleryOrder(profileId, session.sub, orderedIds);
+    revalidatePath("/dashboard");
+    const slug = await getProfileSlugByUserId(session.sub);
+    if (slug) revalidatePath(`/${slug}`);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to reorder" };
+  }
 }
 
 /** Ensure current user is admin; returns error string or null if allowed. */

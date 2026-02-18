@@ -1,8 +1,8 @@
 import { SITE_URL } from "@/lib/site";
-import { getProfileSlugs } from "@/lib/profiles";
+import { getAllMemberProfileSlugs } from "@/lib/member-profiles";
 
-export default function sitemap() {
-  const profiles = getProfileSlugs();
+export default async function sitemap() {
+  const profiles = await getAllMemberProfileSlugs();
   return [
     { url: SITE_URL, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 1 },
     ...profiles.map((slug) => ({

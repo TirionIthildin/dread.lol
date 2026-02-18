@@ -39,12 +39,32 @@ services:
       timeout: 5s
       retries: 5
 
+  # SeaweedFS – internal only (no ports exposed); app reaches via SEAWEED_MASTER_URL
+  seaweed-master:
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    command: ["master", "-ip=seaweed-master", "-ip.bind=0.0.0.0", "-defaultReplication=000"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:9333/cluster/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seaweed-volume:
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    command: ["volume", "-ip=seaweed-volume", "-master=seaweed-master:9333", "-ip.bind=0.0.0.0", "-port=8080"]
+    depends_on:
+      seaweed-master: { condition: service_healthy }
+
   dread:
     image: registry.ithildin.co/poker/dread.lol
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
       valkey: { condition: service_healthy }
+      seaweed-volume:
+        condition: service_started
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
@@ -53,6 +73,7 @@ services:
       - NEXT_PUBLIC_SITE_URL=${SERVICE_FQDN_DREAD_3000}
       - DATABASE_URL=postgres://${POSTGRES_USER:-dread}:${POSTGRES_PASSWORD:-dread}@postgres:5432/${POSTGRES_DB:-dread}
       - VALKEY_URL=redis://valkey:6379
+      - SEAWEED_MASTER_URL=http://seaweed-master:9333
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
       interval: 30s

@@ -90,6 +90,8 @@ export interface DiscordUser {
   global_name: string | null;
   avatar: string | null;
   discriminator: string;
+  /** User's public badges bitfield. See Discord API User flags. */
+  public_flags?: number;
 }
 
 /**

@@ -8,21 +8,96 @@ import {
   Notebook,
   Link as LinkIcon,
   Image,
+  ImagesSquare,
   Palette,
   SlidersHorizontal,
   Terminal,
+  Trash,
 } from "@phosphor-icons/react";
-import { useActionState, useState, useCallback } from "react";
+import { useActionState, useState, useCallback, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import type { ProfileRow, ProfileViewRow } from "@/lib/db/schema";
-import { updateProfileAction, type ProfileFormState } from "@/app/dashboard/actions";
+import type { GalleryItem } from "@/lib/member-profiles";
+import {
+  updateProfileAction,
+  applyTemplateAction,
+  addGalleryItemAction,
+  updateGalleryItemAction,
+  deleteGalleryItemAction,
+  type ProfileFormState,
+} from "@/app/dashboard/actions";
 import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
+import { PROFILE_TEMPLATES, type ProfileTemplate } from "@/lib/profile-templates";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
 const SECTION_KEYS = ["basics", "links", "banner", "terminal", "display", "fun"] as const;
+
+function TemplateConfirmModal({
+  template,
+  onClose,
+  onConfirm,
+  applying,
+}: {
+  template: ProfileTemplate;
+  onClose: () => void;
+  onConfirm: () => void | Promise<void>;
+  applying: boolean;
+}) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="template-modal-title"
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div
+        className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="template-modal-title" className="text-base font-semibold text-[var(--foreground)]">
+          Apply template “{template.name}”?
+        </h3>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          This will replace your tagline, description, banner, links, and other profile content. Your slug, name, and avatar stay the same. Any unsaved changes in the form will be lost.
+        </p>
+        {template.description && (
+          <p className="mt-1 text-xs text-[var(--muted)]">{template.description}</p>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={applying}
+            className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm()}
+            disabled={applying}
+            className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+          >
+            {applying ? "Applying…" : "Apply"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function parseTerminalCommandsForEditor(raw: string | null): { command: string; output: string }[] {
   if (!raw?.trim()) return [];
@@ -42,6 +117,7 @@ interface DashboardMyProfileProps {
   profile: ProfileRow;
   viewCount: number;
   recentViews: ProfileViewRow[];
+  gallery: GalleryItem[];
 }
 
 function formatDate(d: Date) {
@@ -184,12 +260,13 @@ function TabButton({
   );
 }
 
-type DashboardTab = "editor" | "preview" | "logs";
+type DashboardTab = "editor" | "preview" | "gallery" | "logs";
 
 export default function DashboardMyProfile({
   profile,
   viewCount,
   recentViews,
+  gallery: initialGallery,
 }: DashboardMyProfileProps) {
   const [tab, setTab] = useState<DashboardTab>("editor");
   const [state, formAction] = useActionState<ProfileFormState, FormData>(
@@ -205,6 +282,15 @@ export default function DashboardMyProfile({
     display: false,
     fun: false,
   }));
+  const [gallery, setGallery] = useState<GalleryItem[]>(initialGallery);
+  const [galleryAddUrl, setGalleryAddUrl] = useState("");
+  const [galleryAddTitle, setGalleryAddTitle] = useState("");
+  const [galleryAddDescription, setGalleryAddDescription] = useState("");
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryAddError, setGalleryAddError] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [slugValue, setSlugValue] = useState(profile.slug);
   const [terminalCommandEntries, setTerminalCommandEntries] = useState<{ command: string; output: string }[]>(
     () => parseTerminalCommandsForEditor(profile.terminalCommands ?? null)
@@ -215,6 +301,13 @@ export default function DashboardMyProfile({
   const [linkEntries, setLinkEntries] = useState<LinkEntry[]>(() => parseLinkEntries(profile));
   const [avatarUrlValue, setAvatarUrlValue] = useState(profile.avatarUrl ?? "");
   const [slugCheck, setSlugCheck] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [templateModal, setTemplateModal] = useState<ProfileTemplate | null>(null);
+  const [templateApplying, setTemplateApplying] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setGallery(initialGallery);
+  }, [initialGallery]);
 
   const checkSlugAvailability = useCallback(async () => {
     const s = normalizeSlug(slugValue);
@@ -269,6 +362,9 @@ export default function DashboardMyProfile({
           </TabButton>
           <TabButton active={tab === "preview"} onClick={() => setTab("preview")} icon={<Eye {...dashIcon} />}>
             Preview
+          </TabButton>
+          <TabButton active={tab === "gallery"} onClick={() => setTab("gallery")} icon={<ImagesSquare {...dashIcon} />}>
+            Gallery
           </TabButton>
           <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon={<List {...dashIcon} />}>
             Logs
@@ -391,6 +487,41 @@ export default function DashboardMyProfile({
                   </optgroup>
                 ))}
               </select>
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Birthday <span className="text-[var(--muted)]/70">(month & day only — shown as countdown on profile)</span>
+              <div className="mt-1 flex gap-2">
+                <select
+                  name="birthdayMonth"
+                  defaultValue={(() => {
+                    const b = (profile as { birthday?: string }).birthday;
+                    if (!b || !/^\d{2}-\d{2}$/.test(b)) return "";
+                    return b.slice(0, 2);
+                  })()}
+                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                >
+                  <option value="">Month</option>
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const mm = String(i + 1).padStart(2, "0");
+                    const name = new Date(2000, i, 1).toLocaleString("default", { month: "long" });
+                    return <option key={mm} value={mm}>{name}</option>;
+                  })}
+                </select>
+                <select
+                  name="birthdayDay"
+                  defaultValue={(() => {
+                    const b = (profile as { birthday?: string }).birthday;
+                    if (!b || !/^\d{2}-\d{2}$/.test(b)) return "";
+                    return b.slice(3, 5);
+                  })()}
+                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                >
+                  <option value="">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => (
+                    <option key={i + 1} value={String(i + 1).padStart(2, "0")}>{i + 1}</option>
+                  ))}
+                </select>
+              </div>
             </label>
             <div className="flex gap-3 items-start">
               <label className="flex-1 min-w-0 block text-xs font-medium text-[var(--muted)]">
@@ -753,6 +884,10 @@ export default function DashboardMyProfile({
                 <input type="checkbox" name="showPageViews" defaultChecked={profile.showPageViews ?? true} className="rounded border-[var(--border)]" />
                 Display page views in dashboard
               </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
+                <input type="checkbox" name="showDiscordBadges" defaultChecked={(profile as { showDiscordBadges?: boolean }).showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
+                Show my Discord badges on profile <span className="text-[var(--muted)]/70">(Staff, Partner, HypeSquad, etc.)</span>
+              </label>
               </div>
             </details>
 
@@ -838,8 +973,21 @@ export default function DashboardMyProfile({
                   <option value="glass">Glass (blur)</option>
                 </select>
               </label>
+              </div>
+            </details>
+
+            <details
+              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
+              open={openSections.statusIndicator}
+              onToggle={(e) => setOpenSections((s) => ({ ...s, statusIndicator: (e.target as HTMLDetailsElement).open }))}
+            >
+              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex items-center gap-2">Status indicator</span>
+              </summary>
+              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
+              <p className="text-xs text-[var(--muted)]">Discord-style dot shown next to your name. Not synced with Discord.</p>
               <label className="block text-xs font-medium text-[var(--muted)]">
-                Status indicator <span className="text-[var(--muted)]/70">(Discord-style dot; not synced with Discord — API doesn’t provide presence)</span>
+                Presence
                 <select
                   name="displayStatus"
                   defaultValue={profile.displayStatus ?? ""}
@@ -854,6 +1002,25 @@ export default function DashboardMyProfile({
               </label>
               </div>
             </details>
+
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 p-3 space-y-2">
+              <p className="text-xs font-medium text-[var(--muted)]">Templates</p>
+              <p className="text-xs text-[var(--muted)]">
+                Apply a preset to replace your tagline, description, banner, links, and related content. Your slug, name, and avatar are kept.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PROFILE_TEMPLATES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTemplateModal(t)}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {state?.success && (
               <p className="text-sm text-[var(--terminal)]" role="status">
@@ -899,6 +1066,203 @@ export default function DashboardMyProfile({
       </section>
       )}
 
+      {tab === "gallery" && (
+      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
+        <div className="border-b border-[var(--border)] px-4 py-3 flex items-center gap-2 bg-[var(--bg)]/80">
+          <span className="ml-2 text-xs text-[var(--muted)] font-mono inline-flex items-center gap-2">
+            <ImagesSquare size={14} weight="regular" /> Gallery
+          </span>
+        </div>
+        <div className="p-4 space-y-4">
+          <p className="text-xs text-[var(--muted)]">Images with optional title and description, shown on your profile.</p>
+          {gallery.length > 0 && (
+            <ul className="space-y-3 list-none p-0 m-0">
+              {gallery.map((item) => (
+                <li key={item.id} className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-2 flex gap-3">
+                  <a
+                    href={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 w-16 h-16 rounded overflow-hidden border border-[var(--border)] bg-[var(--surface)]"
+                  >
+                    {item.imageUrl.includes("cdn.discordapp.com") ? (
+                      <Image src={item.imageUrl} alt={item.title ?? ""} width={64} height={64} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl} alt={item.title ?? ""} className="w-full h-full object-cover" width={64} height={64} />
+                    )}
+                  </a>
+                  <div className="min-w-0 flex-1">
+                    {editingItemId === item.id ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          placeholder="Title"
+                          maxLength={200}
+                          className="block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1 text-sm mb-1 focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                        />
+                        <input
+                          type="text"
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          placeholder="Description"
+                          maxLength={1000}
+                          className="block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                        />
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const res = await updateGalleryItemAction(item.id, { title: editTitle || undefined, description: editDescription || undefined });
+                              if (res.error) setGalleryAddError(res.error);
+                              else {
+                                setEditingItemId(null);
+                                setGallery((prev) => prev.map((p) => (p.id === item.id ? { ...p, title: editTitle || undefined, description: editDescription || undefined } : p)));
+                              }
+                            }}
+                            className="text-xs px-2 py-1 rounded border border-[var(--accent)]/50 bg-[var(--accent)]/10 text-[var(--accent)]"
+                          >
+                            Save
+                          </button>
+                          <button type="button" onClick={() => { setEditingItemId(null); setEditTitle(""); setEditDescription(""); }} className="text-xs px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)]">
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {item.title && <p className="text-sm font-medium text-[var(--foreground)] truncate">{item.title}</p>}
+                        {item.description && <p className="text-xs text-[var(--muted)] line-clamp-2">{item.description}</p>}
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => { setEditingItemId(item.id); setEditTitle(item.title ?? ""); setEditDescription(item.description ?? ""); }}
+                            className="text-xs text-[var(--accent)] hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm("Remove this image from your gallery?")) return;
+                              const res = await deleteGalleryItemAction(item.id);
+                              if (res.error) setGalleryAddError(res.error);
+                              else setGallery((prev) => prev.filter((p) => p.id !== item.id));
+                            }}
+                            className="text-xs text-[var(--muted)] hover:text-[var(--warning)] inline-flex items-center gap-1"
+                            aria-label="Delete"
+                          >
+                            <Trash size={12} /> Remove
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-3 space-y-2">
+            <p className="text-xs font-medium text-[var(--muted)]">Add image</p>
+            {galleryAddError && <p className="text-xs text-[var(--warning)]">{galleryAddError}</p>}
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Upload (JPEG, PNG, GIF, WebP, SVG, max 5 MiB)
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                className="mt-1 block w-full text-sm text-[var(--muted)] file:mr-2 file:rounded file:border-0 file:bg-[var(--accent)]/20 file:px-3 file:py-1.5 file:text-xs file:text-[var(--accent)]"
+                disabled={galleryUploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setGalleryAddError(null);
+                  setGalleryUploading(true);
+                  try {
+                    const form = new FormData();
+                    form.append("file", file);
+                    const res = await fetch("/api/upload", { method: "POST", body: form });
+                    const data = await res.json();
+                    if (!res.ok) {
+                      setGalleryAddError(data.error ?? "Upload failed");
+                      return;
+                    }
+                    const result = await addGalleryItemAction(profile.id, { imageUrl: data.url, title: galleryAddTitle || undefined, description: galleryAddDescription || undefined });
+                    if (result.error) setGalleryAddError(result.error);
+                    else {
+                      setGallery((prev) => [...prev, { id: result.id!, imageUrl: data.url, title: galleryAddTitle || undefined, description: galleryAddDescription || undefined, sortOrder: prev.length }]);
+                      setGalleryAddTitle("");
+                      setGalleryAddDescription("");
+                    }
+                  } finally {
+                    setGalleryUploading(false);
+                    e.target.value = "";
+                  }
+                }}
+              />
+            </label>
+            <p className="text-xs text-[var(--muted)]">Or paste image URL</p>
+            <div className="flex flex-wrap gap-2 items-end">
+              <label className="flex-1 min-w-[120px] text-xs font-medium text-[var(--muted)]">
+                URL
+                <input
+                  type="url"
+                  value={galleryAddUrl}
+                  onChange={(e) => setGalleryAddUrl(e.target.value)}
+                  placeholder="https://… or /api/files/…"
+                  className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </label>
+              <label className="min-w-[100px] text-xs font-medium text-[var(--muted)]">
+                Title
+                <input
+                  type="text"
+                  value={galleryAddTitle}
+                  onChange={(e) => setGalleryAddTitle(e.target.value)}
+                  placeholder="Optional"
+                  maxLength={200}
+                  className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </label>
+              <label className="min-w-[100px] text-xs font-medium text-[var(--muted)]">
+                Description
+                <input
+                  type="text"
+                  value={galleryAddDescription}
+                  onChange={(e) => setGalleryAddDescription(e.target.value)}
+                  placeholder="Optional"
+                  maxLength={1000}
+                  className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={!galleryAddUrl.trim() || galleryUploading}
+                onClick={async () => {
+                  setGalleryAddError(null);
+                  const result = await addGalleryItemAction(profile.id, {
+                    imageUrl: galleryAddUrl.trim(),
+                    title: galleryAddTitle.trim() || undefined,
+                    description: galleryAddDescription.trim() || undefined,
+                  });
+                  if (result.error) setGalleryAddError(result.error);
+                  else {
+                    setGallery((prev) => [...prev, { id: result.id!, imageUrl: galleryAddUrl.trim(), title: galleryAddTitle || undefined, description: galleryAddDescription || undefined, sortOrder: prev.length }]);
+                    setGalleryAddUrl("");
+                    setGalleryAddTitle("");
+                    setGalleryAddDescription("");
+                  }
+                }}
+                className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+      )}
+
       {tab === "logs" && (
       <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
         <div className="border-b border-[var(--border)] px-4 py-3 flex items-center gap-2 bg-[var(--bg)]/80">
@@ -940,6 +1304,25 @@ export default function DashboardMyProfile({
           )}
         </div>
       </section>
+      )}
+
+      {templateModal && (
+        <TemplateConfirmModal
+          template={templateModal}
+          onClose={() => setTemplateModal(null)}
+          onConfirm={async () => {
+            setTemplateApplying(true);
+            const result = await applyTemplateAction(profile.id, templateModal.id);
+            setTemplateApplying(false);
+            if (result.error) {
+              alert(result.error);
+            } else {
+              setTemplateModal(null);
+              router.refresh();
+            }
+          }}
+          applying={templateApplying}
+        />
       )}
     </div>
   );

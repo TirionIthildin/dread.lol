@@ -2,7 +2,7 @@
  * Postgres schema (Drizzle). Run migrations with: npm run db:migrate
  * Users = Discord-linked accounts. Profiles = member pages (1 per user). ProfileViews = page view log.
  */
-import { pgTable, text, timestamp, integer, serial, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, serial, boolean, unique } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -71,8 +71,33 @@ export const profileViews = pgTable("profile_views", {
   viewedAt: timestamp("viewed_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/** Vouches: logged-in users can vouch for a profile (one vouch per user per profile). */
+export const vouches = pgTable(
+  "vouches",
+  {
+    id: serial("id").primaryKey(),
+    profileId: integer("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [unique("vouches_profile_user_unique").on(t.profileId, t.userId)]
+);
+
+/** Gallery: images with optional title/description, one per profile. */
+export const galleryItems = pgTable("gallery_items", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url").notNull(),
+  title: text("title"),
+  description: text("description"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type ProfileRow = typeof profiles.$inferSelect;
 export type NewProfileRow = typeof profiles.$inferInsert;
 export type ProfileViewRow = typeof profileViews.$inferSelect;
+export type VouchRow = typeof vouches.$inferSelect;
+export type GalleryItemRow = typeof galleryItems.$inferSelect;
+export type NewGalleryItemRow = typeof galleryItems.$inferInsert;

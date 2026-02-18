@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Profile } from "@/lib/profiles";
+import { DISCORD_BADGE_INFO, type DiscordBadgeKey } from "@/lib/discord-badges";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
 import ProfileTags from "@/app/components/ProfileTags";
@@ -8,6 +9,9 @@ import ProfileStatus from "@/app/components/ProfileStatus";
 import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
+import ProfileVouches from "@/app/components/ProfileVouches";
+import type { VouchedByUser } from "@/lib/member-profiles";
+import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 
 const ACCENT_THEMES = ["cyan", "green", "purple", "orange", "rose"] as const;
 const CARD_STYLES = ["default", "sharp", "glass"] as const;
@@ -23,11 +27,20 @@ const STATUS_DOT_STYLES: Record<string, { bg: string; label: string }> = {
   offline: { bg: "bg-[#747f8d]", label: "Offline" },
 };
 
-interface ProfileContentProps {
-  profile: Profile;
+export interface ProfileVouchesData {
+  slug: string;
+  count: number;
+  vouchedBy: VouchedByUser[];
+  currentUserHasVouched: boolean;
+  canVouch: boolean;
 }
 
-export default function ProfileContent({ profile }: ProfileContentProps) {
+interface ProfileContentProps {
+  profile: Profile;
+  vouches?: ProfileVouchesData;
+}
+
+export default function ProfileContent({ profile, vouches }: ProfileContentProps) {
   const themeClass =
     profile.accentColor && ACCENT_THEMES.includes(profile.accentColor as (typeof ACCENT_THEMES)[number])
       ? `profile-theme-${profile.accentColor}`
@@ -130,10 +143,10 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
                   <span className="text-[var(--muted)] font-normal">{profile.nameGreeting.trim()} </span>
                 )}
                 {profile.name}
-                {(profile.verified || profile.staff) && (
+                {(profile.verified || profile.staff || (profile.discordBadges?.length ?? 0) > 0) && (
                   <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
                     {profile.verified && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Verified">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member of the community">
                         <svg className="size-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
                         </svg>
@@ -141,13 +154,26 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
                       </span>
                     )}
                     {profile.staff && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="Staff">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="Server staff — member of the Dread.lol team">
                         <svg className="size-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                           <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
                         </svg>
                         Staff
                       </span>
                     )}
+                    {profile.discordBadges?.map((key) => {
+                      const info = (key as DiscordBadgeKey) in DISCORD_BADGE_INFO ? DISCORD_BADGE_INFO[key as DiscordBadgeKey] : null;
+                      if (!info) return null;
+                      return (
+                        <span
+                          key={key}
+                          className="inline-flex items-center gap-1 rounded-md bg-[#5865F2]/15 px-1.5 py-0.5 text-xs font-medium text-[#5865F2]"
+                          title={info.title}
+                        >
+                          {info.label}
+                        </span>
+                      );
+                    })}
                   </span>
                 )}
               </h1>
@@ -155,7 +181,11 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
                 <p className="text-xs text-[var(--muted)] mt-0.5">{profile.pronouns.trim()}</p>
               )}
               {profile.tagline && (
-                <TaglineWithEasterEgg tagline={profile.tagline} />
+                <TaglineWithEasterEgg
+                  tagline={profile.tagline}
+                  easterEggTaglineWord={profile.easterEggTaglineWord}
+                  easterEggLink={profile.easterEggLink}
+                />
               )}
               {profile.location?.trim() && (
                 <p className="text-xs text-[var(--muted)] mt-0.5">📍 {profile.location.trim()}</p>
@@ -177,6 +207,15 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
                   return null;
                 }
               })()}
+              {profile.birthday?.trim() && (() => {
+                const countdown = getBirthdayCountdown(profile.birthday);
+                if (!countdown) return null;
+                return (
+                  <p className="text-xs text-[var(--muted)] mt-0.5">
+                    🎂 {countdown}
+                  </p>
+                );
+              })()}
             </div>
           </div>
           {profile.description && (
@@ -192,6 +231,66 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
             roblox={profile.roblox}
             links={profile.links}
           />
+          {profile.gallery && profile.gallery.length > 0 && (
+            <section className="mt-6" aria-labelledby="gallery-heading">
+              <h2 id="gallery-heading" className="text-sm font-medium text-[var(--muted)] mb-3">
+                Gallery
+              </h2>
+              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 list-none p-0 m-0">
+                {profile.gallery.map((item) => (
+                  <li key={item.id} className="rounded-lg border border-[var(--border)] overflow-hidden bg-[var(--bg)]/50">
+                    <a
+                      href={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] rounded-lg"
+                    >
+                      {item.imageUrl.includes("cdn.discordapp.com") ? (
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.title ?? ""}
+                          width={240}
+                          height={240}
+                          className="w-full aspect-square object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
+                          alt={item.title ?? ""}
+                          width={240}
+                          height={240}
+                          className="w-full aspect-square object-cover"
+                        />
+                      )}
+                    </a>
+                    {(item.title || item.description) && (
+                      <div className="p-2">
+                        {item.title && (
+                          <p className="font-medium text-[var(--foreground)] text-sm truncate" title={item.title}>
+                            {item.title}
+                          </p>
+                        )}
+                        {item.description && (
+                          <p className="text-xs text-[var(--muted)] line-clamp-2" title={item.description}>
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {vouches && (
+            <ProfileVouches
+              slug={vouches.slug}
+              count={vouches.count}
+              vouchedBy={vouches.vouchedBy}
+              currentUserHasVouched={vouches.currentUserHasVouched}
+              canVouch={vouches.canVouch}
+            />
+          )}
           {profile.updatedAt && (
             <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)]">
               Last updated {profile.updatedAt}
