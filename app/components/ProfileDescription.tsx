@@ -23,29 +23,35 @@ export default function ProfileDescription({ text, easterEgg }: ProfileDescripti
   }, []);
 
   if (!easterEgg || !text.includes(BAT)) {
-    return <p className="mt-2 text-[var(--muted)] leading-relaxed text-sm">{text}</p>;
+    return (
+      <div className="mt-3 pl-3 border-l-2 border-[var(--border)]/60">
+        <p className="text-[var(--muted)] leading-relaxed text-sm">{text}</p>
+      </div>
+    );
   }
 
   const parts = text.split(BAT);
   return (
-    <p className="mt-2 text-[var(--muted)] leading-relaxed text-sm">
-      {parts[0]}
-      <button
-        type="button"
-        onClick={handleBatClick}
-        disabled={flying}
-        className={`inline-block align-middle transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded cursor-pointer disabled:pointer-events-none ${flying ? "animate-bat-fly" : ""}`}
-        aria-label="Easter egg"
-        title="Click me"
-      >
-        {BAT}
-      </button>
-      {parts[1]}
-      {revealed && (
-        <span className="ml-2 text-[var(--terminal)] text-xs" role="status">
-          I am batman
-        </span>
-      )}
-    </p>
+    <div className="mt-3 pl-3 border-l-2 border-[var(--border)]/60">
+      <p className="text-[var(--muted)] leading-relaxed text-sm">
+        {parts[0]}
+        <button
+          type="button"
+          onClick={handleBatClick}
+          disabled={flying}
+          className={`inline-block align-middle transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded cursor-pointer disabled:pointer-events-none ${flying ? "animate-bat-fly" : ""}`}
+          aria-label="Easter egg"
+          title="Click me"
+        >
+          {BAT}
+        </button>
+        {parts[1]}
+        {revealed && (
+          <span className="ml-2 text-[var(--terminal)] text-xs" role="status">
+            I am batman
+          </span>
+        )}
+      </p>
+    </div>
   );
 }

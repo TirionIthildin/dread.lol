@@ -82,20 +82,20 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl, po
   }, [linkUrl, popupUrl]);
 
   if (!triggerWord || !tagline.toLowerCase().includes(triggerWord.toLowerCase())) {
-    return <p className="mt-1 text-sm text-[var(--accent)]">{tagline}</p>;
+    return <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">{tagline}</p>;
   }
 
   const parts = tagline.split(new RegExp(`(${triggerWord})`, "gi"));
   return (
     <>
-      <p className="mt-1 text-sm text-[var(--accent)]">
+      <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">
         {parts.map((part, i) =>
           part.toLowerCase() === triggerWord.toLowerCase() ? (
             <button
               key={i}
               type="button"
               onClick={handleTrigger}
-              className="cursor-pointer underline decoration-dashed underline-offset-2 hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded"
+              className="cursor-pointer underline decoration-dashed decoration-[var(--accent)]/60 underline-offset-3 hover:text-[var(--foreground)] hover:decoration-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded transition-colors"
               aria-label="Easter egg"
             >
               {part}

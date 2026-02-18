@@ -26,11 +26,11 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
         className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden transition-shadow duration-300 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]"
         aria-labelledby="profile-name"
       >
-        <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/90 px-3 py-2 sm:px-4">
+        <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/90 px-3 py-2.5 sm:px-4">
           <div className="flex gap-1.5 items-center shrink-0" aria-hidden>
-            <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
-            <span className="h-2 w-2 rounded-full bg-[#eab308]" />
-            <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#eab308] shadow-[0_0_6px_rgba(234,179,8,0.4)]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
           </div>
           <span className="ml-2 font-mono text-xs text-[var(--muted)] truncate flex-1 min-w-0">
             {profile.slug}.txt
@@ -42,7 +42,7 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
           </p>
           {profile.banner && (
             <pre
-              className={`leading-tight whitespace-pre font-mono mt-1.5 mb-3 overflow-x-auto overflow-y-hidden rounded py-1.5 ${
+              className={`leading-tight whitespace-pre font-mono mt-1.5 mb-4 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${
                 profile.bannerAnimatedFire ? "banner-fire-gradient" : "text-[var(--accent)]"
               }`}
               style={{
@@ -56,20 +56,20 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
               {profile.banner}
             </pre>
           )}
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-4 flex items-center gap-4">
             {profile.avatar && (
               <img
                 src={profile.avatar}
                 alt=""
-                width={56}
-                height={56}
+                width={64}
+                height={64}
                 loading="lazy"
                 decoding="async"
-                className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg"
+                className="h-16 w-16 shrink-0 rounded-full border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40"
               />
             )}
-            <div>
-              <h1 id="profile-name" className="text-lg font-semibold text-[var(--foreground)] tracking-tight">{profile.name}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 id="profile-name" className="text-xl font-semibold text-[var(--foreground)] tracking-tight">{profile.name}</h1>
               {profile.tagline && (
                 <TaglineWithEasterEgg
                   tagline={profile.tagline}
