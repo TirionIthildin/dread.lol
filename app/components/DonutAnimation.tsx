@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 const WIDTH = 90;
 const HEIGHT = 28;
@@ -13,10 +13,33 @@ const PHI_SPACING = 0.012;
 const CHARS = ".,-~:;=!*#$@";
 
 export default function DonutAnimation() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const frameRef = useRef<number>(0);
   const ARef = useRef(0);
   const BRef = useRef(0);
+  const [scale, setScale] = useState(1);
+
+  const updateScale = useCallback(() => {
+    const container = containerRef.current;
+    const pre = preRef.current;
+    if (!container || !pre) return;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const pw = pre.scrollWidth;
+    const ph = pre.scrollHeight;
+    if (pw <= 0 || ph <= 0) return;
+    const s = Math.min(1, cw / pw, ch / ph);
+    setScale((prev) => (Math.abs(prev - s) < 0.001 ? prev : s));
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => updateScale());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [updateScale]);
 
   useEffect(() => {
     const buffer = new Array(WIDTH * HEIGHT).fill(" ");
@@ -74,7 +97,10 @@ export default function DonutAnimation() {
       }
       const out = lines.join("\n");
 
-      if (preRef.current) preRef.current.textContent = out;
+      if (preRef.current) {
+        preRef.current.textContent = out;
+        requestAnimationFrame(updateScale);
+      }
 
       ARef.current += 0.03;
       BRef.current += 0.015;
@@ -83,21 +109,32 @@ export default function DonutAnimation() {
 
     frameRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(frameRef.current);
-  }, []);
+  }, [updateScale]);
 
   return (
-    <div className="donut-glow rounded-lg border border-[var(--border)] bg-black/40 p-4 sm:p-6 inline-block">
-      <pre
-        ref={preRef}
-        className="font-mono text-[9px] sm:text-[11px] leading-[1.15] text-[var(--accent)] whitespace-pre select-none"
+    <div
+      ref={containerRef}
+      className="donut-glow w-full h-full min-h-0 flex items-center justify-center rounded-lg border border-[var(--border)] bg-black/40 p-4 sm:p-6 overflow-hidden"
+    >
+      <div
+        className="flex items-center justify-center shrink-0"
         style={{
-          fontFamily: "var(--font-mono), monospace",
-          textShadow: "0 0 10px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.2)",
+          transform: `scale(${scale})`,
+          transformOrigin: "center",
         }}
-        aria-hidden
       >
-        {" "}
-      </pre>
+        <pre
+          ref={preRef}
+          className="font-mono text-[9px] sm:text-[11px] leading-[1.15] text-[var(--accent)] whitespace-pre select-none"
+          style={{
+            fontFamily: "var(--font-mono), monospace",
+            textShadow: "0 0 10px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.2)",
+          }}
+          aria-hidden
+        >
+          {" "}
+        </pre>
+      </div>
     </div>
   );
 }

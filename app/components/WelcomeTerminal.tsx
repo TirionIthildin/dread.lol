@@ -18,7 +18,16 @@ const BANNER_ASCII = ` _ .-') _  _  .-')     ('-.   ('-.     _ .-') _
  \`-------' \`--' '--' \`------'\`--' \`--' \`-------'  `;
 
 const BANNER_OUTPUT = (
-  <pre className="text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono overflow-x-auto" style={{ textShadow: "0 0 16px rgba(6, 182, 212, 0.25)" }} aria-hidden>
+  <pre
+    className="leading-tight whitespace-pre font-mono overflow-x-auto overflow-y-hidden text-[var(--accent)]"
+    style={{
+      fontSize: "clamp(6px, 1.8vh, 11px)",
+      lineHeight: 1.12,
+      maxHeight: "min(180px, 28vh)",
+      textShadow: "0 0 16px rgba(6, 182, 212, 0.25)",
+    }}
+    aria-hidden
+  >
     {BANNER_ASCII}
   </pre>
 );

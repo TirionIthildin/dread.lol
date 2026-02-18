@@ -42,21 +42,15 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
           </p>
           {profile.banner && (
             <pre
-              className={`leading-tight whitespace-pre font-mono mt-1.5 mb-3 overflow-x-auto rounded py-1.5 overflow-y-auto ${
-                profile.bannerSmall ? "" : "text-[9px] sm:text-[10px] max-h-[140px]"
-              } ${profile.bannerAnimatedFire ? "banner-fire-gradient" : "text-[var(--accent)]"}`}
-              style={
-                profile.bannerSmall
-                  ? {
-                      fontSize: "clamp(2px, 0.5vh, 5px)",
-                      lineHeight: 1.12,
-                      maxHeight: "min(240px, 32vh)",
-                      ...(!profile.bannerAnimatedFire && { textShadow: "0 0 20px rgba(6, 182, 212, 0.15)" }),
-                    }
-                  : !profile.bannerAnimatedFire
-                    ? { textShadow: "0 0 20px rgba(6, 182, 212, 0.15)" }
-                    : undefined
-              }
+              className={`leading-tight whitespace-pre font-mono mt-1.5 mb-3 overflow-x-auto overflow-y-hidden rounded py-1.5 ${
+                profile.bannerAnimatedFire ? "banner-fire-gradient" : "text-[var(--accent)]"
+              }`}
+              style={{
+                fontSize: profile.bannerSmall ? "clamp(2px, 0.5vh, 5px)" : "clamp(5px, 1.1vh, 10px)",
+                lineHeight: 1.12,
+                maxHeight: "min(260px, 32vh)",
+                ...(!profile.bannerAnimatedFire && { textShadow: "0 0 20px rgba(6, 182, 212, 0.15)" }),
+              }}
               aria-hidden
             >
               {profile.banner}
