@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProfileContent from "@/app/components/ProfileContent";
+import { getProfileBySlug, getProfileSlugs } from "@/lib/profiles";
 import {
-  getProfileBySlug,
-  getProfileSlugs,
-} from "@/lib/profiles";
+  getMemberProfileBySlug,
+  recordProfileView,
+  memberProfileToProfile,
+} from "@/lib/member-profiles";
+import { getClientIp, getUserAgent } from "@/lib/request";
 import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
+import type { Profile } from "@/lib/profiles";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -15,13 +19,17 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const profile = getProfileBySlug(slug);
+  const staticProfile = getProfileBySlug(slug);
+  let profile: Profile | null = staticProfile ?? null;
+  if (!profile) {
+    const memberRow = await getMemberProfileBySlug(slug);
+    profile = memberRow ? memberProfileToProfile(memberRow) : null;
+  }
   if (!profile) return { title: "Not found" };
   const title = profile.name;
-  const description =
-    profile.tagline ?? profile.description ?? `${profile.name} on ${SITE_NAME}`;
+  const description = profile.tagline ?? profile.description ?? `${profile.name} on ${SITE_NAME}`;
   const canonicalUrl = `${SITE_URL}/${slug}`;
-  const ogImage = profile.avatar ?? SITE_OG_IMAGE;
+  const ogImage = profile.ogImageUrl ?? profile.avatar ?? SITE_OG_IMAGE;
   return {
     title,
     description,
@@ -43,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function ProfileJsonLd({ profile }: { profile: NonNullable<ReturnType<typeof getProfileBySlug>> }) {
+function ProfileJsonLd({ profile }: { profile: Profile }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
@@ -63,8 +71,20 @@ function ProfileJsonLd({ profile }: { profile: NonNullable<ReturnType<typeof get
 
 export default async function ProfilePage({ params }: Props) {
   const { slug } = await params;
-  const profile = getProfileBySlug(slug);
-  if (!profile) notFound();
+  const staticProfile = getProfileBySlug(slug);
+  if (staticProfile) {
+    return (
+      <>
+        <ProfileJsonLd profile={staticProfile} />
+        <ProfileContent profile={staticProfile} />
+      </>
+    );
+  }
+  const memberRow = await getMemberProfileBySlug(slug);
+  if (!memberRow) notFound();
+  const [ip, userAgent] = await Promise.all([getClientIp(), getUserAgent()]);
+  await recordProfileView(memberRow.id, ip, userAgent);
+  const profile = memberProfileToProfile(memberRow);
   return (
     <>
       <ProfileJsonLd profile={profile} />

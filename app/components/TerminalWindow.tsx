@@ -147,7 +147,10 @@ export default function TerminalWindow({ title, children, className = "", onClos
       className={`overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm ${className} ${
         isClosing ? "opacity-0 scale-95 pointer-events-none" : ""
       } ${isFloating || isDragging ? "duration-0" : "transition-all duration-200"}`}
-      style={floatingStyle}
+      style={{
+        ...floatingStyle,
+        ...(isDragging && { willChange: "transform" }),
+      }}
       role="article"
       aria-hidden={isClosing}
     >

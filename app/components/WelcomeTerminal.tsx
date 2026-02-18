@@ -163,6 +163,9 @@ export default function WelcomeTerminal() {
         const next = historyIndex <= 0 ? -1 : historyIndex - 1;
         setHistoryIndex(next);
         setInput(next === -1 ? "" : history[next]);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === "l" || e.key === "k")) {
+        e.preventDefault();
+        setLines([]);
       }
     },
     [history, historyIndex]
@@ -214,7 +217,7 @@ export default function WelcomeTerminal() {
         </span>
       </form>
       <p className="mt-1.5 text-[10px] text-[var(--muted)]/70" aria-hidden>
-        Type <span className="text-[var(--accent)]/80">help</span> for commands
+        Type <span className="text-[var(--accent)]/80">help</span> for commands · <span className="text-[var(--muted)]/60">Ctrl+L</span> clear
       </p>
     </div>
   );

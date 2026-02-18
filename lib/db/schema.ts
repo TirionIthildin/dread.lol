@@ -1,0 +1,57 @@
+/**
+ * Postgres schema (Drizzle). Run migrations with: npm run db:migrate
+ * Users = Discord-linked accounts. Profiles = member pages (1 per user). ProfileViews = page view log.
+ */
+import { pgTable, text, timestamp, integer, serial, boolean } from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  discordUserId: text("discord_user_id").notNull().unique(),
+  username: text("username"),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const profiles = pgTable("profiles", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  tagline: text("tagline"),
+  description: text("description").notNull(),
+  avatarUrl: text("avatar_url"),
+  status: text("status"),
+  quote: text("quote"),
+  tags: text("tags").array(),
+  discord: text("discord"),
+  roblox: text("roblox"),
+  banner: text("banner"),
+  bannerSmall: boolean("banner_small").default(false),
+  bannerAnimatedFire: boolean("banner_animated_fire").default(false),
+  easterEgg: boolean("easter_egg").default(false),
+  easterEggTaglineWord: text("easter_egg_tagline_word"),
+  easterEggLinkTrigger: text("easter_egg_link_trigger"),
+  easterEggLinkUrl: text("easter_egg_link_url"),
+  easterEggLinkPopupUrl: text("easter_egg_link_popup_url"),
+  links: text("links"),
+  ogImageUrl: text("og_image_url"),
+  showUpdatedAt: boolean("show_updated_at").default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const profileViews = pgTable("profile_views", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  visitorIp: text("visitor_ip").notNull(),
+  userAgent: text("user_agent"),
+  viewedAt: timestamp("viewed_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type ProfileRow = typeof profiles.$inferSelect;
+export type NewProfileRow = typeof profiles.$inferInsert;
+export type ProfileViewRow = typeof profileViews.$inferSelect;

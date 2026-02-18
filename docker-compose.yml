@@ -1,38 +1,41 @@
-# Dread.lol - Build and run: docker compose up -d
+# Dread.lol - Postgres + Valkey only. Run: docker compose up -d
 #
-# Optional: set NEXT_PUBLIC_SITE_URL to this site's base URL (e.g. https://dread.lol)
-# for metadata, sitemap, and Open Graph image URLs. Use .env or export before docker compose up.
+# Run the app separately: npm run dev (connects to localhost:5432 and localhost:6379).
+# Set DATABASE_URL, VALKEY_URL, DISCORD_OAUTH_*, and AUTH_* in .env for the app.
 
 services:
-  dread:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: dread
+  postgres:
+    image: postgres:16-alpine
+    container_name: dread-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dread}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dread}
+      POSTGRES_DB: ${POSTGRES_DB:-dread}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dread} -d ${POSTGRES_DB:-dread}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8
+    container_name: dread-valkey
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - NEXT_TELEMETRY_DISABLED=1
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-}
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/tmp
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  valkey_data:

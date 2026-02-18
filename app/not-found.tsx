@@ -11,7 +11,14 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 grid-bg scanlines">
-      <div className="relative z-10 w-full max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="relative z-10 w-full max-w-2xl space-y-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--bg)] rounded-lg px-2 py-1 -mt-2"
+        >
+          <span className="text-[var(--terminal)]">$</span> cd .. — dread.lol
+        </Link>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden">
         <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/90 px-3 py-2.5 sm:px-4">
           <span className="h-2 w-2 rounded-full bg-[#ef4444]" aria-hidden />
           <span className="h-2 w-2 rounded-full bg-[#eab308]" aria-hidden />
@@ -41,6 +48,7 @@ export default function NotFound() {
             </Link>
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

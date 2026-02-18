@@ -204,6 +204,15 @@
   .animate-delay-700 { animation-delay: 700ms; }
   .animate-delay-1000 { animation-delay: 1000ms; }
 
+  @keyframes skeleton-shine {
+    0% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+    100% { opacity: 0.4; }
+  }
+  .animate-skeleton {
+    animation: skeleton-shine 1.5s ease-in-out infinite;
+  }
+
   .hover-lift {
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease;
   }

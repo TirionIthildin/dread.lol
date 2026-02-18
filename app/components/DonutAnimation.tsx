@@ -15,7 +15,6 @@ const CHARS = ".,-~:;=!*#$@";
 export default function DonutAnimation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
-  const frameRef = useRef<number>(0);
   const ARef = useRef(0);
   const BRef = useRef(0);
   const [scale, setScale] = useState(1);
@@ -44,8 +43,13 @@ export default function DonutAnimation() {
   useEffect(() => {
     const buffer = new Array(WIDTH * HEIGHT).fill(" ");
     const zbuffer = new Float32Array(WIDTH * HEIGHT);
+    let rafId = 0;
 
     function render() {
+      if (typeof document !== "undefined" && document.hidden) {
+        rafId = 0;
+        return;
+      }
       buffer.fill(" ");
       zbuffer.fill(0);
       const A = ARef.current;
@@ -104,11 +108,21 @@ export default function DonutAnimation() {
 
       ARef.current += 0.03;
       BRef.current += 0.015;
-      frameRef.current = requestAnimationFrame(render);
+      rafId = requestAnimationFrame(render);
     }
 
-    frameRef.current = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(frameRef.current);
+    rafId = requestAnimationFrame(render);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden && rafId === 0) {
+        rafId = requestAnimationFrame(render);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      cancelAnimationFrame(rafId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [updateScale]);
 
   return (

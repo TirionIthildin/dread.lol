@@ -32,6 +32,10 @@ export interface Profile {
   status?: string;
   /** Optional quote or fun fact. */
   quote?: string;
+  /** Custom OG/social image URL (member profiles only). */
+  ogImageUrl?: string;
+  /** When set, show "Last updated …" on the profile (member profiles only). */
+  updatedAt?: string;
 }
 
 export const PROFILES: Profile[] = [

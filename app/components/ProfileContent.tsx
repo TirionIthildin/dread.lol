@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Profile } from "@/lib/profiles";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
@@ -58,13 +59,11 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
           )}
           <div className="mt-4 flex items-center gap-4">
             {profile.avatar && (
-              <img
+              <Image
                 src={profile.avatar}
                 alt=""
                 width={64}
                 height={64}
-                loading="lazy"
-                decoding="async"
                 className="h-16 w-16 shrink-0 rounded-full border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40"
               />
             )}
@@ -96,6 +95,11 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
             roblox={profile.roblox}
             links={profile.links}
           />
+          {profile.updatedAt && (
+            <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)]">
+              Last updated {profile.updatedAt}
+            </p>
+          )}
         </div>
       </article>
     </div>

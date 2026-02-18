@@ -63,6 +63,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${jetbrainsMono.variable}`}>
       <head>
+        <link rel="preconnect" href="https://cdn.discordapp.com" />
+        <link rel="dns-prefetch" href="https://cdn.discordapp.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
