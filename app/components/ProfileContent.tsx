@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Profile } from "@/lib/profiles";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
+import ProfileTags from "@/app/components/ProfileTags";
+import ProfileStatus from "@/app/components/ProfileStatus";
+import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 
 interface ProfileContentProps {
@@ -68,7 +71,16 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
             text={profile.description}
             easterEgg={profile.easterEgg}
           />
-          <ProfileLinks discord={profile.discord} roblox={profile.roblox} />
+          {profile.tags && profile.tags.length > 0 && (
+            <ProfileTags tags={profile.tags} />
+          )}
+          {profile.status && <ProfileStatus status={profile.status} />}
+          {profile.quote && <ProfileQuote quote={profile.quote} />}
+          <ProfileLinks
+            discord={profile.discord}
+            roblox={profile.roblox}
+            links={profile.links}
+          />
         </div>
       </div>
     </div>

@@ -22,6 +22,14 @@ export interface Profile {
   easterEggLink?: { triggerWord: string; url: string };
   /** When true, render the banner with an animated fire gradient. */
   bannerAnimatedFire?: boolean;
+  /** Short tags/pills (e.g. "Vibe Coder", "LOTR"). */
+  tags?: string[];
+  /** Extra links (GitHub, Twitter, website, etc.). */
+  links?: { label: string; href: string }[];
+  /** Optional status line (e.g. "Building Ithildin"). */
+  status?: string;
+  /** Optional quote or fun fact. */
+  quote?: string;
 }
 
 export const PROFILES: Profile[] = [
@@ -50,6 +58,9 @@ export const PROFILES: Profile[] = [
                                                                            `,
     discord: "@qwe301",
     roblox: "https://www.roblox.com/users/1553094661/profile",
+    tags: ["Hustler", "Klass", "Income"],
+    status: "Outcome → income",
+    quote: "Long as the outcome is income.",
   },
   {
     slug: "balatro",
@@ -59,6 +70,9 @@ export const PROFILES: Profile[] = [
     description:
       "Larp communities since 2019.",
     discord: "@fluffynuttts_exodus",
+    tags: ["Larp", "Sanity", "Intervals"],
+    status: "Waiting. Always waiting.",
+    quote: "There are only long intervals of horrible sanity.",
     banner: `⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⢸⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠸⣿⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -93,6 +107,12 @@ export const PROFILES: Profile[] = [
     },
     description: "",
     bannerAnimatedFire: true,
+    tags: ["Vibe Coder", "Ithildin", "LOTR", "Tirion"],
+    links: [
+      { label: "Ithildin", href: "https://ithildin.co" },
+    ],
+    status: "Coding by starlight",
+    quote: "Speak friend and enter. ✧",
     banner: `    ███      ▄█     ▄████████  ▄█   ▄██████▄  ███▄▄▄▄   
 ▀█████████▄ ███    ███    ███ ███  ███    ███ ███▀▀▀██▄ 
    ▀███▀▀██ ███▌   ███    ███ ███▌ ███    ███ ███   ███ 
