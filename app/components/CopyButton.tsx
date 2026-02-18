@@ -32,7 +32,7 @@ export default function CopyButton({ copyValue, children, ariaLabel, className =
     >
       {children}
       {copied && (
-        <span className="text-xs text-[var(--terminal)]" role="status">
+        <span className="text-xs text-[var(--terminal)]" role="status" aria-live="polite">
           Copied!
         </span>
       )}

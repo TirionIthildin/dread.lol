@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import DonutAnimation from "@/app/components/DonutAnimation";
 
 const SLIDES = [
   "There is no sanity here.",
@@ -29,13 +30,16 @@ interface TaglineWithEasterEggProps {
   triggerWord?: string;
   /** When set, clicking the trigger word plays this URL in the background (YouTube) or opens in new tab. */
   linkUrl?: string;
+  /** When set with linkUrl, opens this URL in a modal overlay (e.g. donut math article). */
+  popupUrl?: string;
 }
 
-export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl }: TaglineWithEasterEggProps) {
+export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl, popupUrl }: TaglineWithEasterEggProps) {
   const [showOverlay, setShowOverlay] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [backgroundVideoSrc, setBackgroundVideoSrc] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
     if (!showOverlay) return;
@@ -56,6 +60,7 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl }: 
       const embedUrl = youtubeWatchToEmbedUrl(linkUrl);
       if (embedUrl) {
         setBackgroundVideoSrc(embedUrl);
+        if (popupUrl) setShowPopup(true);
         return;
       }
       window.open(linkUrl, "_blank", "noopener,noreferrer");
@@ -63,7 +68,7 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl }: 
     }
     setShowOverlay(true);
     setVideoSrc(YOUTUBE_EMBED_URL);
-  }, [linkUrl]);
+  }, [linkUrl, popupUrl]);
 
   if (!triggerWord || !tagline.toLowerCase().includes(triggerWord.toLowerCase())) {
     return <p className="mt-1 text-sm text-[var(--accent)]">{tagline}</p>;
@@ -99,6 +104,40 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl }: 
           className="fixed -left-[9999px] top-0 w-[100px] h-[100px] opacity-0 pointer-events-none overflow-hidden"
           aria-hidden
         />
+      )}
+
+      {showPopup && popupUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-black/90 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Spinning donut"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface)]/95 px-3 py-2 sm:px-4 shrink-0">
+            <span className="font-mono text-xs text-[var(--muted)] truncate">
+              donut
+            </span>
+            <a
+              href={popupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-[var(--accent)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--accent)] rounded"
+            >
+              Donut math (a1k0n)
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowPopup(false)}
+              className="ml-auto rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              aria-label="Close popup"
+            >
+              Close
+            </button>
+          </div>
+          <div className="flex-1 flex items-center justify-center min-h-0 p-4 overflow-auto">
+            <DonutAnimation />
+          </div>
+        </div>
       )}
 
       {showOverlay && (

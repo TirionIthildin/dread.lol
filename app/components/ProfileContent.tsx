@@ -23,7 +23,10 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
           cd ..
         </Link>
       </p>
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden">
+      <article
+        className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden"
+        aria-labelledby="profile-name"
+      >
         <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 sm:px-4">
           <div className="flex gap-1.5 items-center shrink-0" aria-hidden>
             <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
@@ -53,16 +56,19 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
                 alt=""
                 width={64}
                 height={64}
+                loading="lazy"
+                decoding="async"
                 className="h-16 w-16 shrink-0 rounded-full border-2 border-[var(--border)] object-cover"
               />
             )}
             <div>
-              <h1 className="text-xl font-semibold text-[var(--foreground)]">{profile.name}</h1>
+              <h1 id="profile-name" className="text-xl font-semibold text-[var(--foreground)]">{profile.name}</h1>
               {profile.tagline && (
                 <TaglineWithEasterEgg
                   tagline={profile.tagline}
                   triggerWord={profile.easterEggLink?.triggerWord ?? profile.easterEggTaglineWord}
                   linkUrl={profile.easterEggLink?.url}
+                  popupUrl={profile.easterEggLink?.popupUrl}
                 />
               )}
             </div>
@@ -82,7 +88,7 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
             links={profile.links}
           />
         </div>
-      </div>
+      </article>
     </div>
   );
 }

@@ -18,8 +18,8 @@ export interface Profile {
   easterEgg?: boolean;
   /** Word in tagline that triggers a scary easter egg when clicked (e.g. "sanity"). */
   easterEggTaglineWord?: string;
-  /** Word in tagline that opens a link when clicked (e.g. "Ithildin" → YouTube). */
-  easterEggLink?: { triggerWord: string; url: string };
+  /** Word in tagline that opens a link when clicked (e.g. "Ithildin" → YouTube). Optional popupUrl opens in a modal. */
+  easterEggLink?: { triggerWord: string; url: string; popupUrl?: string };
   /** When true, render the banner with an animated fire gradient. */
   bannerAnimatedFire?: boolean;
   /** Short tags/pills (e.g. "Vibe Coder", "LOTR"). */
@@ -104,6 +104,7 @@ export const PROFILES: Profile[] = [
     easterEggLink: {
       triggerWord: "Ithildin",
       url: "https://www.youtube.com/watch?v=caR7C2SHdFI&list=RDcaR7C2SHdFI&start_radio=1",
+      popupUrl: "https://www.a1k0n.net/2011/07/20/donut-math.html",
     },
     description: "",
     bannerAnimatedFire: true,
