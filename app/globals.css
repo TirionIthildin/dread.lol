@@ -255,6 +255,35 @@
   .animate-glitch {
     animation: glitch 0.3s ease-in-out infinite;
   }
+
+  @keyframes fire-gradient {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .banner-fire-gradient {
+    background: linear-gradient(
+      90deg,
+      #fef08a,
+      #fde047,
+      #fbbf24,
+      #f97316,
+      #ea580c,
+      #dc2626,
+      #f97316,
+      #fbbf24,
+      #fef08a
+    );
+    background-size: 200% 100%;
+    animation: fire-gradient 4s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 .content-container {

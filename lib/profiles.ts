@@ -18,6 +18,10 @@ export interface Profile {
   easterEgg?: boolean;
   /** Word in tagline that triggers a scary easter egg when clicked (e.g. "sanity"). */
   easterEggTaglineWord?: string;
+  /** Word in tagline that opens a link when clicked (e.g. "Ithildin" → YouTube). */
+  easterEggLink?: { triggerWord: string; url: string };
+  /** When true, render the banner with an animated fire gradient. */
+  bannerAnimatedFire?: boolean;
 }
 
 export const PROFILES: Profile[] = [
@@ -69,6 +73,27 @@ export const PROFILES: Profile[] = [
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠟⣿⣿⣿⣿⡟⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⢿⣿⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`,
+  },
+  {
+    slug: "tirion",
+    name: "Tirion",
+    tagline: "Programmer, Vibe Coder, Founder of Ithildin",
+    discord: "@TirionIthildin",
+    easterEggLink: {
+      triggerWord: "Ithildin",
+      url: "https://www.youtube.com/watch?v=caR7C2SHdFI&list=RDcaR7C2SHdFI&start_radio=1",
+    },
+    description: "",
+    bannerAnimatedFire: true,
+    banner: `    ███      ▄█     ▄████████  ▄█   ▄██████▄  ███▄▄▄▄   
+▀█████████▄ ███    ███    ███ ███  ███    ███ ███▀▀▀██▄ 
+   ▀███▀▀██ ███▌   ███    ███ ███▌ ███    ███ ███   ███ 
+    ███   ▀ ███▌  ▄███▄▄▄▄██▀ ███▌ ███    ███ ███   ███ 
+    ███     ███▌ ▀▀███▀▀▀▀▀   ███▌ ███    ███ ███   ███ 
+    ███     ███  ▀███████████ ███  ███    ███ ███   ███ 
+    ███     ███    ███    ███ ███  ███    ███ ███   ███ 
+   ▄████▀   █▀     ███    ███ █▀    ▀██████▀   ▀█   █▀  
+                   ███    ███                           `,
   },
 ];
 

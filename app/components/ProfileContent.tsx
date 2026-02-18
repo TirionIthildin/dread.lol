@@ -36,7 +36,10 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
             <span className="text-[var(--muted)]">$</span> cat {profile.slug}.txt
           </p>
           {profile.banner && (
-            <pre className="text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono mt-2 mb-4 overflow-x-auto" aria-hidden>
+            <pre
+              className={`text-[10px] sm:text-xs leading-tight whitespace-pre font-mono mt-2 mb-4 overflow-x-auto ${profile.bannerAnimatedFire ? "banner-fire-gradient" : "text-[var(--accent)]"}`}
+              aria-hidden
+            >
               {profile.banner}
             </pre>
           )}
@@ -55,7 +58,8 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
               {profile.tagline && (
                 <TaglineWithEasterEgg
                   tagline={profile.tagline}
-                  triggerWord={profile.easterEggTaglineWord}
+                  triggerWord={profile.easterEggLink?.triggerWord ?? profile.easterEggTaglineWord}
+                  linkUrl={profile.easterEggLink?.url}
                 />
               )}
             </div>

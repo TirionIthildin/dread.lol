@@ -11,16 +11,31 @@ const SLIDES = [
 
 const YOUTUBE_EMBED_URL = "https://www.youtube.com/embed/bFY_7g3hfb8?autoplay=1&start=8";
 
+function youtubeWatchToEmbedUrl(watchUrl: string): string | null {
+  try {
+    const url = new URL(watchUrl);
+    if (!url.hostname.includes("youtube.com") && !url.hostname.includes("youtu.be")) return null;
+    const id = url.hostname === "youtu.be" ? url.pathname.slice(1) : url.searchParams.get("v");
+    if (!id) return null;
+    return `https://www.youtube.com/embed/${id}?autoplay=1`;
+  } catch {
+    return null;
+  }
+}
+
 interface TaglineWithEasterEggProps {
   tagline: string;
   /** Word that triggers the easter egg when clicked (e.g. "sanity") */
   triggerWord?: string;
+  /** When set, clicking the trigger word plays this URL in the background (YouTube) or opens in new tab. */
+  linkUrl?: string;
 }
 
-export default function TaglineWithEasterEgg({ tagline, triggerWord }: TaglineWithEasterEggProps) {
+export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl }: TaglineWithEasterEggProps) {
   const [showOverlay, setShowOverlay] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [backgroundVideoSrc, setBackgroundVideoSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showOverlay) return;
@@ -37,9 +52,18 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord }: TaglineWi
   }, [slideIndex]);
 
   const handleTrigger = useCallback(() => {
+    if (linkUrl) {
+      const embedUrl = youtubeWatchToEmbedUrl(linkUrl);
+      if (embedUrl) {
+        setBackgroundVideoSrc(embedUrl);
+        return;
+      }
+      window.open(linkUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     setShowOverlay(true);
     setVideoSrc(YOUTUBE_EMBED_URL);
-  }, []);
+  }, [linkUrl]);
 
   if (!triggerWord || !tagline.toLowerCase().includes(triggerWord.toLowerCase())) {
     return <p className="mt-1 text-sm text-[var(--accent)]">{tagline}</p>;
@@ -65,6 +89,17 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord }: TaglineWi
           )
         )}
       </p>
+
+      {backgroundVideoSrc && (
+        <iframe
+          src={backgroundVideoSrc}
+          title="Easter egg audio"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="fixed -left-[9999px] top-0 w-[100px] h-[100px] opacity-0 pointer-events-none overflow-hidden"
+          aria-hidden
+        />
+      )}
 
       {showOverlay && (
         <>

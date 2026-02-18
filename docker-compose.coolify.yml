@@ -13,14 +13,14 @@
 
 services:
   dread:
-    image: ${DREAD_IMAGE}
+    image: registry.ithildin.co/poker/dread.lol/main
     restart: unless-stopped
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - NEXT_PUBLIC_SITE_URL=${SERVICE_FQDN_DREAD_3000}
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
       interval: 30s
