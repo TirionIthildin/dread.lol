@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import DonutAnimation from "@/app/components/DonutAnimation";
 
 const SLIDES = [
@@ -40,11 +40,22 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl, po
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [backgroundVideoSrc, setBackgroundVideoSrc] = useState<string | null>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!showOverlay) return;
     setSlideIndex(0);
   }, [showOverlay]);
+
+  useEffect(() => {
+    if (!showPopup) return;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowPopup(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showPopup]);
 
   const handleOverlayClick = useCallback(() => {
     if (slideIndex + 1 >= SLIDES.length) {
@@ -108,33 +119,40 @@ export default function TaglineWithEasterEgg({ tagline, triggerWord, linkUrl, po
 
       {showPopup && popupUrl && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col bg-black/90 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg)]/98 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-label="Spinning donut"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface)]/95 px-3 py-2 sm:px-4 shrink-0">
-            <span className="font-mono text-xs text-[var(--muted)] truncate">
-              donut
-            </span>
-            <a
-              href={popupUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-[var(--accent)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--accent)] rounded"
-            >
-              Donut math (a1k0n)
-            </a>
-            <button
-              type="button"
-              onClick={() => setShowPopup(false)}
-              className="ml-auto rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-              aria-label="Close popup"
-            >
-              Close
-            </button>
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden style={{ backgroundImage: "linear-gradient(rgba(6, 182, 212, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.2) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+          <div className="relative flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface)]/90 px-3 py-2.5 sm:px-4 shrink-0 shadow-lg shadow-black/20">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[var(--accent)]" aria-hidden />
+              <span className="font-mono text-xs text-[var(--muted)] truncate">
+                donut.c
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={popupUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-[var(--accent)] hover:text-[var(--terminal)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] rounded px-2 py-1"
+              >
+                a1k0n.net
+              </a>
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={() => setShowPopup(false)}
+                className="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                aria-label="Close popup (Escape)"
+              >
+                Close
+              </button>
+            </div>
           </div>
-          <div className="flex-1 flex items-center justify-center min-h-0 p-4 overflow-auto">
+          <div className="relative flex-1 flex items-center justify-center min-h-0 p-6 overflow-auto">
             <DonutAnimation />
           </div>
         </div>

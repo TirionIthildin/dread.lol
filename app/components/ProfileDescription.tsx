@@ -23,12 +23,12 @@ export default function ProfileDescription({ text, easterEgg }: ProfileDescripti
   }, []);
 
   if (!easterEgg || !text.includes(BAT)) {
-    return <p className="mt-4 text-[var(--muted)] leading-relaxed">{text}</p>;
+    return <p className="mt-2 text-[var(--muted)] leading-relaxed text-sm">{text}</p>;
   }
 
   const parts = text.split(BAT);
   return (
-    <p className="mt-4 text-[var(--muted)] leading-relaxed">
+    <p className="mt-2 text-[var(--muted)] leading-relaxed text-sm">
       {parts[0]}
       <button
         type="button"

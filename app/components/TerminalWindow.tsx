@@ -144,7 +144,7 @@ export default function TerminalWindow({ title, children, className = "", onClos
 
   const terminalChrome = (
     <div
-      className={`overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm ${className} ${
+      className={`overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm ${className} ${
         isClosing ? "opacity-0 scale-95 pointer-events-none" : ""
       } ${isFloating || isDragging ? "duration-0" : "transition-all duration-200"}`}
       style={floatingStyle}
@@ -152,7 +152,7 @@ export default function TerminalWindow({ title, children, className = "", onClos
       aria-hidden={isClosing}
     >
       <div
-        className={`flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 sm:px-4 transition-colors select-none ${
+        className={`flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/80 px-3 py-1.5 sm:px-4 transition-colors select-none ${
           isMinimized ? "cursor-pointer hover:bg-[var(--border)]/30" : "cursor-grab active:cursor-grabbing"
         } ${isDragging ? "cursor-grabbing" : ""}`}
         onClick={isMinimized ? handleExpand : undefined}
@@ -174,7 +174,7 @@ export default function TerminalWindow({ title, children, className = "", onClos
         <span className="shrink-0 flex items-center" aria-hidden>
           <Logo size={20} className="w-5 h-5 opacity-90" />
         </span>
-        <div className="flex gap-1.5 items-center shrink-0 ml-2" aria-hidden>
+        <div className="flex gap-1.5 items-center shrink-0 ml-2" aria-hidden role="presentation">
           {onClose ? (
             <button
               type="button"
@@ -209,7 +209,7 @@ export default function TerminalWindow({ title, children, className = "", onClos
         aria-hidden={isMinimized}
       >
         <div className="min-h-0 overflow-hidden border-t border-[var(--border)]/50">
-          <div className="p-4 font-mono text-sm sm:p-5 sm:text-sm">{children}</div>
+          <div className="p-3 font-mono text-sm sm:p-4 sm:text-sm">{children}</div>
         </div>
       </div>
     </div>

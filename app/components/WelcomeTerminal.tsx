@@ -2,31 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import { SITE_NAME } from "@/lib/site";
 import { PROFILES } from "@/lib/profiles";
 
 const PROMPT = "$";
-
-const DREADFETCH_INFO: Array<{ label: string; value: string }> = [
-  { label: "Site", value: SITE_NAME },
-  { label: "Tagline", value: "No algorithm. No ads. Just the void." },
-  { label: "Theme", value: "terminal cyan / eternal night" },
-  { label: "Status", value: "awake" },
-  { label: "Uptime", value: "since the void" },
-  { label: "Shell", value: "dark mode only" },
-];
-
-const DREADFETCH_OUTPUT = (
-  <div className="min-w-0 space-y-0.5 text-xs sm:text-sm">
-    {DREADFETCH_INFO.map(({ label, value }) => (
-      <div key={label} className="flex gap-2">
-        <span className="shrink-0 text-[var(--accent)] w-20">{label}</span>
-        <span className="text-[var(--muted)]">:</span>
-        <span className="text-[var(--foreground)]">{value}</span>
-      </div>
-    ))}
-  </div>
-);
 
 const BANNER_ASCII = ` _ .-') _  _  .-')     ('-.   ('-.     _ .-') _   
 ( (  OO) )( \\( -O )  _(  OO) ( OO ).-.( (  OO) )  
@@ -39,7 +18,7 @@ const BANNER_ASCII = ` _ .-') _  _  .-')     ('-.   ('-.     _ .-') _
  \`-------' \`--' '--' \`------'\`--' \`--' \`-------'  `;
 
 const BANNER_OUTPUT = (
-  <pre className="text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono overflow-x-auto" aria-hidden>
+  <pre className="text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono overflow-x-auto" style={{ textShadow: "0 0 16px rgba(6, 182, 212, 0.25)" }} aria-hidden>
     {BANNER_ASCII}
   </pre>
 );
@@ -47,15 +26,10 @@ const BANNER_OUTPUT = (
 const INTRO_LINES: Array<{ type: "command" | "output"; content: ReactNode }> = [
   { type: "output", content: BANNER_OUTPUT },
   { type: "output", content: null },
-  { type: "command", content: "dreadfetch" },
-  { type: "output", content: null },
-  { type: "output", content: DREADFETCH_OUTPUT },
-  { type: "output", content: null },
 ];
 
 const HELP_LINES = [
   "help — show this message",
-  "dreadfetch — show site info",
   "cat intro.txt — show intro",
   ...PROFILES.map((p) => `open ${p.slug} — ${p.name}'s profile`),
   "whoami — current user",
@@ -75,16 +49,7 @@ const HELP_OUTPUT = (
 );
 
 const INTRO_OUTPUT = (
-  <span className="block space-y-1">
-    <span className="text-[var(--foreground)]">
-      <span className="text-[var(--accent)]">TITLE</span>
-      <span className="text-[var(--muted)]">:</span> {SITE_NAME}
-    </span>
-    <span className="text-[var(--foreground)]">
-      <span className="text-[var(--accent)]">TAGLINE</span>
-      <span className="text-[var(--muted)]">:</span> No algorithm. No ads. Just the void.
-    </span>
-  </span>
+  <span className="text-[var(--foreground)]">{SITE_NAME}</span>
 );
 
 type LineEntry = { type: "command" | "output"; content: ReactNode };
@@ -92,7 +57,6 @@ type LineEntry = { type: "command" | "output"; content: ReactNode };
 function runCommand(cmd: string): { output: ReactNode; navigate?: string } | null {
   const c = cmd.trim().toLowerCase();
   if (c === "help" || c === "?") return { output: HELP_OUTPUT };
-  if (c === "dreadfetch" || c === "fetch") return { output: DREADFETCH_OUTPUT };
   if (c === "cat intro.txt" || c === "cat intro") return { output: INTRO_OUTPUT };
   const profile = PROFILES.find((p) => c === `open ${p.slug}` || c === p.slug);
   if (profile) return { output: `Opening ${profile.name}...`, navigate: `/${profile.slug}` };
@@ -101,7 +65,7 @@ function runCommand(cmd: string): { output: ReactNode; navigate?: string } | nul
     return {
       output: (
         <span className="text-[var(--foreground)]">
-          {[...PROFILES.map((p) => p.slug), "intro.txt", "dreadfetch", "help"].join("  ")}
+          {[...PROFILES.map((p) => p.slug), "intro.txt", "help"].join("  ")}
         </span>
       ),
     };
@@ -199,7 +163,7 @@ export default function WelcomeTerminal() {
     <div className="space-y-1 text-left" onClick={() => inputRef.current?.focus()}>
       <div
         ref={scrollRef}
-        className="max-h-[50vh] min-h-[120px] overflow-y-auto overflow-x-hidden pr-2 scroll-smooth"
+        className="max-h-[38vh] min-h-[80px] overflow-y-auto overflow-x-hidden pr-2 scroll-smooth"
         tabIndex={-1}
         role="log"
         aria-label="Terminal output"
@@ -218,7 +182,7 @@ export default function WelcomeTerminal() {
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="mt-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <form onSubmit={handleSubmit} className="mt-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
         <span className="text-[var(--muted)] shrink-0">{PROMPT}</span>
         <input
           ref={inputRef}
@@ -226,7 +190,7 @@ export default function WelcomeTerminal() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="min-w-0 flex-1 border-0 bg-transparent px-1 py-0 font-mono text-sm text-[var(--terminal)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-0"
+          className="min-w-0 flex-1 border-0 bg-transparent px-1 py-0 font-mono text-sm text-[var(--terminal)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-0 selection:bg-[var(--accent)]/30"
           placeholder="enter command..."
           aria-label="Terminal command"
           autoComplete="off"
@@ -240,6 +204,9 @@ export default function WelcomeTerminal() {
           _
         </span>
       </form>
+      <p className="mt-1.5 text-[10px] text-[var(--muted)]/70" aria-hidden>
+        Type <span className="text-[var(--accent)]/80">help</span> for commands
+      </p>
     </div>
   );
 }

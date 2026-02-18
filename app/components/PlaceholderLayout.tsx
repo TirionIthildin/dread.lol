@@ -42,7 +42,7 @@ export default function PlaceholderLayout({ children }: PlaceholderLayoutProps) 
 
       <main
         id="main-content"
-        className="flex-1 flex flex-col items-center justify-center p-4"
+        className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 overflow-auto"
         tabIndex={-1}
       >
         {children}

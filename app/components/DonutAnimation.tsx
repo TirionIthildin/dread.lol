@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from "react";
 
-const WIDTH = 80;
-const HEIGHT = 22;
+const WIDTH = 90;
+const HEIGHT = 28;
 const R1 = 1;
 const R2 = 2;
 const K2 = 5;
 const K1 = (WIDTH * K2 * 3) / (8 * (R1 + R2));
-const THETA_SPACING = 0.07;
-const PHI_SPACING = 0.02;
+const THETA_SPACING = 0.05;
+const PHI_SPACING = 0.012;
 const CHARS = ".,-~:;=!*#$@";
 
 export default function DonutAnimation() {
@@ -76,8 +76,8 @@ export default function DonutAnimation() {
 
       if (preRef.current) preRef.current.textContent = out;
 
-      ARef.current += 0.04;
-      BRef.current += 0.02;
+      ARef.current += 0.03;
+      BRef.current += 0.015;
       frameRef.current = requestAnimationFrame(render);
     }
 
@@ -86,13 +86,18 @@ export default function DonutAnimation() {
   }, []);
 
   return (
-    <pre
-      ref={preRef}
-      className="font-mono text-[8px] sm:text-[10px] leading-tight text-[var(--accent)] whitespace-pre m-auto select-none"
-      style={{ fontFamily: "var(--font-mono), monospace" }}
-      aria-hidden
-    >
-      {" "}
-    </pre>
+    <div className="donut-glow rounded-lg border border-[var(--border)] bg-black/40 p-4 sm:p-6 inline-block">
+      <pre
+        ref={preRef}
+        className="font-mono text-[9px] sm:text-[11px] leading-[1.15] text-[var(--accent)] whitespace-pre select-none"
+        style={{
+          fontFamily: "var(--font-mono), monospace",
+          textShadow: "0 0 10px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.2)",
+        }}
+        aria-hidden
+      >
+        {" "}
+      </pre>
+    </div>
   );
 }
