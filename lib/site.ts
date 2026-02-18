@@ -7,8 +7,7 @@ export const SITE_URL =
   "https://dread.lol";
 
 export const SITE_NAME = "Dread.Lol" as const;
-export const SITE_DESCRIPTION =
-  "Profiles for friends — Klass, Balatro, Tirion, and more." as const;
+export const SITE_DESCRIPTION = "Accessing the terminal." as const;
 
 /** Default OG/Twitter image. Use absolute URL for social crawlers. */
 export const SITE_OG_IMAGE = `${SITE_URL}/logo.png`;
