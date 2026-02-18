@@ -70,7 +70,7 @@ export const PROFILES: Profile[] = [
     tagline: "I became insane, with long intervals of horrible sanity",
     easterEggTaglineWord: "sanity",
     description:
-      "Larp communities since 2019.",
+      "I must not only punish, but punish with impunity.",
     discord: "@fluffynuttts_exodus",
     tags: ["Larp", "Sanity", "Intervals"],
     status: "Waiting. Always waiting.",
