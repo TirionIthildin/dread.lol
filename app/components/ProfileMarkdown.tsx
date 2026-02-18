@@ -5,18 +5,33 @@ import remarkGfm from "remark-gfm";
 
 const baseClass = "profile-markdown";
 
+const SAFE_LINK_PROTOCOLS = ["https:", "http:"];
+
+function isSafeHref(href: string | undefined | null): boolean {
+  if (!href || typeof href !== "string") return false;
+  try {
+    const protocol = new URL(href, "https://dread.lol").protocol.toLowerCase();
+    return SAFE_LINK_PROTOCOLS.includes(protocol);
+  } catch {
+    return false;
+  }
+}
+
 const components = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-[var(--accent)] underline underline-offset-2 hover:text-[var(--accent)]/90"
-    >
-      {children}
-    </a>
-  ),
+  a: ({ href, children }) => {
+    const safe = isSafeHref(href);
+    return (
+      <a
+        href={safe ? href : "#"}
+        target={safe ? "_blank" : undefined}
+        rel={safe ? "noopener noreferrer" : undefined}
+        className="text-[var(--accent)] underline underline-offset-2 hover:text-[var(--accent)]/90"
+      >
+        {children}
+      </a>
+    );
+  },
   strong: ({ children }) => <strong className="font-semibold text-[var(--foreground)]">{children}</strong>,
   em: ({ children }) => <em>{children}</em>,
   ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-0.5">{children}</ul>,

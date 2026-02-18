@@ -58,6 +58,7 @@ export const profiles = pgTable("profiles", {
   layoutDensity: text("layout_density"),
   noindex: boolean("noindex").default(false),
   metaDescription: text("meta_description"),
+  showPageViews: boolean("show_page_views").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

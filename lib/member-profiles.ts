@@ -152,6 +152,12 @@ export async function getMemberProfileBySlug(slug: string): Promise<ProfileRow |
   return row ?? null;
 }
 
+/** Get member profile by id. Returns null if not found. Used for ownership checks. */
+export async function getMemberProfileById(profileId: number): Promise<ProfileRow | null> {
+  const [row] = await db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
+  return row ?? null;
+}
+
 /** Get profile slug for a user (for revalidation). Returns null if no profile. */
 export async function getProfileSlugByUserId(userId: string): Promise<string | null> {
   const [row] = await db.select({ slug: profiles.slug }).from(profiles).where(eq(profiles.userId, userId)).limit(1);
@@ -228,6 +234,7 @@ export async function updateMemberProfile(
     layoutDensity?: string;
     noindex?: boolean;
     metaDescription?: string;
+    showPageViews?: boolean;
   }
 ): Promise<ProfileRow> {
   const [row] = await db

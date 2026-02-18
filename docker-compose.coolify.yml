@@ -9,18 +9,50 @@
 # 3. Assign the domain to the dread service.
 # 4. Set NEXT_PUBLIC_SITE_URL to this site's public URL (e.g. https://dread.lol)
 #    so metadata, sitemap, and Open Graph images use absolute URLs.
+# 5. Set POSTGRES_PASSWORD (and optionally POSTGRES_USER, POSTGRES_DB) for the DB.
 # ============================================
 
 services:
-  dread:
-    image: registry.ithildin.co/poker/dread.lol/main
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dread}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dread}
+      POSTGRES_DB: ${POSTGRES_DB:-dread}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dread} -d ${POSTGRES_DB:-dread}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8
+    restart: unless-stopped
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dread:
+    image: registry.ithildin.co/poker/dread.lol
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_SITE_URL=${SERVICE_FQDN_DREAD_3000}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-dread}:${POSTGRES_PASSWORD:-dread}@postgres:5432/${POSTGRES_DB:-dread}
+      - VALKEY_URL=redis://valkey:6379
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
       interval: 30s
@@ -39,3 +71,7 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+
+volumes:
+  postgres_data:
+  valkey_data:

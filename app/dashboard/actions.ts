@@ -3,16 +3,38 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { updateMemberProfile, getOrCreateUser, approveUser, setUserBadges, getProfileSlugByUserId } from "@/lib/member-profiles";
+import { normalizeSlug } from "@/lib/slug";
 
 export type ProfileFormState = { error?: string; success?: boolean; savedAt?: string } | null;
 
-function normalizeSlug(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64) || "member";
+function parseLinksValue(linksRaw: string | null | undefined): string | null {
+  if (!linksRaw?.trim()) return null;
+  const trimmed = linksRaw.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const arr = JSON.parse(trimmed) as unknown;
+      if (!Array.isArray(arr)) return null;
+      const valid = arr.filter(
+        (x): x is { label: string; href: string } =>
+          x && typeof x === "object" && typeof (x as { label?: string }).label === "string" && typeof (x as { href?: string }).href === "string"
+      );
+      return valid.length > 0 ? JSON.stringify(valid) : null;
+    } catch {
+      return null;
+    }
+  }
+  const parsed = trimmed
+    .split("\n")
+    .map((line) => {
+      const sep = line.includes("|") ? "|" : "\t";
+      const i = line.indexOf(sep);
+      if (i === -1) return null;
+      const label = line.slice(0, i).trim();
+      const href = line.slice(i + 1).trim();
+      return label && href ? { label, href } : null;
+    })
+    .filter(Boolean);
+  return parsed.length > 0 ? JSON.stringify(parsed) : null;
 }
 
 export async function updateProfileAction(
@@ -28,23 +50,8 @@ export async function updateProfileAction(
   const id = parseInt(profileId, 10);
   if (Number.isNaN(id)) return { error: "Invalid profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
-  const slug = rawSlug ? normalizeSlug(rawSlug).slice(0, 64) : undefined;
-  const linksRaw = (formData.get("links") as string)?.trim();
-  const linksJson =
-    linksRaw &&
-    JSON.stringify(
-      linksRaw
-        .split("\n")
-        .map((line) => {
-          const sep = line.includes("|") ? "|" : "\t";
-          const i = line.indexOf(sep);
-          if (i === -1) return null;
-          const label = line.slice(0, i).trim();
-          const href = line.slice(i + 1).trim();
-          return label && href ? { label, href } : null;
-        })
-        .filter(Boolean)
-    );
+  const slug = rawSlug ? normalizeSlug(rawSlug) : undefined;
+  const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
   try {
     await updateMemberProfile(id, session.sub, {
       slug,
@@ -69,7 +76,7 @@ export async function updateProfileAction(
       useTerminalLayout: formData.get("useTerminalLayout") === "on",
       terminalTitle: (formData.get("terminalTitle") as string)?.trim() || undefined,
       terminalCommands: (formData.get("terminalCommands") as string)?.trim() || null,
-      links: linksJson ?? null,
+      links: linksJson,
       ogImageUrl: (formData.get("ogImageUrl") as string)?.trim() || undefined,
       showUpdatedAt: formData.get("showUpdatedAt") === "on",
       accentColor: (formData.get("accentColor") as string)?.trim() || undefined,
@@ -84,6 +91,7 @@ export async function updateProfileAction(
       layoutDensity: (formData.get("layoutDensity") as string)?.trim() || undefined,
       noindex: formData.get("noindex") === "on",
       metaDescription: ((formData.get("metaDescription") as string)?.trim() || undefined)?.slice(0, 200),
+      showPageViews: formData.get("showPageViews") === "on",
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";

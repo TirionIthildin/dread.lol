@@ -19,13 +19,15 @@ type Props = {
 export default function AdminPendingList({ pending, onApproved }: Props) {
   const [isPending, startTransition] = useTransition();
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function handleApprove(userId: string) {
+    setError(null);
     setApprovingId(userId);
     startTransition(async () => {
       const result = await approveUserAction(userId);
       if (result.error) {
-        alert(result.error);
+        setError(result.error);
         setApprovingId(null);
       } else {
         onApproved?.() ?? window.location.reload();
@@ -35,7 +37,16 @@ export default function AdminPendingList({ pending, onApproved }: Props) {
   }
 
   return (
-    <ul className="space-y-3">
+    <div className="space-y-3">
+      {error && (
+        <div
+          className="rounded-lg border border-[var(--warning)]/50 bg-[var(--warning)]/10 px-3 py-2 text-sm text-[var(--warning)]"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+      <ul className="space-y-3">
       {pending.map((u) => {
         const busy = approvingId === u.id && isPending;
         return (
@@ -81,6 +92,7 @@ export default function AdminPendingList({ pending, onApproved }: Props) {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }

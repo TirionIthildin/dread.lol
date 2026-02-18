@@ -33,6 +33,12 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col grid-bg scanlines">
+      <a
+        href="#main-content"
+        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-lg focus:bg-[var(--accent)] focus:px-3 focus:py-2 focus:text-[var(--bg)] focus:font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:[clip:auto] focus:[margin:0]"
+      >
+        Skip to content
+      </a>
       <div
         className="fixed inset-0 -z-10 overflow-hidden pointer-events-none"
         aria-hidden

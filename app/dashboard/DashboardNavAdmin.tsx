@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AdminPendingList, { type PendingUser } from "@/app/dashboard/AdminPendingList";
 import AdminBadgesList from "@/app/dashboard/AdminBadgesList";
@@ -16,10 +17,13 @@ export type AdminUser = {
   createdAt: string;
 };
 
+type AdminPanel = "users" | "improvement";
+
 type Props = { isAdmin: boolean };
 
 export default function DashboardNavAdmin({ isAdmin }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<AdminPanel>("users");
   const [pending, setPending] = useState<PendingUser[] | null>(null);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,6 +64,7 @@ export default function DashboardNavAdmin({ isAdmin }: Props) {
 
   function openModal() {
     setModalOpen(true);
+    setActivePanel("users");
     setPending(null);
     setUsers(null);
     setError(null);
@@ -113,27 +118,33 @@ export default function DashboardNavAdmin({ isAdmin }: Props) {
         Admin
       </button>
 
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="admin-modal-title"
-        >
+      {modalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={closeModal}
-            aria-hidden
-          />
-          <div className="relative z-10 w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl">
-            <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-4 py-3">
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-modal-title"
+          >
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={closeModal}
+              aria-hidden
+            />
+            <div
+              className="relative z-10 w-full max-w-3xl max-h-[85vh] flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border)] px-4 py-3 bg-[var(--bg)]/80">
               <h2 id="admin-modal-title" className="text-lg font-semibold text-[var(--foreground)]">
                 Admin
               </h2>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-colors"
                 aria-label="Close"
               >
                 <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -141,43 +152,101 @@ export default function DashboardNavAdmin({ isAdmin }: Props) {
                 </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {loading && pending === null && users === null ? (
-                <p className="text-sm text-[var(--muted)]">Loading…</p>
-              ) : error ? (
-                <p className="text-sm text-[var(--warning)]">{error}</p>
-              ) : (
-                <>
-                  <section>
-                    <h3 className="text-sm font-medium text-[var(--muted)] mb-2">Pending approval</h3>
-                    {pending && pending.length > 0 ? (
-                      <AdminPendingList
-                        pending={pending.map((u) => ({
-                          ...u,
-                          createdAt: typeof u.createdAt === "string" ? new Date(u.createdAt) : u.createdAt,
-                        }))}
-                        onApproved={() => {
-                          fetchPending();
-                          fetchUsers();
-                        }}
-                      />
+
+            <div className="flex flex-1 min-h-0">
+              {/* Sidebar */}
+              <nav
+                className="shrink-0 w-48 border-r border-[var(--border)] bg-[var(--bg)]/50 p-2 flex flex-col gap-0.5"
+                aria-label="Admin sections"
+              >
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("users")}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                    activePanel === "users"
+                      ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
+                      : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
+                  }`}
+                >
+                  <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  User management
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("improvement")}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                    activePanel === "improvement"
+                      ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
+                      : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
+                  }`}
+                >
+                  <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  Improvement
+                </button>
+              </nav>
+
+              {/* Main content */}
+              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                {activePanel === "users" && (
+                  <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    {loading && pending === null && users === null ? (
+                      <p className="text-sm text-[var(--muted)]">Loading…</p>
+                    ) : error ? (
+                      <p className="text-sm text-[var(--warning)]">{error}</p>
                     ) : (
-                      <p className="text-sm text-[var(--muted)]">No pending accounts.</p>
+                      <>
+                        <section>
+                          <h3 className="text-sm font-medium text-[var(--muted)] mb-2">Pending approval</h3>
+                          {pending && pending.length > 0 ? (
+                            <AdminPendingList
+                              pending={pending.map((u) => ({
+                                ...u,
+                                createdAt: typeof u.createdAt === "string" ? new Date(u.createdAt) : u.createdAt,
+                              }))}
+                              onApproved={() => {
+                                fetchPending();
+                                fetchUsers();
+                              }}
+                            />
+                          ) : (
+                            <p className="text-sm text-[var(--muted)]">No pending accounts.</p>
+                          )}
+                        </section>
+                        <section>
+                          <h3 className="text-sm font-medium text-[var(--muted)] mb-2">Verified & Staff badges</h3>
+                          {users && users.length > 0 ? (
+                            <AdminBadgesList users={users} onUpdate={fetchUsers} />
+                          ) : (
+                            <p className="text-sm text-[var(--muted)]">No users yet.</p>
+                          )}
+                        </section>
+                      </>
                     )}
-                  </section>
-                  <section>
-                    <h3 className="text-sm font-medium text-[var(--muted)] mb-2">Verified & Staff badges</h3>
-                    {users && users.length > 0 ? (
-                      <AdminBadgesList users={users} onUpdate={fetchUsers} />
-                    ) : (
-                      <p className="text-sm text-[var(--muted)]">No users yet.</p>
-                    )}
-                  </section>
-                </>
-              )}
+                  </div>
+                )}
+                {activePanel === "improvement" && (
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-6 text-center">
+                      <p className="text-[var(--muted)] text-sm">
+                        Improvement tools and suggestions will live here.
+                      </p>
+                      <p className="text-[var(--muted)] text-xs mt-2">
+                        Coming soon.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

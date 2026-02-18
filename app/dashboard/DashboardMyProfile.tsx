@@ -16,10 +16,9 @@ import { useActionState, useState, useCallback } from "react";
 import { useFormStatus } from "react-dom";
 import type { ProfileRow, ProfileViewRow } from "@/lib/db/schema";
 import { updateProfileAction, type ProfileFormState } from "@/app/dashboard/actions";
+import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
-
-const SLUG_MAX = 64;
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
@@ -217,12 +216,8 @@ export default function DashboardMyProfile({
   const [avatarUrlValue, setAvatarUrlValue] = useState(profile.avatarUrl ?? "");
   const [slugCheck, setSlugCheck] = useState<"idle" | "checking" | "available" | "taken">("idle");
 
-  const normalizeSlugForCheck = useCallback((raw: string) =>
-    raw.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, SLUG_MAX) || ""
-  , []);
-
   const checkSlugAvailability = useCallback(async () => {
-    const s = normalizeSlugForCheck(slugValue);
+    const s = normalizeSlug(slugValue);
     if (!s) {
       setSlugCheck("idle");
       return;
@@ -237,7 +232,7 @@ export default function DashboardMyProfile({
     } catch {
       setSlugCheck("idle");
     }
-  }, [slugValue, profile.id, normalizeSlugForCheck]);
+  }, [slugValue, profile.id]);
 
   const expandAll = () => setOpenSections(Object.fromEntries(SECTION_KEYS.map((k) => [k, true])));
   const collapseAll = () => setOpenSections(Object.fromEntries(SECTION_KEYS.map((k) => [k, false])));
@@ -262,9 +257,11 @@ export default function DashboardMyProfile({
             </Link>
             <CopyProfileUrlButton slug={profile.slug} />
           </div>
-          <p className="text-sm font-medium text-[var(--foreground)]">
-            {viewCount} view{viewCount !== 1 ? "s" : ""}
-          </p>
+          {(profile.showPageViews ?? true) && (
+            <p className="text-sm font-medium text-[var(--foreground)]">
+              {viewCount} view{viewCount !== 1 ? "s" : ""}
+            </p>
+          )}
         </div>
         <div className="flex border-b border-[var(--border)] bg-[var(--bg)]/50">
           <TabButton active={tab === "editor"} onClick={() => setTab("editor")} icon={<PencilSimple {...dashIcon} />}>
@@ -327,15 +324,15 @@ export default function DashboardMyProfile({
                   type="text"
                   name="slug"
                   value={slugValue}
-                  onChange={(e) => { setSlugValue(e.target.value.slice(0, SLUG_MAX)); setSlugCheck("idle"); }}
+                  onChange={(e) => { setSlugValue(e.target.value.slice(0, SLUG_MAX_LENGTH)); setSlugCheck("idle"); }}
                   onBlur={checkSlugAvailability}
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   pattern="[a-z0-9_-]+"
                   title="Letters, numbers, hyphen, underscore only"
-                  maxLength={SLUG_MAX}
+                  maxLength={SLUG_MAX_LENGTH}
                 />
                 <span className="mt-0.5 block text-[10px] text-[var(--muted)]">
-                  {slugValue.length} / {SLUG_MAX}
+                  {slugValue.length} / {SLUG_MAX_LENGTH}
                   {slugCheck === "checking" && " · Checking…"}
                   {slugCheck === "available" && slugValue.trim() && (
                     <span className="text-[var(--terminal)]"> · Available</span>
@@ -751,6 +748,10 @@ export default function DashboardMyProfile({
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
                 <input type="checkbox" name="showUpdatedAt" defaultChecked={profile.showUpdatedAt ?? false} className="rounded border-[var(--border)]" />
                 Show “Last updated” date on profile
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
+                <input type="checkbox" name="showPageViews" defaultChecked={profile.showPageViews ?? true} className="rounded border-[var(--border)]" />
+                Display page views in dashboard
               </label>
               </div>
             </details>

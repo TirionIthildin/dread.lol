@@ -99,13 +99,23 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
           )}
           <div className="mt-4 flex items-center gap-4">
             {profile.avatar && (
-              <Image
-                src={profile.avatar}
-                alt=""
-                width={64}
-                height={64}
-                className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
-              />
+              profile.avatar.includes("cdn.discordapp.com") ? (
+                <Image
+                  src={profile.avatar}
+                  alt=""
+                  width={64}
+                  height={64}
+                  className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
+                />
+              ) : (
+                <img
+                  src={profile.avatar}
+                  alt=""
+                  width={64}
+                  height={64}
+                  className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
+                />
+              )
             )}
             <div className="profile-name-block min-w-0 flex-1">
               <h1 id="profile-name" className="text-xl font-semibold text-[var(--foreground)] tracking-tight flex items-center gap-2 flex-wrap">

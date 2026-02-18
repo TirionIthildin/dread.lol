@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { getMemberProfileBySlug } from "@/lib/member-profiles";
-
-function normalizeSlug(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64) || "";
-}
+import { getMemberProfileBySlug, getMemberProfileById } from "@/lib/member-profiles";
+import { normalizeSlug } from "@/lib/slug";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -26,7 +18,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ available: false, error: "Slug is required" });
   }
 
+  let ownsCurrentProfile = false;
+  if (profileId != null && !Number.isNaN(profileId)) {
+    const profile = await getMemberProfileById(profileId);
+    ownsCurrentProfile = profile?.userId === session.sub;
+  }
+
   const existing = await getMemberProfileBySlug(slug);
-  const available = !existing || (profileId != null && existing.id === profileId);
+  const available = !existing || (ownsCurrentProfile && existing.id === profileId);
   return NextResponse.json({ available });
 }

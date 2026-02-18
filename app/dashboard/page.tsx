@@ -6,6 +6,7 @@ import {
   getOrCreateMemberProfile,
   getProfileViews,
 } from "@/lib/member-profiles";
+import { slugFromUsername } from "@/lib/slug";
 import DashboardAuth from "@/app/dashboard/DashboardAuth";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
 import UnapprovedMessage from "@/app/components/UnapprovedMessage";
@@ -17,14 +18,6 @@ export const metadata: Metadata = {
 };
 
 type Props = { searchParams: Promise<{ error?: string; message?: string }> };
-
-function slugFromUsername(username: string): string {
-  return username
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "") || "member";
-}
 
 export default async function DashboardPage({ searchParams }: Props) {
   const session = await getSession();
