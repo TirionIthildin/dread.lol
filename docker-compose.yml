@@ -1,0 +1,38 @@
+# Dread.lol - Build and run: docker compose up -d
+#
+# Optional: set NEXT_PUBLIC_SITE_URL to this site's base URL (e.g. https://dread.lol)
+# for metadata, sitemap, and Open Graph image URLs. Use .env or export before docker compose up.
+
+services:
+  dread:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dread
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID

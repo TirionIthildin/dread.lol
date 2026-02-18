@@ -1,0 +1,41 @@
+# ============================================
+# Dread.lol - Coolify Deployment
+# ============================================
+# Use a pre-built image from your registry. Coolify handles proxy and TLS.
+#
+# Setup in Coolify:
+# 1. Create a new Docker Compose resource and use this file.
+# 2. Set DREAD_IMAGE to your image (e.g. ghcr.io/your-org/dread-lol:latest).
+# 3. Assign the domain to the dread service.
+# 4. Set NEXT_PUBLIC_SITE_URL to this site's public URL (e.g. https://dread.lol)
+#    so metadata, sitemap, and Open Graph images use absolute URLs.
+# ============================================
+
+services:
+  dread:
+    image: ${DREAD_IMAGE}
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
