@@ -1,19 +1,13 @@
 "use client";
 
-import Footer from "@/app/components/Footer";
-import { usePathname } from "next/navigation";
-
 interface PlaceholderLayoutProps {
   children: React.ReactNode;
 }
 
 /**
- * Placeholder-style layout: no top nav, centered main, footer.
- * Same structure as Placeholder (ithildin placeholder page).
+ * Placeholder-style layout: no top nav, centered main.
  */
 export default function PlaceholderLayout({ children }: PlaceholderLayoutProps) {
-  const pathname = usePathname();
-
   return (
     <div className="min-h-screen flex flex-col grid-bg scanlines">
       <a
@@ -53,8 +47,6 @@ export default function PlaceholderLayout({ children }: PlaceholderLayoutProps) 
       >
         {children}
       </main>
-
-      <Footer pathname={pathname ?? "/"} />
     </div>
   );
 }

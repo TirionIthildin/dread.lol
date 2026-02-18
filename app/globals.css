@@ -242,6 +242,19 @@
   .animate-bat-fly {
     animation: batFly 1.2s ease-in-out forwards;
   }
+
+  @keyframes glitch {
+    0% { transform: translate(0); opacity: 1; }
+    20% { transform: translate(-2px, 2px); opacity: 0.9; }
+    40% { transform: translate(2px, -2px); opacity: 1; }
+    60% { transform: translate(-2px, -2px); opacity: 0.9; }
+    80% { transform: translate(2px, 2px); opacity: 1; }
+    100% { transform: translate(0); opacity: 1; }
+  }
+
+  .animate-glitch {
+    animation: glitch 0.3s ease-in-out infinite;
+  }
 }
 
 .content-container {

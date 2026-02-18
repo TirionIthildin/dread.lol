@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Profile } from "@/lib/profiles";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
+import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 
 interface ProfileContentProps {
   profile: Profile;
@@ -52,7 +53,10 @@ export default function ProfileContent({ profile }: ProfileContentProps) {
             <div>
               <h1 className="text-xl font-semibold text-[var(--foreground)]">{profile.name}</h1>
               {profile.tagline && (
-                <p className="mt-1 text-sm text-[var(--accent)]">{profile.tagline}</p>
+                <TaglineWithEasterEgg
+                  tagline={profile.tagline}
+                  triggerWord={profile.easterEggTaglineWord}
+                />
               )}
             </div>
           </div>

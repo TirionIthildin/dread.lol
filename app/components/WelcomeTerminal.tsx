@@ -9,10 +9,11 @@ const PROMPT = "$";
 
 const DREADFETCH_INFO: Array<{ label: string; value: string }> = [
   { label: "Site", value: SITE_NAME },
-  { label: "Tagline", value: SITE_DESCRIPTION },
-  { label: "Profiles", value: PROFILES.map((p) => p.name).join(", ") },
-  { label: "Theme", value: "terminal cyan" },
-  { label: "Status", value: "Ready" },
+  { label: "Tagline", value: "No algorithm. No ads. Just the void." },
+  { label: "Theme", value: "terminal cyan / eternal night" },
+  { label: "Status", value: "awake" },
+  { label: "Uptime", value: "since the void" },
+  { label: "Shell", value: "dark mode only" },
 ];
 
 const DREADFETCH_OUTPUT = (
@@ -27,7 +28,25 @@ const DREADFETCH_OUTPUT = (
   </div>
 );
 
+const BANNER_ASCII = ` _ .-') _  _  .-')     ('-.   ('-.     _ .-') _   
+( (  OO) )( \\( -O )  _(  OO) ( OO ).-.( (  OO) )  
+ \\     .'_ ,------. (,------./ . --. / \\     .'_  
+ ,\`'--..._)|   /\`. ' |  .---'| \\-.  \\  ,\`'--..._) 
+ |  |  \\  '|  /  | | |  |  .-'-'  |  | |  |  \\  ' 
+ |  |   ' ||  |_.' |(|  '--.\\| |_.'  | |  |   ' | 
+ |  |   / :|  .  '.' |  .--' |  .-.  | |  |   / : 
+ |  '--'  /|  |\\  \\  |  \`---.|  | |  | |  '--'  / 
+ \`-------' \`--' '--' \`------'\`--' \`--' \`-------'  `;
+
+const BANNER_OUTPUT = (
+  <pre className="text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono overflow-x-auto" aria-hidden>
+    {BANNER_ASCII}
+  </pre>
+);
+
 const INTRO_LINES: Array<{ type: "command" | "output"; content: ReactNode }> = [
+  { type: "output", content: BANNER_OUTPUT },
+  { type: "output", content: null },
   { type: "command", content: "dreadfetch" },
   { type: "output", content: null },
   { type: "output", content: DREADFETCH_OUTPUT },
@@ -63,11 +82,7 @@ const INTRO_OUTPUT = (
     </span>
     <span className="text-[var(--foreground)]">
       <span className="text-[var(--accent)]">TAGLINE</span>
-      <span className="text-[var(--muted)]">:</span> {SITE_DESCRIPTION}
-    </span>
-    <span className="text-[var(--foreground)]">
-      <span className="text-[var(--accent)]">PROFILES</span>
-      <span className="text-[var(--muted)]">:</span> {PROFILES.map((p) => p.name).join(", ")}
+      <span className="text-[var(--muted)]">:</span> No algorithm. No ads. Just the void.
     </span>
   </span>
 );

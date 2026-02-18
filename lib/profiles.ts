@@ -16,6 +16,8 @@ export interface Profile {
   roblox?: string;
   /** When true, the bat 🦇 in description is clickable and shows an easter egg. */
   easterEgg?: boolean;
+  /** Word in tagline that triggers a scary easter egg when clicked (e.g. "sanity"). */
+  easterEggTaglineWord?: string;
 }
 
 export const PROFILES: Profile[] = [
@@ -41,6 +43,7 @@ export const PROFILES: Profile[] = [
     slug: "balatro",
     name: "Balatro",
     tagline: "I became insane, with long intervals of horrible sanity",
+    easterEggTaglineWord: "sanity",
     description:
       "Larp communities since 2019.",
     discord: "@fluffynuttts_exodus",

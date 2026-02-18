@@ -31,6 +31,15 @@ export default function HomePageContent() {
             </Link>
           </span>
         ))}
+        <span className="mx-2">·</span>
+        <a
+          href="https://ithildin.co"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--muted)] transition-colors hover:text-[var(--terminal)] focus:outline-none focus:underline focus:decoration-[var(--accent)]"
+        >
+          open ithildin
+        </a>
       </p>
     </div>
   );
