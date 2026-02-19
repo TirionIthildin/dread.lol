@@ -355,40 +355,44 @@ export default function ProfileContent({ profile, vouches, reactions, similarPro
                   easterEggLink={profile.easterEggLink}
                 />
               )}
-              {profile.location?.trim() && (
-                <p className="text-xs text-[var(--muted)] mt-0.5 inline-flex items-center gap-1.5">
-                  <MapPin {...profileMetaIconProps} aria-hidden />
-                  {profile.location.trim()}
-                </p>
-              )}
-              {profile.timezone?.trim() && (() => {
-                try {
-                  const formatter = new Intl.DateTimeFormat(undefined, {
-                    timeZone: profile.timezone.trim(),
-                    timeStyle: "short",
-                    hour12: true,
-                  });
-                  const localTime = formatter.format(new Date());
-                  return (
-                    <p className="text-xs text-[var(--muted)] mt-0.5 inline-flex items-center gap-1.5" title={`Current time in ${profile.timezone}`}>
-                      <Clock {...profileMetaIconProps} aria-hidden />
-                      {localTime}
+              {((profile.location?.trim() || profile.timezone?.trim() || profile.birthday?.trim()) && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                  {profile.location?.trim() && (
+                    <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5">
+                      <MapPin {...profileMetaIconProps} aria-hidden />
+                      {profile.location.trim()}
                     </p>
-                  );
-                } catch {
-                  return null;
-                }
-              })()}
-              {profile.birthday?.trim() && (() => {
-                const countdown = getBirthdayCountdown(profile.birthday);
-                if (!countdown) return null;
-                return (
-                  <p className="text-xs text-[var(--muted)] mt-0.5 inline-flex items-center gap-1.5">
-                    <Cake {...profileMetaIconProps} aria-hidden />
-                    {countdown}
-                  </p>
-                );
-              })()}
+                  )}
+                  {profile.timezone?.trim() && (() => {
+                    try {
+                      const formatter = new Intl.DateTimeFormat(undefined, {
+                        timeZone: profile.timezone.trim(),
+                        timeStyle: "short",
+                        hour12: true,
+                      });
+                      const localTime = formatter.format(new Date());
+                      return (
+                        <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5" title={`Current time in ${profile.timezone}`}>
+                          <Clock {...profileMetaIconProps} aria-hidden />
+                          {localTime}
+                        </p>
+                      );
+                    } catch {
+                      return null;
+                    }
+                  })()}
+                  {profile.birthday?.trim() && (() => {
+                    const countdown = getBirthdayCountdown(profile.birthday);
+                    if (!countdown) return null;
+                    return (
+                      <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5">
+                        <Cake {...profileMetaIconProps} aria-hidden />
+                        {countdown}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )) || null}
               {profile.discordPresence && (
                 <div className="mt-2.5">
                   <DiscordPresenceDisplay
