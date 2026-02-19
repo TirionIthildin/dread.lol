@@ -38,7 +38,7 @@ const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" }
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
-type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "audio" | "statusIndicator";
+type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "audio";
 const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNode }[] = [
   { id: "basics", label: "Basics", icon: <Notebook {...dashIcon} aria-hidden /> },
   { id: "links", label: "Links", icon: <LinkIcon {...dashIcon} aria-hidden /> },
@@ -47,7 +47,6 @@ const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNo
   { id: "display", label: "Display & SEO", icon: <Palette {...dashIcon} aria-hidden /> },
   { id: "fun", label: "Styling", icon: <SlidersHorizontal {...dashIcon} aria-hidden /> },
   { id: "audio", label: "Audio Manager", icon: <MusicNotes {...dashIcon} aria-hidden /> },
-  { id: "statusIndicator", label: "Status, quotes & tags", icon: <Circle {...dashIcon} aria-hidden /> },
 ];
 
 function TemplateConfirmModal({
@@ -593,6 +592,9 @@ export default function DashboardMyProfile({
                 className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
               />
             </label>
+            <p className="text-xs text-[var(--muted)] rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
+              Status and presence come from Discord when you’re in our server. Join the Discord and your live status (online/idle/busy) plus Rich Presence (e.g. “Playing X”) will appear on your profile.
+            </p>
             <div className="space-y-2">
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Avatar
@@ -1462,12 +1464,6 @@ export default function DashboardMyProfile({
                   </p>
                 </div>
               )}
-            </div>
-
-            <div className={activeEditorSection === "statusIndicator" ? "block space-y-3" : "hidden"}>
-              <p className="text-xs text-[var(--muted)] rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
-                Status and presence come from Discord when you’re in our server. Join the Discord and your live status (online/idle/busy) plus Rich Presence (e.g. “Playing X”) will appear on your profile.
-              </p>
             </div>
 
             {state?.success && (
