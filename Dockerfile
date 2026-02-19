@@ -40,6 +40,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/package.json /app/package-lock.json* ./
+RUN npm install discord.js ioredis --omit=dev --ignore-scripts && npm cache clean --force
+RUN chmod +x scripts/entrypoint.sh
 
 USER nextjs
 
@@ -51,4 +55,4 @@ ENV HOSTNAME="0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-CMD ["node", "server.js"]
+CMD ["sh", "scripts/entrypoint.sh"]

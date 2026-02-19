@@ -11,7 +11,7 @@
 #    so metadata, sitemap, and Open Graph images use absolute URLs.
 # 5. Set POSTGRES_PASSWORD (and optionally POSTGRES_USER, POSTGRES_DB) for the DB.
 # 6. For live Discord status on profiles: set DISCORD_BOT_TOKEN and DISCORD_GUILD_ID.
-#    The dread-bot service runs alongside the site. Without a token it exits gracefully (no restart loop).
+#    The bot runs inside the dread container. Without a token it exits gracefully (no restart loop).
 # ============================================
 
 services:
@@ -59,20 +59,6 @@ services:
     depends_on:
       seaweed-master: { condition: service_healthy }
 
-  dread-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile.bot
-    image: dread-lol-bot
-    restart: on-failure
-    depends_on:
-      valkey: { condition: service_healthy }
-    environment:
-      - NODE_ENV=production
-      - VALKEY_URL=redis://valkey:6379
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
-      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
-
   dread:
     image: registry.ithildin.co/poker/dread.lol
     restart: unless-stopped
@@ -90,6 +76,8 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER:-dread}:${POSTGRES_PASSWORD:-dread}@postgres:5432/${POSTGRES_DB:-dread}
       - VALKEY_URL=redis://valkey:6379
       - SEAWEED_MASTER_URL=http://seaweed-master:9333
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
       interval: 30s
