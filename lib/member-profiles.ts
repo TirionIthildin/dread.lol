@@ -75,20 +75,35 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
     };
   }
   const now = new Date();
-  await users.insertOne({
-    _id: id,
-    discordUserId: session.sub,
-    username: session.preferred_username ?? null,
-    displayName: session.name ?? null,
-    avatarUrl: session.picture ?? null,
-    approved: false,
-    isAdmin: false,
-    verified: false,
-    staff: false,
-    discordPublicFlags: session.public_flags ?? null,
-    createdAt: now,
-    updatedAt: now,
-  });
+  try {
+    await users.insertOne({
+      _id: id,
+      discordUserId: session.sub,
+      username: session.preferred_username ?? null,
+      displayName: session.name ?? null,
+      avatarUrl: session.picture ?? null,
+      approved: false,
+      isAdmin: false,
+      verified: false,
+      staff: false,
+      discordPublicFlags: session.public_flags ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (err: unknown) {
+    // Race: another request created the user first (E11000 duplicate key)
+    if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000) {
+      const existing = await users.findOne({ _id: id });
+      if (existing) {
+        return {
+          id: existing._id,
+          approved: existing.approved,
+          isAdmin: existing.isAdmin || getAdminDiscordIds().includes(existing.discordUserId),
+        };
+      }
+    }
+    throw err;
+  }
   return { id, approved: false, isAdmin: getAdminDiscordIds().includes(session.sub) };
 }
 
