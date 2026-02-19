@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exchangeCode, getUserInfo, getAvatarUrl } from "@/lib/auth/discord";
+import { exchangeCode, getUserInfo, getAvatarUrl, getUserGuilds } from "@/lib/auth/discord";
 import {
   consumeOAuthState,
   createSession,
   getSessionCookieConfig,
 } from "@/lib/auth/session";
+import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
 
 const DASHBOARD_PATH = "/dashboard";
@@ -38,8 +39,22 @@ export async function GET(request: NextRequest) {
 
   try {
     const tokens = await exchangeCode(code);
-    const userInfo = await getUserInfo(tokens.access_token);
+    const [userInfo, guilds] = await Promise.all([
+      getUserInfo(tokens.access_token),
+      getUserGuilds(tokens.access_token).catch(() => []),
+    ]);
     const picture = getAvatarUrl(userInfo);
+    if (guilds.length > 0) {
+      const client = await getDb();
+      const dbName = await getDbName();
+      const db = client.db(dbName);
+      await db.collection(COLLECTIONS.userGuilds).updateOne(
+        { userId: userInfo.id },
+        { $set: { guilds, updatedAt: new Date() }, $setOnInsert: { userId: userInfo.id } },
+        { upsert: true }
+      );
+    }
+
     const sessionValue = await createSession({
       sub: userInfo.id,
       name: userInfo.global_name ?? userInfo.username,

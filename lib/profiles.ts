@@ -116,6 +116,8 @@ export interface Profile {
   };
   /** How to display Discord presence: pills (default), minimal, stacked, inline. */
   discordPresenceStyle?: string;
+  /** Last seen in Discord (ISO string), when offline or no presence. */
+  discordLastSeen?: string;
   /** When true, show an audio player widget on the profile. */
   showAudioPlayer?: boolean;
   /** Audio tracks for the player: url and optional title. */

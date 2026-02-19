@@ -9,7 +9,8 @@ import crypto from "node:crypto";
 const DISCORD_AUTHORIZE = "https://discord.com/api/oauth2/authorize";
 const DISCORD_TOKEN = "https://discord.com/api/oauth2/token";
 const DISCORD_USER_ME = "https://discord.com/api/users/@me";
-const DEFAULT_SCOPES = "identify";
+const DISCORD_USER_GUILDS = "https://discord.com/api/users/@me/guilds";
+const DEFAULT_SCOPES = "identify guilds";
 
 function getConfig() {
   const clientId = process.env.DISCORD_OAUTH_CLIENT_ID?.trim();
@@ -108,6 +109,26 @@ export async function getUserInfo(accessToken: string): Promise<DiscordUser> {
     throw new Error(`Discord userinfo failed: ${res.status} ${text}`);
   }
   return res.json() as Promise<DiscordUser>;
+}
+
+export interface DiscordGuild {
+  id: string;
+  name: string;
+}
+
+/**
+ * Fetch current user's guilds (requires guilds scope).
+ */
+export async function getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
+  const res = await fetch(DISCORD_USER_GUILDS, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Discord guilds fetch failed: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as { id: string; name: string }[];
+  return data.map((g) => ({ id: g.id, name: g.name }));
 }
 
 /**

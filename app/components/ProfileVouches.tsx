@@ -9,6 +9,7 @@ interface ProfileVouchesProps {
   slug: string;
   count: number;
   vouchedBy: VouchedByUser[];
+  mutualVouchers?: VouchedByUser[];
   currentUserHasVouched: boolean;
   canVouch: boolean;
 }
@@ -17,6 +18,7 @@ export default function ProfileVouches({
   slug,
   count: initialCount,
   vouchedBy: initialVouchedBy,
+  mutualVouchers = [],
   currentUserHasVouched: initialHasVouched,
   canVouch,
 }: ProfileVouchesProps) {
@@ -54,6 +56,17 @@ export default function ProfileVouches({
 
   return (
     <div className="mt-4 pt-3 border-t border-[var(--border)]/50">
+      {mutualVouchers.length > 0 && (
+        <p className="text-xs text-[var(--muted)] mb-2">
+          You&apos;re both vouched by{" "}
+          {mutualVouchers.map((u, i) => (
+            <span key={u.userId}>
+              {i > 0 && ", "}
+              <span className="font-medium text-[var(--foreground)]">{displayName(u)}</span>
+            </span>
+          ))}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-[var(--muted)]">
           {count} {count === 1 ? "vouch" : "vouches"}

@@ -40,6 +40,8 @@ const HELP_LINES = [
   "help — show this message",
   "cat intro.txt — show intro",
   "login — sign in with Discord",
+  "leaderboard — top vouches this month",
+  "trending — profiles trending this week",
   "whoami — current user",
   "ls — list files",
   "clear — clear screen",
@@ -67,12 +69,14 @@ function runCommand(cmd: string): { output: ReactNode; navigate?: string; redire
   if (c === "help" || c === "?") return { output: HELP_OUTPUT };
   if (c === "cat intro.txt" || c === "cat intro") return { output: INTRO_OUTPUT };
   if (c === "login") return { output: "Redirecting to sign in...", redirect: "/api/auth/discord" };
+  if (c === "leaderboard" || c === "top") return { output: "Opening leaderboard...", navigate: "/leaderboard" };
+  if (c === "trending") return { output: "Opening trending...", navigate: "/trending" };
   if (c === "whoami") return { output: "guest" };
   if (c === "ls" || c === "ls -la" || c === "ls -l") {
     return {
       output: (
         <span className="text-[var(--foreground)]">
-          {"intro.txt help login".split(" ").join("  ")}
+          {"intro.txt help login leaderboard trending".split(" ").join("  ")}
         </span>
       ),
     };

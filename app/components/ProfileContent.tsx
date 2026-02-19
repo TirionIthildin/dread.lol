@@ -13,11 +13,14 @@ import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
+import ProfileReactions from "@/app/components/ProfileReactions";
+import ProfileReportButton from "@/app/components/ProfileReportButton";
 import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
 import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
+import { formatLastSeen } from "@/lib/discord-lastseen";
 import { SITE_URL } from "@/lib/site";
 
 function resolveMediaUrl(url: string): string {
@@ -140,16 +143,36 @@ export interface ProfileVouchesData {
   slug: string;
   count: number;
   vouchedBy: VouchedByUser[];
+  mutualVouchers?: VouchedByUser[];
   currentUserHasVouched: boolean;
   canVouch: boolean;
+}
+
+export interface ProfileReactionsData {
+  slug: string;
+  reactions: { emoji: string; count: number }[];
+  userReaction: string | null;
+  canReact: boolean;
+}
+
+interface SimilarProfile {
+  slug: string;
+  name: string;
 }
 
 interface ProfileContentProps {
   profile: Profile;
   vouches?: ProfileVouchesData;
+  reactions?: ProfileReactionsData;
+  similarProfiles?: SimilarProfile[];
+  mutualGuilds?: string[];
+  /** Show report button (when viewing others). False only when viewing own profile. */
+  canReport?: boolean;
+  /** Can actually submit (requires login) */
+  canSubmitReport?: boolean;
 }
 
-export default function ProfileContent({ profile, vouches }: ProfileContentProps) {
+export default function ProfileContent({ profile, vouches, reactions, similarProfiles, mutualGuilds, canReport, canSubmitReport }: ProfileContentProps) {
   const themeClass =
     profile.accentColor && ACCENT_THEMES.includes(profile.accentColor as (typeof ACCENT_THEMES)[number])
       ? `profile-theme-${profile.accentColor}`
@@ -231,6 +254,7 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
           <span className="ml-2 font-mono text-xs text-[var(--muted)] truncate flex-1 min-w-0">
             {profile.slug}.txt
           </span>
+          {canReport !== false && <ProfileReportButton slug={profile.slug} canSubmit={canSubmitReport ?? false} />}
         </div>
         <div className="p-3 font-mono text-sm sm:p-4 sm:text-sm border-t border-[var(--border)]/50 profile-content-inner">
           <p className="text-[var(--terminal)]">
@@ -375,6 +399,16 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                   />
                 </div>
               )}
+              {profile.discordLastSeen && (
+                <p className="text-xs text-[var(--muted)] mt-1.5">
+                  Last active in Discord {formatLastSeen(new Date(profile.discordLastSeen))}
+                </p>
+              )}
+              {mutualGuilds && mutualGuilds.length > 0 && (
+                <p className="text-xs text-[var(--muted)] mt-1.5">
+                  We&apos;re both in: {mutualGuilds.join(", ")}
+                </p>
+              )}
             </div>
           </div>
           {profile.description && (
@@ -395,11 +429,36 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
           {profile.showAudioPlayer && profile.audioTracks && profile.audioTracks.length > 0 && (
             <ProfileAudioPlayer tracks={profile.audioTracks} />
           )}
+          {reactions && (
+            <ProfileReactions
+              slug={reactions.slug}
+              reactions={reactions.reactions}
+              userReaction={reactions.userReaction}
+              canReact={reactions.canReact}
+            />
+          )}
+          {similarProfiles && similarProfiles.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-[var(--border)]/50">
+              <p className="text-xs font-medium text-[var(--muted)] mb-2">Similar profiles</p>
+              <div className="flex flex-wrap gap-2">
+                {similarProfiles.map((p) => (
+                  <Link
+                    key={p.slug}
+                    href={`/${p.slug}`}
+                    className="inline-flex items-center gap-1 rounded-md bg-[var(--bg)]/50 px-2 py-1 text-sm text-[var(--foreground)]/90 hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] border border-[var(--border)]/50 transition-colors"
+                  >
+                    {p.name || p.slug}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           {vouches && (
             <ProfileVouches
               slug={vouches.slug}
               count={vouches.count}
               vouchedBy={vouches.vouchedBy}
+              mutualVouchers={vouches.mutualVouchers}
               currentUserHasVouched={vouches.currentUserHasVouched}
               canVouch={vouches.canVouch}
             />

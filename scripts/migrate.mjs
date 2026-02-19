@@ -50,6 +50,7 @@ try {
   await db.collection("profile_views").createIndex({ profileId: 1, viewedAt: -1 });
 
   await db.collection("vouches").createIndex({ profileId: 1, userId: 1 }, { unique: true });
+  await db.collection("profile_reactions").createIndex({ profileId: 1, userId: 1 }, { unique: true });
   await db.collection("vouches").createIndex({ profileId: 1, createdAt: -1 });
 
   await db.collection("gallery_items").createIndex({ profileId: 1, sortOrder: 1 });
@@ -60,6 +61,10 @@ try {
   await db.collection("badges").createIndex({ sortOrder: 1 });
 
   await db.collection("user_badges").createIndex({ userId: 1, badgeId: 1 }, { unique: true });
+  await db.collection("user_guilds").createIndex({ userId: 1 }, { unique: true });
+
+  await db.collection("profile_reports").createIndex({ profileId: 1, reportedBy: 1 }, { unique: true });
+  await db.collection("profile_reports").createIndex({ profileId: 1, createdAt: -1 });
 
   console.log("MongoDB indexes created.");
 } catch (err) {

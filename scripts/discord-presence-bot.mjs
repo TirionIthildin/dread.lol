@@ -17,7 +17,9 @@ const PRESENCE_KEY_PREFIX = "discord:presence:";
 const PRESENCE_TTL_SECONDS = 300; // 5 min
 const FLAGS_KEY_PREFIX = "discord:flags:";
 const PREMIUM_KEY_PREFIX = "discord:premium:";
+const LASTSEEN_KEY_PREFIX = "discord:lastseen:";
 const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 h
+const LASTSEEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const DISCORD_API = "https://discord.com/api/v10";
 
 const token = process.env.DISCORD_BOT_TOKEN?.trim();
@@ -115,6 +117,11 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   redis
     .setex(key, PRESENCE_TTL_SECONDS, value)
     .catch((err) => console.error("[Redis] setex", userId, err.message));
+
+  const lastSeenKey = LASTSEEN_KEY_PREFIX + userId;
+  redis
+    .setex(lastSeenKey, LASTSEEN_TTL_SECONDS, String(Date.now()))
+    .catch((err) => console.error("[Redis] lastseen", userId, err.message));
 
   fetchAndStoreUserFlags(userId).catch(() => {});
 });

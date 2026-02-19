@@ -15,9 +15,8 @@ import {
   setDiscordPremiumInRedis,
 } from "@/lib/discord-flags";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
-import { getDb, getDbName } from "@/lib/db";
-import { COLLECTIONS } from "@/lib/db/collections";
-import type { UserDoc } from "@/lib/db/schema";
+import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
+import type { UserDoc } from "@/lib/db";
 
 export async function GET(request: Request) {
   const err = await requireAdmin();

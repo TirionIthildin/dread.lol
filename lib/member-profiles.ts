@@ -695,6 +695,298 @@ export async function removeVouch(profileId: string, userId: string): Promise<bo
   return result.deletedCount > 0;
 }
 
+/**
+ * Get users who have vouched both the viewer's profile and the viewed profile.
+ * Returns empty if viewer is not logged in or has no profile.
+ */
+export async function getMutualVouchers(
+  viewerUserId: string,
+  viewedProfileId: string,
+  viewedProfileOwnerUserId: string
+): Promise<VouchedByUser[]> {
+  if (viewerUserId === viewedProfileOwnerUserId) return [];
+  let viewedOid: ObjectId;
+  try {
+    viewedOid = new ObjectId(viewedProfileId);
+  } catch {
+    return [];
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const viewerProfile = await db
+    .collection(COLLECTIONS.profiles)
+    .findOne({ userId: viewerUserId }, { projection: { _id: 1 } });
+  if (!viewerProfile) return [];
+  const viewerProfileOid = viewerProfile._id as ObjectId;
+  const [viewerVouchers, viewedVouchers] = await Promise.all([
+    db.collection(COLLECTIONS.vouches).find({ profileId: viewerProfileOid }).toArray(),
+    db.collection(COLLECTIONS.vouches).find({ profileId: viewedOid }).toArray(),
+  ]);
+  const viewerSet = new Set(viewerVouchers.map((v) => v.userId));
+  const mutualIds = viewedVouchers.map((v) => v.userId).filter((id) => viewerSet.has(id));
+  if (mutualIds.length === 0) return [];
+  const users = await db.collection<UserDoc>(COLLECTIONS.users).find({ _id: { $in: mutualIds } }).toArray();
+  const userMap = new Map(users.map((u) => [u._id, u]));
+  return mutualIds.map((id) => {
+    const u = userMap.get(id);
+    return {
+      userId: id,
+      displayName: u?.displayName ?? null,
+      username: u?.username ?? null,
+      avatarUrl: u?.avatarUrl ?? null,
+    };
+  });
+}
+
+/**
+ * Top profiles by vouches received in the current month.
+ */
+export async function getLeaderboardTopVouches(limit = 20): Promise<
+  { slug: string; name: string; count: number }[]
+> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const pipeline = [
+    { $match: { createdAt: { $gte: startOfMonth } } },
+    { $group: { _id: "$profileId", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: limit },
+    {
+      $lookup: {
+        from: COLLECTIONS.profiles,
+        localField: "_id",
+        foreignField: "_id",
+        as: "profile",
+        pipeline: [{ $project: { slug: 1, name: 1 } }],
+      },
+    },
+    { $unwind: "$profile" },
+    { $project: { slug: "$profile.slug", name: "$profile.name", count: 1, _id: 0 } },
+  ];
+  const results = await db.collection(COLLECTIONS.vouches).aggregate(pipeline).toArray();
+  return results as { slug: string; name: string; count: number }[];
+}
+
+/**
+ * Trending profiles this week: combined score from vouches, views, and reactions in last 7 days.
+ */
+export async function getTrendingProfiles(limit = 10): Promise<
+  { slug: string; name: string; score: number }[]
+> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [vouchesResult, viewsResult, reactionsResult] = await Promise.all([
+    db
+      .collection(COLLECTIONS.vouches)
+      .aggregate<{ _id: ObjectId; count: number }>([
+        { $match: { createdAt: { $gte: weekAgo } } },
+        { $group: { _id: "$profileId", count: { $sum: 1 } } },
+      ])
+      .toArray(),
+    db
+      .collection(COLLECTIONS.profileViews)
+      .aggregate<{ _id: ObjectId; count: number }>([
+        { $match: { viewedAt: { $gte: weekAgo } } },
+        { $group: { _id: "$profileId", count: { $sum: 1 } } },
+      ])
+      .toArray(),
+    db
+      .collection(COLLECTIONS.profileReactions)
+      .aggregate<{ _id: ObjectId; count: number }>([
+        { $match: { updatedAt: { $gte: weekAgo } } },
+        { $group: { _id: "$profileId", count: { $sum: 1 } } },
+      ])
+      .toArray(),
+  ]);
+
+  const scoreMap = new Map<string, number>();
+  for (const row of vouchesResult) {
+    const id = (row._id as ObjectId).toString();
+    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.count * 5);
+  }
+  for (const row of viewsResult) {
+    const id = (row._id as ObjectId).toString();
+    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.count);
+  }
+  for (const row of reactionsResult) {
+    const id = (row._id as ObjectId).toString();
+    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.count * 2);
+  }
+
+  const sorted = [...scoreMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+  if (sorted.length === 0) return [];
+
+  const profiles = await db
+    .collection(COLLECTIONS.profiles)
+    .find({ _id: { $in: sorted.map(([id]) => new ObjectId(id)) } })
+    .project({ slug: 1, name: 1 })
+    .toArray();
+  const profileMap = new Map(profiles.map((p) => [(p._id as ObjectId).toString(), p]));
+  return sorted.map(([id, score]) => {
+    const p = profileMap.get(id) as { slug: string; name: string } | undefined;
+    return { slug: p?.slug ?? "?", name: p?.name ?? "?", score };
+  });
+}
+
+/**
+ * Mutual Discord guilds between viewer and profile owner. Returns guild names.
+ */
+export async function getMutualGuilds(
+  viewerUserId: string,
+  profileOwnerUserId: string
+): Promise<string[]> {
+  if (viewerUserId === profileOwnerUserId) return [];
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const [viewerGuilds, ownerGuilds] = await Promise.all([
+    db.collection(COLLECTIONS.userGuilds).findOne(
+      { userId: viewerUserId },
+      { projection: { guilds: 1 } }
+    ),
+    db.collection(COLLECTIONS.userGuilds).findOne(
+      { userId: profileOwnerUserId },
+      { projection: { guilds: 1 } }
+    ),
+  ]);
+  const viewer = (viewerGuilds as { guilds?: { id: string; name: string }[] } | null)?.guilds ?? [];
+  const owner = (ownerGuilds as { guilds?: { id: string; name: string }[] } | null)?.guilds ?? [];
+  const ownerIds = new Set(owner.map((g) => g.id));
+  const ownerMap = new Map(owner.map((g) => [g.id, g.name]));
+  return viewer
+    .filter((g) => ownerIds.has(g.id))
+    .map((g) => ownerMap.get(g.id) ?? g.name)
+    .slice(0, 10);
+}
+
+/**
+ * Similar profiles: share at least one tag. Excludes the given profile.
+ */
+export async function getSimilarProfiles(
+  profileId: string,
+  tags: string[],
+  limit = 6
+): Promise<{ slug: string; name: string }[]> {
+  if (!tags || tags.length === 0) return [];
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return [];
+  }
+  const profiles = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profiles)
+    .find({
+      _id: { $ne: oid },
+      tags: { $in: tags },
+    })
+    .project({ slug: 1, name: 1 })
+    .limit(limit)
+    .toArray();
+  return profiles.map((p) => ({ slug: (p as { slug: string }).slug, name: (p as { name: string }).name ?? (p as { slug: string }).slug }));
+}
+
+const REACTION_EMOJIS = ["👍", "🔥", "❤️", "😂", "🤝"] as const;
+
+export async function getProfileReactions(profileId: string): Promise<{ emoji: string; count: number }[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return [];
+  }
+  const docs = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileReactions)
+    .aggregate([
+      { $match: { profileId: oid } },
+      { $group: { _id: "$emoji", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ])
+    .toArray();
+  return docs.map((d: { _id: string; count: number }) => ({ emoji: d._id, count: d.count }));
+}
+
+export async function getCurrentUserReaction(profileId: string, userId: string): Promise<string | null> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return null;
+  }
+  const doc = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileReactions)
+    .findOne({ profileId: oid, userId });
+  return doc?.emoji ?? null;
+}
+
+export async function setProfileReaction(
+  profileId: string,
+  userId: string,
+  emoji: string
+): Promise<{ reactions: { emoji: string; count: number }[]; userReaction: string | null }> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
+  }
+  if (!REACTION_EMOJIS.includes(emoji as (typeof REACTION_EMOJIS)[number])) {
+    throw new Error("Invalid emoji");
+  }
+  const profile = await db.collection(COLLECTIONS.profiles).findOne({ _id: oid }, { projection: { userId: 1 } });
+  if (!profile || (profile as { userId: string }).userId === userId) {
+    throw new Error("Cannot react to own profile");
+  }
+  const now = new Date();
+  await db.collection(COLLECTIONS.profileReactions).updateOne(
+    { profileId: oid, userId },
+    { $set: { emoji, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
+  const [reactions, userReaction] = await Promise.all([
+    getProfileReactions(profileId),
+    getCurrentUserReaction(profileId, userId),
+  ]);
+  return { reactions, userReaction };
+}
+
+export async function removeProfileReaction(
+  profileId: string,
+  userId: string
+): Promise<{ reactions: { emoji: string; count: number }[] }> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
+  }
+  await client.db(dbName).collection(COLLECTIONS.profileReactions).deleteOne({ profileId: oid, userId });
+  const reactions = await getProfileReactions(profileId);
+  return { reactions };
+}
+
 export async function hasUserVouched(profileId: string, userId: string): Promise<boolean> {
   const client = await getDb();
   const dbName = await getDbName();

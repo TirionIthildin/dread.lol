@@ -18,6 +18,14 @@ export default function HomePageContent() {
         <WelcomeTerminal />
       </TerminalWindow>
       <footer className="mt-4 pb-2 text-[10px] text-[var(--muted)]">
+        <Link href="/leaderboard" className="hover:text-[var(--accent)] hover:underline">
+          Leaderboard
+        </Link>
+        <span className="mx-1.5">·</span>
+        <Link href="/trending" className="hover:text-[var(--accent)] hover:underline">
+          Trending
+        </Link>
+        <span className="mx-1.5">·</span>
         <Link href="/privacy" className="hover:text-[var(--accent)] hover:underline">
           Privacy
         </Link>

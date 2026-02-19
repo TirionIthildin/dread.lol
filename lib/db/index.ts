@@ -22,10 +22,13 @@ export const COLLECTIONS = {
   profiles: "profiles",
   profileViews: "profile_views",
   vouches: "vouches",
+  profileReactions: "profile_reactions",
   galleryItems: "gallery_items",
   profileShortLinks: "profile_short_links",
   badges: "badges",
   userBadges: "user_badges",
+  userGuilds: "user_guilds",
+  profileReports: "profile_reports",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

@@ -13,8 +13,14 @@ import {
   getUserDiscordBadgeData,
   getVouchesForProfile,
   hasUserVouched,
+  getMutualVouchers,
+  getProfileReactions,
+  getCurrentUserReaction,
+  getSimilarProfiles,
+  getMutualGuilds,
 } from "@/lib/member-profiles";
 import { getDiscordPresence } from "@/lib/discord-presence";
+import { getDiscordLastSeen } from "@/lib/discord-lastseen";
 import { getSession } from "@/lib/auth/session";
 import { getClientIp, getUserAgent } from "@/lib/request";
 import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
@@ -82,7 +88,7 @@ export default async function ProfilePage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
   const showPageViews = memberRow.showPageViews ?? true;
-  const [ip, userAgent, badgeFlags, customBadges, discordBadgeData, vouchesData, session, discordPresence, viewCount] = await Promise.all([
+  const [ip, userAgent, badgeFlags, customBadges, discordBadgeData, vouchesData, session, discordPresence, discordLastSeen, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getUserBadges(memberRow.userId),
@@ -91,16 +97,29 @@ export default async function ProfilePage({ params }: Props) {
     getVouchesForProfile(memberRow.id),
     getSession(),
     getDiscordPresence(memberRow.userId),
+    getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
+  ]);
+  const [reactions, userReaction, similarProfiles, mutualGuilds] = await Promise.all([
+    getProfileReactions(memberRow.id),
+    session ? getCurrentUserReaction(memberRow.id, session.sub) : Promise.resolve(null),
+    getSimilarProfiles(memberRow.id, memberRow.tags ?? [], 6),
+    session && session.sub !== memberRow.userId
+      ? getMutualGuilds(session.sub, memberRow.userId)
+      : Promise.resolve([]),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent);
   const currentUserHasVouched = session
     ? await hasUserVouched(memberRow.id, session.sub)
     : false;
   const canVouch = session != null && session.sub !== memberRow.userId;
+  const mutualVouchers = session && canVouch
+    ? await getMutualVouchers(session.sub, memberRow.id, memberRow.userId)
+    : [];
   const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges);
   if (showPageViews) profile.viewCount = viewCount;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;
+  const showLastSeen = showDiscordPresence && (!discordPresence?.status || discordPresence?.status === "offline");
   if (showDiscordPresence && discordPresence) {
     profile.discordPresence = {
       status: discordPresence.status,
@@ -112,18 +131,31 @@ export default async function ProfilePage({ params }: Props) {
       })),
     };
   }
+  if (showLastSeen && discordLastSeen) {
+    profile.discordLastSeen = discordLastSeen.toISOString();
+  }
   const vouches = {
     slug,
     count: vouchesData.count,
     vouchedBy: vouchesData.vouchedBy,
+    mutualVouchers,
     currentUserHasVouched,
     canVouch,
   };
+  const canReact = session != null && session.sub !== memberRow.userId;
   const needsCursorEffect = profile.cursorStyle === "glow" || profile.cursorStyle === "trail";
   const content = (
     <>
       <ProfileJsonLd profile={profile} />
-      <ProfileContent profile={profile} vouches={vouches} />
+      <ProfileContent
+        profile={profile}
+        vouches={vouches}
+        reactions={{ slug, reactions, userReaction, canReact }}
+        similarProfiles={similarProfiles}
+        mutualGuilds={mutualGuilds}
+        canReport={session?.sub !== memberRow.userId}
+        canSubmitReport={session != null && session.sub !== memberRow.userId}
+      />
     </>
   );
 
