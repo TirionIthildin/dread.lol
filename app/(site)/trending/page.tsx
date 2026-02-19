@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getTrendingProfiles } from "@/lib/member-profiles";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: `Trending — ${SITE_NAME}`,
   description: `Profiles trending this week on ${SITE_NAME}`,
@@ -13,7 +15,12 @@ export const metadata: Metadata = {
 };
 
 export default async function TrendingPage() {
-  const trending = await getTrendingProfiles(15);
+  let trending: { slug: string; name: string; score: number }[] = [];
+  try {
+    trending = await getTrendingProfiles(15);
+  } catch {
+    // MongoDB unavailable (e.g. during Docker build or CI)
+  }
 
   return (
     <div className="relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto">

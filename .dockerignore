@@ -1,0 +1,21 @@
+# Dependencies (installed in container)
+node_modules/
+
+# Build output (produced in container)
+.next/
+out/
+
+# Environment files (contain secrets — must not be in image)
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE / Misc
+.idea
+.vscode
+*.log
+.DS_Store

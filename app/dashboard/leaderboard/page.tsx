@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getLeaderboardTopVouches } from "@/lib/member-profiles";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: `Leaderboard — ${SITE_NAME}`,
   description: `Top vouched profiles this month on ${SITE_NAME}`,
@@ -13,7 +15,12 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardLeaderboardPage() {
-  const leaderboard = await getLeaderboardTopVouches(20);
+  let leaderboard: { slug: string; name: string; count: number }[] = [];
+  try {
+    leaderboard = await getLeaderboardTopVouches(20);
+  } catch {
+    // MongoDB unavailable (e.g. during Docker build or CI)
+  }
   const now = new Date();
   const monthName = now.toLocaleString("default", { month: "long" });
   const year = now.getFullYear();
