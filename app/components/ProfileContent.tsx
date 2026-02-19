@@ -43,7 +43,24 @@ const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
 const CURSOR_STYLES = ["default", "crosshair", "pointer", "text", "grab", "minimal", "beam"] as const;
-const ANIMATION_PRESETS = ["none", "fade-in", "slide-up", "scale-in", "glow", "shimmer"] as const;
+const ANIMATION_PRESETS = [
+  "none",
+  "fade-in",
+  "slide-up",
+  "scale-in",
+  "bounce-in",
+  "flip-in",
+  "slide-in-left",
+  "zoom-bounce",
+  "blur-in",
+  "neon-glow",
+  "drift-in",
+  "stagger",
+  "float",
+  "pulse-border",
+  "glow",
+  "shimmer",
+] as const;
 
 /** Gradient styles use background-clip: text, which makes space chars invisible. Render spaces as 1ch spans. */
 const GRADIENT_BANNER_STYLES = ["fire", "cyan", "green", "purple", "orange", "rose"] as const;

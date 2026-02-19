@@ -424,10 +424,64 @@
   .profile-animate-scale-in {
     animation: profile-scale-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+  .profile-animate-bounce-in {
+    animation: profile-bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .profile-animate-flip-in {
+    animation: profile-flip-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: center top;
+  }
+  .profile-animate-slide-in-left {
+    animation: profile-slide-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-animate-zoom-bounce {
+    animation: profile-zoom-bounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .profile-animate-blur-in {
+    animation: profile-blur-in 0.5s ease-out both;
+  }
+  .profile-animate-neon-glow {
+    animation: profile-neon-glow 0.6s ease-out both;
+  }
+  .profile-animate-drift-in {
+    animation: profile-drift-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-animate-stagger .profile-content-inner {
+    overflow: hidden;
+  }
+  .profile-animate-stagger .profile-content-inner > * {
+    animation: profile-fade-slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(1) { animation-delay: 0ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(2) { animation-delay: 50ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(3) { animation-delay: 100ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(4) { animation-delay: 150ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(5) { animation-delay: 200ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(6) { animation-delay: 250ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(7) { animation-delay: 300ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(8) { animation-delay: 350ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(9) { animation-delay: 400ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(10) { animation-delay: 450ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(11) { animation-delay: 500ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(12) { animation-delay: 550ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(13) { animation-delay: 600ms; }
+  .profile-animate-stagger .profile-content-inner > *:nth-child(n+14) { animation-delay: 650ms; }
   .profile-animate-glow:hover {
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
       0 0 32px color-mix(in srgb, var(--accent) 12%, transparent),
       0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  }
+  .profile-animate-neon-glow:hover {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+      0 0 24px color-mix(in srgb, var(--accent) 25%, transparent),
+      0 0 48px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  }
+  .profile-animate-float {
+    animation: profile-float 4s ease-in-out infinite both;
+  }
+  .profile-animate-pulse-border {
+    animation: profile-pulse-border 2s ease-in-out infinite both;
   }
   .profile-animate-shimmer .profile-content-inner a {
     background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 18%, transparent), transparent);
@@ -442,6 +496,10 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
+  @keyframes profile-fade-slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   @keyframes profile-slide-up {
     from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
@@ -450,11 +508,70 @@
     from { opacity: 0; transform: scale(0.97); }
     to { opacity: 1; transform: scale(1); }
   }
+  @keyframes profile-bounce-in {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    60% { opacity: 1; transform: scale(1.02) translateY(-4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes profile-flip-in {
+    from { opacity: 0; transform: perspective(600px) rotateX(-12deg); }
+    to { opacity: 1; transform: perspective(600px) rotateX(0); }
+  }
+  @keyframes profile-slide-in-left {
+    from { opacity: 0; transform: translateX(-40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes profile-zoom-bounce {
+    from { opacity: 0; transform: scale(0.85); }
+    70% { transform: scale(1.02); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes profile-blur-in {
+    from { opacity: 0; filter: blur(12px); }
+    to { opacity: 1; filter: blur(0); }
+  }
+  @keyframes profile-neon-glow {
+    from {
+      opacity: 0;
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent),
+        0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    }
+    to {
+      opacity: 1;
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent),
+        0 0 20px color-mix(in srgb, var(--accent) 15%, transparent);
+    }
+  }
+  @keyframes profile-drift-in {
+    from { opacity: 0; transform: translateX(20px) translateY(10px); }
+    to { opacity: 1; transform: translateX(0) translateY(0); }
+  }
+  @keyframes profile-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes profile-pulse-border {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .profile-animate-fade-in,
     .profile-animate-slide-up,
-    .profile-animate-scale-in {
+    .profile-animate-scale-in,
+    .profile-animate-bounce-in,
+    .profile-animate-flip-in,
+    .profile-animate-slide-in-left,
+    .profile-animate-zoom-bounce,
+    .profile-animate-blur-in,
+    .profile-animate-neon-glow,
+    .profile-animate-drift-in,
+    .profile-animate-float,
+    .profile-animate-pulse-border {
       animation: profile-fade-in 0.2s ease-out both;
+    }
+    .profile-animate-stagger .profile-content-inner > * {
+      animation: profile-fade-in 0.2s ease-out both;
+      animation-delay: 0ms !important;
     }
   }
 

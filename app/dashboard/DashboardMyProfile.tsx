@@ -1309,13 +1309,27 @@ export default function DashboardMyProfile({
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 >
                   <option value="none">None</option>
-                  <option value="fade-in">Fade in</option>
-                  <option value="slide-up">Slide up</option>
-                  <option value="scale-in">Scale in</option>
-                  <option value="glow">Glow on hover</option>
-                  <option value="shimmer">Shimmer on links</option>
+                  <optgroup label="Entrance">
+                    <option value="fade-in">Fade in</option>
+                    <option value="slide-up">Slide up</option>
+                    <option value="scale-in">Scale in</option>
+                    <option value="bounce-in">Bounce in</option>
+                    <option value="flip-in">Flip in</option>
+                    <option value="slide-in-left">Slide in from left</option>
+                    <option value="zoom-bounce">Zoom bounce</option>
+                    <option value="blur-in">Blur in</option>
+                    <option value="neon-glow">Neon glow</option>
+                    <option value="drift-in">Drift in</option>
+                    <option value="stagger">Stagger cascade</option>
+                  </optgroup>
+                  <optgroup label="Ongoing / Hover">
+                    <option value="float">Gentle float</option>
+                    <option value="pulse-border">Pulse border</option>
+                    <option value="glow">Glow on hover</option>
+                    <option value="shimmer">Shimmer on links</option>
+                  </optgroup>
                 </select>
-                <p className="mt-0.5 text-[10px] text-[var(--muted)]">Entrance: fade/slide/scale. Effects: glow (card) or shimmer (links).</p>
+                <p className="mt-0.5 text-[10px] text-[var(--muted)]">Entrance animations play on load. Ongoing/hover effects add ambient motion.</p>
               </label>
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-[var(--muted)]">
