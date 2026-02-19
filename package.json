@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:apply-missing": "node scripts/apply-missing-migration.mjs",
+    "db:migrate-prod": "node scripts/migrate.mjs",
     "db:studio": "drizzle-kit studio",
     "discord-presence-bot": "node --env-file=.env scripts/discord-presence-bot.mjs"
   },

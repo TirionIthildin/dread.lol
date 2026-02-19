@@ -41,8 +41,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/package.json /app/package-lock.json* ./
-RUN npm install discord.js ioredis --omit=dev --ignore-scripts && npm cache clean --force
+RUN npm install discord.js ioredis postgres --omit=dev --ignore-scripts && npm cache clean --force
 RUN chmod +x scripts/entrypoint.sh
 
 USER nextjs
