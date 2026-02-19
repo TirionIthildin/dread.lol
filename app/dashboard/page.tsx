@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
-import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData } from "@/lib/member-profiles";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
 import UnapprovedMessage from "@/app/components/UnapprovedMessage";
@@ -41,6 +41,7 @@ async function MemberProfileSection({
 }) {
   try {
     const { id: userId } = await getOrCreateUser(session);
+    void getUserDiscordBadgeData(userId);
     const slug = slugFromUsername(session.preferred_username ?? session.name ?? session.sub);
     const name = session.name ?? session.preferred_username ?? "Member";
     const profile = await getOrCreateMemberProfile(userId, {

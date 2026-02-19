@@ -4,7 +4,7 @@ import { MapPin, Clock, Cake, Eye } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 
 const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
-import { DISCORD_BADGE_INFO, type DiscordBadgeKey } from "@/lib/discord-badges";
+import { getDiscordBadgeInfo } from "@/lib/discord-badges";
 import { getBadgeIcon } from "@/lib/badge-icons";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
@@ -15,6 +15,7 @@ import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
 import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
+import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { SITE_URL } from "@/lib/site";
@@ -305,7 +306,7 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                       );
                     })}
                     {profile.discordBadges?.map((key) => {
-                      const info = (key as DiscordBadgeKey) in DISCORD_BADGE_INFO ? DISCORD_BADGE_INFO[key as DiscordBadgeKey] : null;
+                      const info = getDiscordBadgeInfo(key);
                       if (!info) return null;
                       return (
                         <span
@@ -365,50 +366,13 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                 );
               })()}
               {profile.discordPresence && (
-                <div className="mt-2.5 flex flex-wrap items-center justify-start gap-2">
-                  <span
-                    className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                      profile.discordPresence.status === "online"
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                        : profile.discordPresence.status === "idle"
-                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                          : profile.discordPresence.status === "dnd"
-                            ? "bg-red-500/15 text-red-600 dark:text-red-400"
-                            : "bg-zinc-500/15 text-zinc-500 dark:text-zinc-400"
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                        profile.discordPresence.status === "online"
-                          ? "bg-emerald-500"
-                          : profile.discordPresence.status === "idle"
-                            ? "bg-amber-500"
-                            : profile.discordPresence.status === "dnd"
-                              ? "bg-red-500"
-                              : "bg-zinc-500"
-                      }`}
-                      aria-hidden
-                    />
-                    <span className="capitalize">{profile.discordPresence.status}</span>
-                  </span>
-                  {profile.discordPresence.activities?.length > 0 &&
-                    profile.discordPresence.activities.slice(0, 2).map((a, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-start gap-1.5 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/50 px-2.5 py-1 text-xs text-[var(--foreground)]/90 min-w-0"
-                          title={[a.name, a.state, a.details].filter(Boolean).join(" · ")}
-                        >
-                          <span className="shrink-0 text-[var(--muted)] mt-0.5" aria-hidden>
-                            {a.name.includes("Spotify") || a.name.includes("Listening") ? "♪" : "▶"}
-                          </span>
-                          <span className="break-words min-w-0">
-                            {a.name}
-                            {(a.state || a.details) && (
-                              <span className="text-[var(--muted)]"> — {a.state || a.details}</span>
-                            )}
-                          </span>
-                        </span>
-                    ))}
+                <div className="mt-2.5">
+                  <DiscordPresenceDisplay
+                    presence={profile.discordPresence}
+                    style={
+                      (profile.discordPresenceStyle as "pills" | "minimal" | "stacked" | "inline" | "widget") ?? "widget"
+                    }
+                  />
                 </div>
               )}
             </div>

@@ -10,7 +10,7 @@ import {
   getProfileViewCount,
   getUserBadges,
   getCustomBadgesForUser,
-  getUserDiscordFlags,
+  getUserDiscordBadgeData,
   getVouchesForProfile,
   hasUserVouched,
 } from "@/lib/member-profiles";
@@ -82,12 +82,12 @@ export default async function ProfilePage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
   const showPageViews = memberRow.showPageViews ?? true;
-  const [ip, userAgent, badgeFlags, customBadges, discordFlags, vouchesData, session, discordPresence, viewCount] = await Promise.all([
+  const [ip, userAgent, badgeFlags, customBadges, discordBadgeData, vouchesData, session, discordPresence, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
-    getUserDiscordFlags(memberRow.userId),
+    getUserDiscordBadgeData(memberRow.userId),
     getVouchesForProfile(memberRow.id),
     getSession(),
     getDiscordPresence(memberRow.userId),
@@ -98,7 +98,7 @@ export default async function ProfilePage({ params }: Props) {
     ? await hasUserVouched(memberRow.id, session.sub)
     : false;
   const canVouch = session != null && session.sub !== memberRow.userId;
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordFlags, customBadges);
+  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges);
   if (showPageViews) profile.viewCount = viewCount;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;
   if (showDiscordPresence && discordPresence) {
@@ -106,6 +106,7 @@ export default async function ProfilePage({ params }: Props) {
       status: discordPresence.status,
       activities: discordPresence.activities.map((a) => ({
         name: a.name,
+        type: a.type,
         state: a.state ?? undefined,
         details: a.details ?? undefined,
       })),

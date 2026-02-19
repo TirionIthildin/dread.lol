@@ -165,6 +165,10 @@ export async function updateProfileAction(
       showPageViews: formData.get("showPageViews") === "on",
       showDiscordBadges: formData.get("showDiscordBadges") === "on",
       showDiscordPresence: formData.get("showDiscordPresence") === "on",
+      discordPresenceStyle: (() => {
+        const s = (formData.get("discordPresenceStyle") as string)?.trim();
+        return ["pills", "minimal", "stacked", "inline", "widget"].includes(s) ? s : undefined;
+      })(),
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();
         const url = validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim());

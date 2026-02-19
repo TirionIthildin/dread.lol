@@ -92,6 +92,8 @@ export interface DiscordUser {
   discriminator: string;
   /** User's public badges bitfield. See Discord API User flags. */
   public_flags?: number;
+  /** 0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic */
+  premium_type?: number;
 }
 
 /**

@@ -38,6 +38,21 @@ export const DISCORD_BADGE_INFO: Record<
   ActiveDeveloper: { label: "Developer", title: "Active Developer" },
 };
 
+/** Premium type: 0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic. Shown as badges. */
+export const PREMIUM_BADGE_INFO: Record<string, { label: string; title: string }> = {
+  Nitro: { label: "Nitro", title: "Discord Nitro" },
+  NitroClassic: { label: "Nitro Classic", title: "Discord Nitro Classic" },
+  NitroBasic: { label: "Nitro Basic", title: "Discord Nitro Basic" },
+};
+
+/** Map premium_type number to badge keys. */
+export function getPremiumBadgeKeys(premiumType: number | null | undefined): string[] {
+  if (premiumType === 1) return ["NitroClassic"];
+  if (premiumType === 2) return ["Nitro"];
+  if (premiumType === 3) return ["NitroBasic"];
+  return [];
+}
+
 /** Decode public_flags bitfield into an array of badge keys (display order). */
 export function decodeDiscordPublicFlags(flags: number): DiscordBadgeKey[] {
   const out: DiscordBadgeKey[] = [];
@@ -60,4 +75,13 @@ export function decodeDiscordPublicFlags(flags: number): DiscordBadgeKey[] {
     if ((flags & value) === value) out.push(key);
   }
   return out;
+}
+
+/** Resolve badge key to display info (supports both public_flags and premium badges). */
+export function getDiscordBadgeInfo(key: string): { label: string; title: string } | null {
+  if ((key as DiscordBadgeKey) in DISCORD_BADGE_INFO) {
+    return DISCORD_BADGE_INFO[key as DiscordBadgeKey];
+  }
+  if (key in PREMIUM_BADGE_INFO) return PREMIUM_BADGE_INFO[key];
+  return null;
 }

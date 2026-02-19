@@ -653,6 +653,20 @@ export default function DashboardMyProfile({
               <p className="text-xs text-[var(--muted)]">
                 When enabled and you’re in our Discord server, your live status (online/idle/busy) and Rich Presence (e.g. “Playing X”) appear on your profile.
               </p>
+              <label className="block pt-2 text-xs font-medium text-[var(--muted)]">
+                Display style
+                <select
+                  name="discordPresenceStyle"
+                  defaultValue={(profile as { discordPresenceStyle?: string }).discordPresenceStyle ?? "widget"}
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                >
+                  <option value="widget">Widget — unified card (default)</option>
+                  <option value="pills">Pills — status pill + activity pills</option>
+                  <option value="minimal">Minimal — dot and compact text</option>
+                  <option value="stacked">Stacked — status + activities as cards</option>
+                  <option value="inline">Inline — single condensed row</option>
+                </select>
+              </label>
             </div>
             <div className="space-y-2">
               <label className="block text-xs font-medium text-[var(--muted)]">
@@ -1084,6 +1098,9 @@ export default function DashboardMyProfile({
                 <input type="checkbox" name="showDiscordBadges" defaultChecked={profile.showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
                 Show my Discord badges on profile <span className="text-[var(--muted)]/70">(Staff, Partner, HypeSquad, etc.)</span>
               </label>
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                ⚠️ Discord badge display is currently broken; some badges (e.g. Nitro) may not show reliably.
+              </p>
             </div>
 
             <div className={activeEditorSection === "fun" ? "block space-y-3" : "hidden"}>

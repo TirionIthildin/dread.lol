@@ -20,6 +20,8 @@ export interface SessionUser {
   picture?: string | null;
   /** Discord public_flags (badge bitfield). Used to store badges on user. */
   public_flags?: number;
+  /** Discord premium_type (0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic). */
+  premium_type?: number;
 }
 
 function getSecret(): string {

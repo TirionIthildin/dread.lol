@@ -11,7 +11,7 @@ import {
   type UserDoc,
 } from "@/lib/db";
 import type { Profile } from "@/lib/profiles";
-import { decodeDiscordPublicFlags } from "@/lib/discord-badges";
+import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import type { SessionUser } from "@/lib/auth/session";
 
 export interface MemberProfileWithViews {
@@ -58,7 +58,9 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
       existing.avatarUrl !== session.picture;
     const hasFlagsChange =
       session.public_flags != null && existing.discordPublicFlags !== session.public_flags;
-    if (hasProfileChanges || hasFlagsChange) {
+    const hasPremiumChange =
+      session.premium_type != null && session.premium_type > 0 && existing.discordPremiumType !== session.premium_type;
+    if (hasProfileChanges || hasFlagsChange || hasPremiumChange) {
       const update: Record<string, unknown> = { updatedAt: new Date() };
       if (hasProfileChanges) {
         update.displayName = session.name ?? null;
@@ -66,6 +68,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
         update.avatarUrl = session.picture ?? null;
       }
       if (hasFlagsChange) update.discordPublicFlags = session.public_flags;
+      if (hasPremiumChange) update.discordPremiumType = session.premium_type;
       await users.updateOne({ _id: id }, { $set: update });
     }
     return {
@@ -87,6 +90,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
       verified: false,
       staff: false,
       discordPublicFlags: session.public_flags ?? null,
+      discordPremiumType: (session as { premium_type?: number }).premium_type ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -209,25 +213,84 @@ export async function getUserBadges(userId: string): Promise<{ verified: boolean
   return { verified: row.verified ?? false, staff: row.staff ?? false };
 }
 
-export async function getUserDiscordFlags(userId: string): Promise<number | null> {
-  const { getDiscordFlagsFromRedis } = await import("@/lib/discord-flags");
-  const fromRedis = await getDiscordFlagsFromRedis(userId);
-  if (fromRedis !== null) {
-    const client = await getDb();
-    const dbName = await getDbName();
-    await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).updateOne(
-      { _id: userId },
-      { $set: { discordPublicFlags: fromRedis, updatedAt: new Date() } }
-    );
-    return fromRedis;
-  }
+const DEBUG_DISCORD_FLAGS =
+  process.env.DEBUG_DISCORD_FLAGS === "1" ||
+  (process.env.NODE_ENV === "development" && process.env.DEBUG_DISCORD_FLAGS !== "0");
+
+export interface DiscordBadgeData {
+  flags: number | null;
+  premiumType: number | null;
+}
+
+export async function getUserDiscordBadgeData(userId: string): Promise<DiscordBadgeData> {
+  const {
+    getDiscordFlagsFromRedis,
+    getDiscordPremiumFromRedis,
+    setDiscordFlagsInRedis,
+    setDiscordPremiumInRedis,
+    fetchDiscordUserFromApi,
+  } = await import("@/lib/discord-flags");
+  if (DEBUG_DISCORD_FLAGS) console.log("[DiscordFlags] getUserDiscordBadgeData", { userId });
+
   const client = await getDb();
   const dbName = await getDbName();
+
+  const flagsRedis = await getDiscordFlagsFromRedis(userId);
+  const premiumRedis = await getDiscordPremiumFromRedis(userId);
+
   const row = await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).findOne(
     { _id: userId },
-    { projection: { discordPublicFlags: 1 } }
+    { projection: { discordPublicFlags: 1, discordPremiumType: 1 } }
   );
-  return row?.discordPublicFlags ?? null;
+  const flagsDb = row?.discordPublicFlags ?? null;
+  const premiumDb = row?.discordPremiumType ?? null;
+
+  let flags = flagsRedis ?? flagsDb;
+  let premiumType = premiumRedis ?? premiumDb;
+
+  if (flags != null && premiumType != null) {
+    if (DEBUG_DISCORD_FLAGS) console.log("[DiscordFlags] Using cache", { userId, flags, premium: premiumType });
+    return { flags, premiumType };
+  }
+
+  if (flags != null && premiumType == null) {
+    if (DEBUG_DISCORD_FLAGS) console.log("[DiscordFlags] Have flags, missing premium, trying API", { userId });
+  } else if (DEBUG_DISCORD_FLAGS) {
+    console.log("[DiscordFlags] Redis+DB miss, trying API", { userId });
+  }
+
+  const fromApi = await fetchDiscordUserFromApi(userId);
+  if (fromApi) {
+    if (DEBUG_DISCORD_FLAGS) console.log("[DiscordFlags] API success, persisting", { userId, ...fromApi });
+    flags = fromApi.publicFlags;
+    premiumType = fromApi.premiumType;
+    await setDiscordFlagsInRedis(userId, flags);
+    if (premiumType > 0) {
+      await setDiscordPremiumInRedis(userId, premiumType);
+    }
+    await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).updateOne(
+      { _id: userId },
+      {
+        $set: {
+          discordPublicFlags: flags,
+          ...(premiumType > 0 && { discordPremiumType: premiumType }),
+          updatedAt: new Date(),
+        },
+      }
+    );
+    return { flags, premiumType };
+  }
+
+  flags = flags ?? null;
+  premiumType = premiumType ?? null;
+  if (DEBUG_DISCORD_FLAGS) console.log("[DiscordFlags] Final", { userId, flags, premium: premiumType });
+  return { flags, premiumType };
+}
+
+/** @deprecated Use getUserDiscordBadgeData. Kept for backward compat. */
+export async function getUserDiscordFlags(userId: string): Promise<number | null> {
+  const { flags } = await getUserDiscordBadgeData(userId);
+  return flags;
 }
 
 export async function setUserBadges(
@@ -788,7 +851,7 @@ function parseAudioTracks(raw: string | null | undefined): { url: string; title?
 export function memberProfileToProfile(
   row: ProfileRow,
   badgeFlags?: { verified: boolean; staff: boolean },
-  discordPublicFlags?: number | null,
+  discordBadgeData?: DiscordBadgeData | null,
   customBadgesList?: CustomBadge[]
 ): Profile {
   const links = parseLinks(row.links ?? null);
@@ -874,9 +937,16 @@ export function memberProfileToProfile(
         })),
       }),
     ...(row.showDiscordBadges &&
-      discordPublicFlags != null && {
-        discordBadges: decodeDiscordPublicFlags(discordPublicFlags),
+      discordBadgeData &&
+      (discordBadgeData.flags != null || discordBadgeData.premiumType != null) && {
+        discordBadges: [
+          ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
+          ...getPremiumBadgeKeys(discordBadgeData.premiumType),
+        ],
       }),
+    ...(row.discordPresenceStyle && {
+      discordPresenceStyle: row.discordPresenceStyle,
+    }),
   };
 }
 

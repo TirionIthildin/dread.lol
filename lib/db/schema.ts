@@ -16,6 +16,8 @@ export interface UserDoc {
   verified: boolean;
   staff: boolean;
   discordPublicFlags?: number | null;
+  /** 0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic */
+  discordPremiumType?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +75,8 @@ export interface ProfileDoc {
   backgroundAudioUrl?: string | null;
   showDiscordBadges?: boolean;
   showDiscordPresence?: boolean;
+  /** Discord presence display style: pills, minimal, stacked, inline. */
+  discordPresenceStyle?: string | null;
   showAudioPlayer?: boolean;
   audioTracks?: string | null;
   createdAt: Date;

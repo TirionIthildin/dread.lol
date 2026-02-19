@@ -16,6 +16,7 @@ import Redis from "ioredis";
 const PRESENCE_KEY_PREFIX = "discord:presence:";
 const PRESENCE_TTL_SECONDS = 300; // 5 min
 const FLAGS_KEY_PREFIX = "discord:flags:";
+const PREMIUM_KEY_PREFIX = "discord:premium:";
 const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 h
 const DISCORD_API = "https://discord.com/api/v10";
 
@@ -76,6 +77,7 @@ function serializePresence(presence) {
 
 async function fetchAndStoreUserFlags(userId) {
   const flagsKey = FLAGS_KEY_PREFIX + userId;
+  const premiumKey = PREMIUM_KEY_PREFIX + userId;
   const existing = await redis.get(flagsKey).catch(() => null);
   if (existing !== null) return;
   try {
@@ -90,6 +92,10 @@ async function fetchAndStoreUserFlags(userId) {
     const flags = user.public_flags;
     if (typeof flags === "number") {
       await redis.setex(flagsKey, FLAGS_TTL_SECONDS, String(flags));
+    }
+    const premium = user.premium_type ?? user.premiumType;
+    if (typeof premium === "number" && premium > 0) {
+      await redis.setex(premiumKey, FLAGS_TTL_SECONDS, String(premium));
     }
   } catch (err) {
     console.error("[Discord] Fetch user flags", userId, err?.message ?? err);
@@ -113,7 +119,7 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   fetchAndStoreUserFlags(userId).catch(() => {});
 });
 
-client.on("ready", () => {
+client.on("clientReady", () => {
   console.log(`[Discord] Logged in as ${client.user?.tag ?? "?"}`);
   if (guildId) {
     const guild = client.guilds.cache.get(guildId);

@@ -112,8 +112,10 @@ export interface Profile {
   /** Live Discord status + Rich Presence (from presence bot). */
   discordPresence?: {
     status: "online" | "idle" | "dnd" | "offline";
-    activities: { name: string; state?: string | null; details?: string | null }[];
+    activities: { name: string; type?: number; state?: string | null; details?: string | null }[];
   };
+  /** How to display Discord presence: pills (default), minimal, stacked, inline. */
+  discordPresenceStyle?: string;
   /** When true, show an audio player widget on the profile. */
   showAudioPlayer?: boolean;
   /** Audio tracks for the player: url and optional title. */

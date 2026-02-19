@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
       profile: `https://discord.com/users/${userInfo.id}`,
       picture,
       ...(userInfo.public_flags != null && { public_flags: userInfo.public_flags }),
+      ...(userInfo.premium_type != null && userInfo.premium_type > 0 && { premium_type: userInfo.premium_type }),
     });
     const config = getSessionCookieConfig(sessionValue);
     const res = NextResponse.redirect(new URL(DASHBOARD_PATH, baseUrl));
