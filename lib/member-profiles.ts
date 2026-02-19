@@ -908,7 +908,7 @@ export async function getProfileReactions(profileId: string): Promise<{ emoji: s
   } catch {
     return [];
   }
-  const docs = await client
+  const docs = (await client
     .db(dbName)
     .collection(COLLECTIONS.profileReactions)
     .aggregate([
@@ -916,8 +916,8 @@ export async function getProfileReactions(profileId: string): Promise<{ emoji: s
       { $group: { _id: "$emoji", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ])
-    .toArray();
-  return docs.map((d: { _id: string; count: number }) => ({ emoji: d._id, count: d.count }));
+    .toArray()) as { _id: string; count: number }[];
+  return docs.map((d) => ({ emoji: d._id, count: d.count }));
 }
 
 export async function getCurrentUserReaction(profileId: string, userId: string): Promise<string | null> {
@@ -954,7 +954,7 @@ export async function setProfileReaction(
     throw new Error("Invalid emoji");
   }
   const profile = await db.collection(COLLECTIONS.profiles).findOne({ _id: oid }, { projection: { userId: 1 } });
-  if (!profile || (profile as { userId: string }).userId === userId) {
+  if (!profile || (profile as unknown as { userId: string }).userId === userId) {
     throw new Error("Cannot react to own profile");
   }
   const now = new Date();

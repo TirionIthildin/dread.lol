@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     if (!profile) {
       return NextResponse.json({ error: "Profile not found", slug }, { status: 404 });
     }
-    discordUserId = (profile as { userId: string }).userId;
+    discordUserId = (profile as unknown as { userId: string }).userId;
   }
 
   if (!discordUserId) {
@@ -72,11 +72,11 @@ export async function GET(request: Request) {
   trace.db = { flags: flagsDb, premium: premiumDb };
 
   const hasToken = Boolean(process.env.DISCORD_BOT_TOKEN?.trim());
-  trace.api = { tokenSet: hasToken };
+  const apiTrace: Record<string, unknown> = { tokenSet: hasToken };
   let finalFlags = flagsRedis ?? flagsDb;
   let finalPremium = premiumRedis ?? premiumDb;
   if (!hasToken) {
-    trace.api.note = "DISCORD_BOT_TOKEN not set, skipping API fetch";
+    apiTrace.note = "DISCORD_BOT_TOKEN not set, skipping API fetch";
   } else {
     try {
       const res = await fetch(`https://discord.com/api/v10/users/${discordUserId}`, {
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
       } catch {
         /* ignore */
       }
-      trace.api.response = {
+      apiTrace.response = {
         status: res.status,
         statusText: res.statusText,
         body: body.slice(0, 300),
@@ -98,9 +98,10 @@ export async function GET(request: Request) {
         hasId: parsed && "id" in parsed,
       };
     } catch (apiErr) {
-      trace.api.error = apiErr instanceof Error ? apiErr.message : String(apiErr);
+      apiTrace.error = apiErr instanceof Error ? apiErr.message : String(apiErr);
     }
   }
+  trace.api = apiTrace;
 
   const allBadges = [
     ...(finalFlags != null ? decodeDiscordPublicFlags(finalFlags) : []),
@@ -120,17 +121,17 @@ export async function GET(request: Request) {
     trace.profile = profile
       ? {
           slug,
-          userId: (profile as { userId: string }).userId,
-          showDiscordBadges: (profile as { showDiscordBadges?: boolean }).showDiscordBadges,
+          userId: (profile as unknown as { userId: string }).userId,
+          showDiscordBadges: (profile as unknown as { showDiscordBadges?: boolean }).showDiscordBadges,
           wouldShowBadges:
-            (profile as { showDiscordBadges?: boolean }).showDiscordBadges !== false && allBadges.length > 0,
+            (profile as unknown as { showDiscordBadges?: boolean }).showDiscordBadges !== false && allBadges.length > 0,
         }
       : null;
   }
 
   if (refresh && hasToken) {
     const fromApi = await fetchDiscordUserFromApi(discordUserId);
-    trace.refresh = { apiResult: fromApi };
+    const refreshTrace: Record<string, unknown> = { apiResult: fromApi };
     if (fromApi) {
       await setDiscordFlagsInRedis(discordUserId, fromApi.publicFlags);
       if (fromApi.premiumType > 0) {
@@ -149,7 +150,7 @@ export async function GET(request: Request) {
             },
           }
         );
-      trace.refresh.persisted = true;
+      refreshTrace.persisted = true;
       const refreshedBadges = [
         ...decodeDiscordPublicFlags(fromApi.publicFlags),
         ...getPremiumBadgeKeys(fromApi.premiumType),
@@ -160,6 +161,7 @@ export async function GET(request: Request) {
         badges: refreshedBadges,
       };
     }
+    trace.refresh = refreshTrace;
   }
 
   return NextResponse.json(trace);
