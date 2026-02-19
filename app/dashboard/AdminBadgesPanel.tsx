@@ -151,7 +151,7 @@ export default function AdminBadgesPanel() {
     });
   }
 
-  function handleDelete(id: number) {
+  function handleDelete(id: string) {
     if (!confirm("Delete this badge? It will be removed from all users.")) return;
     setError(null);
     startTransition(async () => {

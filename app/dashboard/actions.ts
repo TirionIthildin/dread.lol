@@ -170,7 +170,7 @@ export async function applyTemplateAction(
 export async function addGalleryItemAction(
   profileId: string,
   data: { imageUrl: string; title?: string; description?: string }
-): Promise<{ error?: string; id?: number }> {
+): Promise<{ error?: string; id?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const user = await getOrCreateUser(session);
@@ -252,7 +252,7 @@ export async function setGalleryOrderAction(profileId: string, orderedIds: strin
 export async function addShortLinkAction(
   profileId: string,
   data: { slug: string; url: string }
-): Promise<{ error?: string; id?: number; slug?: string; url?: string }> {
+): Promise<{ error?: string; id?: string; slug?: string; url?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const user = await getOrCreateUser(session);

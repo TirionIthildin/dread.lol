@@ -8,6 +8,7 @@ import {
   COLLECTIONS,
   type ProfileRow,
   type ProfileViewRow,
+  type UserDoc,
 } from "@/lib/db";
 import type { Profile } from "@/lib/profiles";
 import { decodeDiscordPublicFlags } from "@/lib/discord-badges";
@@ -46,7 +47,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
-  const users = db.collection(COLLECTIONS.users);
+  const users = db.collection<UserDoc>(COLLECTIONS.users);
 
   const id = session.sub;
   const existing = await users.findOne({ _id: id });
@@ -103,7 +104,7 @@ export async function getPendingUsersList(): Promise<PendingUserRow[]> {
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
-  const users = db.collection(COLLECTIONS.users);
+  const users = db.collection<UserDoc>(COLLECTIONS.users);
 
   const cursor = users
     .find({ approved: false })
@@ -132,7 +133,7 @@ export async function getPendingUsersListPaginated(options: {
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
-  const users = db.collection(COLLECTIONS.users);
+  const users = db.collection<UserDoc>(COLLECTIONS.users);
 
   const filter: Record<string, unknown> = { approved: false };
   if (search) {
@@ -174,7 +175,7 @@ export async function approveUser(userId: string): Promise<boolean> {
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
-  const result = await db.collection(COLLECTIONS.users).updateOne(
+  const result = await db.collection<UserDoc>(COLLECTIONS.users).updateOne(
     { _id: userId },
     { $set: { approved: true, updatedAt: new Date() } }
   );
@@ -185,7 +186,7 @@ export async function getUserBadges(userId: string): Promise<{ verified: boolean
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
-  const row = await db.collection(COLLECTIONS.users).findOne(
+  const row = await db.collection<UserDoc>(COLLECTIONS.users).findOne(
     { _id: userId },
     { projection: { verified: 1, staff: 1 } }
   );
@@ -199,7 +200,7 @@ export async function getUserDiscordFlags(userId: string): Promise<number | null
   if (fromRedis !== null) {
     const client = await getDb();
     const dbName = await getDbName();
-    await client.db(dbName).collection(COLLECTIONS.users).updateOne(
+    await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).updateOne(
       { _id: userId },
       { $set: { discordPublicFlags: fromRedis, updatedAt: new Date() } }
     );
@@ -207,7 +208,7 @@ export async function getUserDiscordFlags(userId: string): Promise<number | null
   }
   const client = await getDb();
   const dbName = await getDbName();
-  const row = await client.db(dbName).collection(COLLECTIONS.users).findOne(
+  const row = await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).findOne(
     { _id: userId },
     { projection: { discordPublicFlags: 1 } }
   );
@@ -225,7 +226,7 @@ export async function setUserBadges(
 
   const client = await getDb();
   const dbName = await getDbName();
-  const result = await client.db(dbName).collection(COLLECTIONS.users).updateOne(
+  const result = await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).updateOne(
     { _id: userId },
     { $set: updates }
   );
@@ -255,7 +256,6 @@ export async function getCustomBadgesForUser(userId: string): Promise<CustomBadg
   if (ubDocs.length === 0) return [];
   const badgeIds = ubDocs.map((ub) => ub.badgeId);
   const badgeDocs = await badges.find({ _id: { $in: badgeIds } }).sort({ sortOrder: 1 }).toArray();
-  const byId = new Map(badgeDocs.map((b) => [b._id.toString(), b]));
   return badgeDocs
     .sort((a, b) => a.sortOrder - b.sortOrder || a._id.toString().localeCompare(b._id.toString()))
     .map((b) => ({
@@ -557,7 +557,7 @@ export async function getVouchesForProfile(profileId: string): Promise<{
   if (vouches.length === 0) return { count: 0, vouchedBy: [] };
 
   const userIds = [...new Set(vouches.map((v) => v.userId))];
-  const users = await db.collection(COLLECTIONS.users).find({ _id: { $in: userIds } }).toArray();
+  const users = await db.collection<UserDoc>(COLLECTIONS.users).find({ _id: { $in: userIds } }).toArray();
   const userMap = new Map(users.map((u) => [u._id, u]));
 
   const vouchedBy: VouchedByUser[] = vouches.map((v) => {
