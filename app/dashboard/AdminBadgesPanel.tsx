@@ -10,7 +10,7 @@ import {
 import { BADGE_ICON_OPTIONS, getBadgeIcon } from "@/lib/badge-icons";
 
 export type CustomBadge = {
-  id: number;
+  id: string;
   key: string;
   label: string;
   description?: string | null;
@@ -26,7 +26,7 @@ export default function AdminBadgesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formKey, setFormKey] = useState("");
   const [formLabel, setFormLabel] = useState("");
   const [formDescription, setFormDescription] = useState("");

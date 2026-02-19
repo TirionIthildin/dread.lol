@@ -58,26 +58,22 @@ async function MemberProfileSection({
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const isMissingTable =
-      msg.includes('relation "profiles" does not exist') ||
-      msg.includes('relation "users" does not exist');
-    if (isMissingTable) {
+    const isDbError = msg.includes("MongoServerSelectionError") || msg.includes("connection refused") || msg.includes("connect ECONNREFUSED");
+    if (isDbError) {
       return (
         <div
           className="rounded-xl border border-[var(--warning)]/50 bg-[var(--warning)]/10 px-4 py-3 text-sm text-[var(--warning)]"
           role="alert"
         >
-          <p className="font-medium">Database not set up</p>
+          <p className="font-medium">Database not available</p>
           <p className="mt-1 text-[var(--muted)]">
-            Run migrations so the <code className="rounded bg-[var(--surface)] px-1">profiles</code> and{" "}
-            <code className="rounded bg-[var(--surface)] px-1">users</code> tables exist. From the project root:
+            Start MongoDB (e.g. <code className="rounded bg-[var(--surface)] px-1">docker compose up -d</code>) and run:
           </p>
           <p className="mt-2 font-mono text-xs">
-            npm run db:migrate
+            npm run db:migrate-prod
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Or apply <code className="rounded bg-[var(--surface)] px-1">drizzle/0000_initial.sql</code> and{" "}
-            <code className="rounded bg-[var(--surface)] px-1">drizzle/0001_member_profiles.sql</code> manually with psql.
+            Ensure DATABASE_URL points to MongoDB (e.g. mongodb://dread:dread@localhost:27017/dread?authSource=admin).
           </p>
         </div>
       );

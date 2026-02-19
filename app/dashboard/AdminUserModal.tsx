@@ -28,7 +28,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [verified, setVerified] = useState(user.verified);
   const [staff, setStaff] = useState(user.staff);
   const [customBadges, setCustomBadges] = useState<CustomBadge[]>([]);
-  const [userBadgeIds, setUserBadgeIds] = useState<number[]>([]);
+  const [userBadgeIds, setUserBadgeIds] = useState<string[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     });
   }
 
-  function handleCustomBadgeToggle(badgeId: number, checked: boolean) {
+  function handleCustomBadgeToggle(badgeId: string, checked: boolean) {
     const next = checked
       ? [...userBadgeIds, badgeId]
       : userBadgeIds.filter((id) => id !== badgeId);

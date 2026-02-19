@@ -64,13 +64,11 @@ export async function updateProfileAction(
   if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
-  const id = parseInt(profileId, 10);
-  if (Number.isNaN(id)) return { error: "Invalid profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
   const slug = rawSlug ? normalizeSlug(rawSlug) : undefined;
   const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
   try {
-    await updateMemberProfile(id, session.sub, {
+    await updateMemberProfile(profileId, session.sub, {
       slug,
       name: ((formData.get("name") as string)?.trim() || undefined)?.slice(0, 100),
       tagline: ((formData.get("tagline") as string)?.trim() || undefined)?.slice(0, 120),
@@ -127,7 +125,7 @@ export async function updateProfileAction(
 
 /** Apply a profile template to the user's profile. Replaces content fields (tagline, description, banner, etc.). */
 export async function applyTemplateAction(
-  profileId: number,
+  profileId: string,
   templateId: string
 ): Promise<{ error?: string }> {
   const session = await getSession();
@@ -170,7 +168,7 @@ export async function applyTemplateAction(
 
 /** Add a gallery item (image URL, optional title/description). */
 export async function addGalleryItemAction(
-  profileId: number,
+  profileId: string,
   data: { imageUrl: string; title?: string; description?: string }
 ): Promise<{ error?: string; id?: number }> {
   const session = await getSession();
@@ -195,7 +193,7 @@ export async function addGalleryItemAction(
 
 /** Update a gallery item (title/description). */
 export async function updateGalleryItemAction(
-  itemId: number,
+  itemId: string,
   data: { title?: string; description?: string }
 ): Promise<{ error?: string }> {
   const session = await getSession();
@@ -217,7 +215,7 @@ export async function updateGalleryItemAction(
 }
 
 /** Delete a gallery item. */
-export async function deleteGalleryItemAction(itemId: number): Promise<{ error?: string }> {
+export async function deleteGalleryItemAction(itemId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const user = await getOrCreateUser(session);
@@ -234,7 +232,7 @@ export async function deleteGalleryItemAction(itemId: number): Promise<{ error?:
 }
 
 /** Reorder gallery items. */
-export async function setGalleryOrderAction(profileId: number, orderedIds: number[]): Promise<{ error?: string }> {
+export async function setGalleryOrderAction(profileId: string, orderedIds: string[]): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const user = await getOrCreateUser(session);
@@ -252,7 +250,7 @@ export async function setGalleryOrderAction(profileId: number, orderedIds: numbe
 
 /** Add a short link (e.g. /username/twitch -> https://twitch.tv/...). */
 export async function addShortLinkAction(
-  profileId: number,
+  profileId: string,
   data: { slug: string; url: string }
 ): Promise<{ error?: string; id?: number; slug?: string; url?: string }> {
   const session = await getSession();
@@ -271,7 +269,7 @@ export async function addShortLinkAction(
 }
 
 /** Delete a short link. */
-export async function deleteShortLinkAction(linkId: number): Promise<{ error?: string }> {
+export async function deleteShortLinkAction(linkId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const user = await getOrCreateUser(session);
@@ -333,7 +331,7 @@ export async function createBadgeAction(data: {
   badgeType?: string;
   imageUrl?: string;
   iconName?: string;
-}): Promise<{ error?: string; id?: number }> {
+}): Promise<{ error?: string; id?: string }> {
   const err = await requireAdmin();
   if (err) return { error: err };
   const key = data.key?.trim();
@@ -346,7 +344,7 @@ export async function createBadgeAction(data: {
 }
 
 export async function updateBadgeAction(
-  id: number,
+  id: string,
   data: {
     key?: string;
     label?: string;
@@ -365,7 +363,7 @@ export async function updateBadgeAction(
   return {};
 }
 
-export async function deleteBadgeAction(id: number): Promise<{ error?: string }> {
+export async function deleteBadgeAction(id: string): Promise<{ error?: string }> {
   const err = await requireAdmin();
   if (err) return { error: err };
   const ok = await deleteBadge(id);
@@ -374,7 +372,7 @@ export async function deleteBadgeAction(id: number): Promise<{ error?: string }>
   return {};
 }
 
-export async function setUserCustomBadgesAction(userId: string, badgeIds: number[]): Promise<{ error?: string }> {
+export async function setUserCustomBadgesAction(userId: string, badgeIds: string[]): Promise<{ error?: string }> {
   const err = await requireAdmin();
   if (err) return { error: err };
   const id = userId?.trim();

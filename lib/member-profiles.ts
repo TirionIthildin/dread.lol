@@ -1,11 +1,16 @@
 /**
- * Member profiles (DB-backed): one profile per user, view tracking, basic edit.
+ * Member profiles (MongoDB-backed): one profile per user, view tracking, basic edit.
  */
-import { eq, and, desc, or, ilike, sql } from "drizzle-orm";
-import { db, users, profiles, profileViews, vouches, galleryItems, profileShortLinks, badges, userBadges } from "@/lib/db";
+import { ObjectId } from "mongodb";
+import {
+  getDb,
+  getDbName,
+  COLLECTIONS,
+  type ProfileRow,
+  type ProfileViewRow,
+} from "@/lib/db";
 import type { Profile } from "@/lib/profiles";
 import { decodeDiscordPublicFlags } from "@/lib/discord-badges";
-import type { ProfileRow, ProfileViewRow } from "@/lib/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
 
 export interface MemberProfileWithViews {
@@ -31,10 +36,20 @@ function getAdminDiscordIds(): string[] {
   return ADMIN_DISCORD_IDS;
 }
 
-/** Get or create user by Discord id (session.sub). New users are created with approved: false. Refreshes name and avatar on each login. */
+function toProfileRow(doc: { _id: ObjectId } & Record<string, unknown>): ProfileRow {
+  const { _id, ...rest } = doc;
+  return { ...rest, id: _id.toString() } as ProfileRow;
+}
+
+/** Get or create user by Discord id (session.sub). */
 export async function getOrCreateUser(session: SessionUser): Promise<UserWithApproval> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const users = db.collection(COLLECTIONS.users);
+
   const id = session.sub;
-  const [existing] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  const existing = await users.findOne({ _id: id });
   if (existing) {
     const hasProfileChanges =
       existing.displayName !== session.name ||
@@ -43,45 +58,38 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
     const hasFlagsChange =
       session.public_flags != null && existing.discordPublicFlags !== session.public_flags;
     if (hasProfileChanges || hasFlagsChange) {
-      await db
-        .update(users)
-        .set({
-          ...(hasProfileChanges && {
-            displayName: session.name ?? null,
-            username: session.preferred_username ?? null,
-            avatarUrl: session.picture ?? null,
-          }),
-          ...(hasFlagsChange && { discordPublicFlags: session.public_flags }),
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, id));
+      const update: Record<string, unknown> = { updatedAt: new Date() };
+      if (hasProfileChanges) {
+        update.displayName = session.name ?? null;
+        update.username = session.preferred_username ?? null;
+        update.avatarUrl = session.picture ?? null;
+      }
+      if (hasFlagsChange) update.discordPublicFlags = session.public_flags;
+      await users.updateOne({ _id: id }, { $set: update });
     }
     return {
-      id: existing.id,
+      id: existing._id,
       approved: existing.approved,
       isAdmin: existing.isAdmin || getAdminDiscordIds().includes(existing.discordUserId),
     };
   }
-  await db.insert(users).values({
-    id,
+  const now = new Date();
+  await users.insertOne({
+    _id: id,
     discordUserId: session.sub,
-    username: session.preferred_username ?? undefined,
-    displayName: session.name ?? undefined,
-    avatarUrl: session.picture ?? undefined,
+    username: session.preferred_username ?? null,
+    displayName: session.name ?? null,
+    avatarUrl: session.picture ?? null,
     approved: false,
     isAdmin: false,
-    discordPublicFlags: session.public_flags ?? undefined,
+    verified: false,
+    staff: false,
+    discordPublicFlags: session.public_flags ?? null,
+    createdAt: now,
+    updatedAt: now,
   });
   return { id, approved: false, isAdmin: getAdminDiscordIds().includes(session.sub) };
 }
-
-const PENDING_USER_SELECT = {
-  id: users.id,
-  username: users.username,
-  displayName: users.displayName,
-  avatarUrl: users.avatarUrl,
-  createdAt: users.createdAt,
-} as const;
 
 export type PendingUserRow = {
   id: string;
@@ -91,17 +99,26 @@ export type PendingUserRow = {
   createdAt: Date;
 };
 
-/** List users that are not yet approved (for admin panel). */
 export async function getPendingUsersList(): Promise<PendingUserRow[]> {
-  const rows = await db
-    .select(PENDING_USER_SELECT)
-    .from(users)
-    .where(eq(users.approved, false))
-    .orderBy(desc(users.createdAt));
-  return rows;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const users = db.collection(COLLECTIONS.users);
+
+  const cursor = users
+    .find({ approved: false })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, createdAt: 1 })
+    .sort({ createdAt: -1 });
+  const docs = await cursor.toArray();
+  return docs.map((d) => ({
+    id: d._id,
+    username: d.username ?? null,
+    displayName: d.displayName ?? null,
+    avatarUrl: d.avatarUrl ?? null,
+    createdAt: d.createdAt,
+  }));
 }
 
-/** List pending users with optional search and pagination. */
 export async function getPendingUsersListPaginated(options: {
   search?: string;
   page?: number;
@@ -109,87 +126,114 @@ export async function getPendingUsersListPaginated(options: {
 }): Promise<{ items: PendingUserRow[]; total: number; page: number; limit: number; totalPages: number }> {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(100, Math.max(1, options.limit ?? 20));
-  const offset = (page - 1) * limit;
+  const skip = (page - 1) * limit;
   const search = options.search?.trim();
 
-  const baseWhere = eq(users.approved, false);
-  const searchWhere = search
-    ? or(
-        ilike(users.username, `%${search}%`),
-        ilike(users.displayName, `%${search}%`),
-        ilike(users.id, `%${search}%`)
-      )
-    : undefined;
-  const whereClause = searchWhere ? and(baseWhere, searchWhere) : baseWhere;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const users = db.collection(COLLECTIONS.users);
 
-  const [items, countResult] = await Promise.all([
-    db
-      .select(PENDING_USER_SELECT)
-      .from(users)
-      .where(whereClause)
-      .orderBy(desc(users.createdAt))
+  const filter: Record<string, unknown> = { approved: false };
+  if (search) {
+    filter.$or = [
+      { username: { $regex: search, $options: "i" } },
+      { displayName: { $regex: search, $options: "i" } },
+      { _id: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const [items, total] = await Promise.all([
+    users
+      .find(filter)
+      .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, createdAt: 1 })
+      .sort({ createdAt: -1 })
+      .skip(skip)
       .limit(limit)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(users)
-      .where(whereClause),
+      .toArray(),
+    users.countDocuments(filter),
   ]);
 
-  const total = countResult[0]?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
-
-  return { items, total, page, limit, totalPages };
+  return {
+    items: items.map((d) => ({
+      id: d._id,
+      username: d.username ?? null,
+      displayName: d.displayName ?? null,
+      avatarUrl: d.avatarUrl ?? null,
+      createdAt: d.createdAt,
+    })),
+    total,
+    page,
+    limit,
+    totalPages,
+  };
 }
 
-/** Approve a user by id. Caller must be admin. */
 export async function approveUser(userId: string): Promise<boolean> {
-  const [row] = await db.update(users).set({ approved: true, updatedAt: new Date() }).where(eq(users.id, userId)).returning({ id: users.id });
-  return Boolean(row);
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const result = await db.collection(COLLECTIONS.users).updateOne(
+    { _id: userId },
+    { $set: { approved: true, updatedAt: new Date() } }
+  );
+  return result.modifiedCount > 0;
 }
 
-/** Get verified/staff badges for a user. */
 export async function getUserBadges(userId: string): Promise<{ verified: boolean; staff: boolean }> {
-  const [row] = await db.select({ verified: users.verified, staff: users.staff }).from(users).where(eq(users.id, userId)).limit(1);
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const row = await db.collection(COLLECTIONS.users).findOne(
+    { _id: userId },
+    { projection: { verified: 1, staff: 1 } }
+  );
   if (!row) return { verified: false, staff: false };
-  return { verified: row.verified, staff: row.staff };
+  return { verified: row.verified ?? false, staff: row.staff ?? false };
 }
 
-/** Get Discord public_flags (badge bitfield) for a user. Reads from Redis (bot cache) first, then DB. */
 export async function getUserDiscordFlags(userId: string): Promise<number | null> {
   const { getDiscordFlagsFromRedis } = await import("@/lib/discord-flags");
   const fromRedis = await getDiscordFlagsFromRedis(userId);
   if (fromRedis !== null) {
-    await db
-      .update(users)
-      .set({ discordPublicFlags: fromRedis, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .then(() => {});
+    const client = await getDb();
+    const dbName = await getDbName();
+    await client.db(dbName).collection(COLLECTIONS.users).updateOne(
+      { _id: userId },
+      { $set: { discordPublicFlags: fromRedis, updatedAt: new Date() } }
+    );
     return fromRedis;
   }
-  const [row] = await db
-    .select({ discordPublicFlags: users.discordPublicFlags })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  const client = await getDb();
+  const dbName = await getDbName();
+  const row = await client.db(dbName).collection(COLLECTIONS.users).findOne(
+    { _id: userId },
+    { projection: { discordPublicFlags: 1 } }
+  );
   return row?.discordPublicFlags ?? null;
 }
 
-/** Set verified/staff badges. Caller must be admin. */
 export async function setUserBadges(
   userId: string,
   badgeFlags: { verified?: boolean; staff?: boolean }
 ): Promise<boolean> {
-  const updates: Partial<{ verified: boolean; staff: boolean; updatedAt: Date }> = { updatedAt: new Date() };
+  const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof badgeFlags.verified === "boolean") updates.verified = badgeFlags.verified;
   if (typeof badgeFlags.staff === "boolean") updates.staff = badgeFlags.staff;
   if (Object.keys(updates).length <= 1) return true;
-  const [row] = await db.update(users).set(updates).where(eq(users.id, userId)).returning({ id: users.id });
-  return Boolean(row);
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client.db(dbName).collection(COLLECTIONS.users).updateOne(
+    { _id: userId },
+    { $set: updates }
+  );
+  return result.matchedCount > 0;
 }
 
 export interface CustomBadge {
-  id: number;
+  id: string;
   key: string;
   label: string;
   description?: string | null;
@@ -200,86 +244,77 @@ export interface CustomBadge {
   iconName?: string | null;
 }
 
-/** Get custom badges assigned to a user (for profile display). */
 export async function getCustomBadgesForUser(userId: string): Promise<CustomBadge[]> {
-  const rows = await db
-    .select({
-      id: badges.id,
-      key: badges.key,
-      label: badges.label,
-      description: badges.description,
-      color: badges.color,
-      sortOrder: badges.sortOrder,
-      badgeType: badges.badgeType,
-      imageUrl: badges.imageUrl,
-      iconName: badges.iconName,
-    })
-    .from(userBadges)
-    .innerJoin(badges, eq(userBadges.badgeId, badges.id))
-    .where(eq(userBadges.userId, userId))
-    .orderBy(badges.sortOrder, badges.id);
-  return rows.map((r) => ({
-    id: r.id,
-    key: r.key,
-    label: r.label,
-    description: r.description ?? undefined,
-    color: r.color ?? undefined,
-    sortOrder: r.sortOrder,
-    badgeType: r.badgeType ?? undefined,
-    imageUrl: r.imageUrl ?? undefined,
-    iconName: r.iconName ?? undefined,
-  }));
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const userBadges = db.collection(COLLECTIONS.userBadges);
+  const badges = db.collection(COLLECTIONS.badges);
+
+  const ubDocs = await userBadges.find({ userId }).toArray();
+  if (ubDocs.length === 0) return [];
+  const badgeIds = ubDocs.map((ub) => ub.badgeId);
+  const badgeDocs = await badges.find({ _id: { $in: badgeIds } }).sort({ sortOrder: 1 }).toArray();
+  const byId = new Map(badgeDocs.map((b) => [b._id.toString(), b]));
+  return badgeDocs
+    .sort((a, b) => a.sortOrder - b.sortOrder || a._id.toString().localeCompare(b._id.toString()))
+    .map((b) => ({
+      id: b._id.toString(),
+      key: b.key,
+      label: b.label,
+      description: b.description ?? undefined,
+      color: b.color ?? undefined,
+      sortOrder: b.sortOrder,
+      badgeType: b.badgeType ?? undefined,
+      imageUrl: b.imageUrl ?? undefined,
+      iconName: b.iconName ?? undefined,
+    }));
 }
 
-/** Get all custom badge definitions (for admin). */
 export async function getAllCustomBadges(): Promise<CustomBadge[]> {
-  const rows = await db
-    .select({
-      id: badges.id,
-      key: badges.key,
-      label: badges.label,
-      description: badges.description,
-      color: badges.color,
-      sortOrder: badges.sortOrder,
-      badgeType: badges.badgeType,
-      imageUrl: badges.imageUrl,
-      iconName: badges.iconName,
-    })
-    .from(badges)
-    .orderBy(badges.sortOrder, badges.id);
-  return rows.map((r) => ({
-    id: r.id,
-    key: r.key,
-    label: r.label,
-    description: r.description ?? undefined,
-    color: r.color ?? undefined,
-    sortOrder: r.sortOrder,
-    badgeType: r.badgeType ?? undefined,
-    imageUrl: r.imageUrl ?? undefined,
-    iconName: r.iconName ?? undefined,
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const docs = await db.collection(COLLECTIONS.badges).find().sort({ sortOrder: 1 }).toArray();
+  return docs.map((b) => ({
+    id: b._id.toString(),
+    key: b.key,
+    label: b.label,
+    description: b.description ?? undefined,
+    color: b.color ?? undefined,
+    sortOrder: b.sortOrder,
+    badgeType: b.badgeType ?? undefined,
+    imageUrl: b.imageUrl ?? undefined,
+    iconName: b.iconName ?? undefined,
   }));
 }
 
-/** Get custom badge IDs assigned to a user (for admin user modal). */
-export async function getUserCustomBadgeIds(userId: string): Promise<number[]> {
-  const rows = await db
-    .select({ badgeId: userBadges.badgeId })
-    .from(userBadges)
-    .where(eq(userBadges.userId, userId));
-  return rows.map((r) => r.badgeId);
+export async function getUserCustomBadgeIds(userId: string): Promise<string[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const docs = await db.collection(COLLECTIONS.userBadges).find({ userId }).toArray();
+  return docs.map((ub) => ub.badgeId.toString());
 }
 
-/** Set custom badges for a user (replaces existing). Caller must be admin. */
-export async function setUserCustomBadges(userId: string, badgeIds: number[]): Promise<void> {
-  await db.delete(userBadges).where(eq(userBadges.userId, userId));
+export async function setUserCustomBadges(userId: string, badgeIds: string[]): Promise<void> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const userBadges = db.collection(COLLECTIONS.userBadges);
+
+  await userBadges.deleteMany({ userId });
   if (badgeIds.length > 0) {
-    await db.insert(userBadges).values(
-      badgeIds.map((badgeId) => ({ userId, badgeId }))
+    await userBadges.insertMany(
+      badgeIds.map((badgeId) => ({
+        _id: new ObjectId(),
+        userId,
+        badgeId: new ObjectId(badgeId),
+      }))
     );
   }
 }
 
-/** Create a custom badge. Caller must be admin. */
 export async function createBadge(data: {
   key: string;
   label: string;
@@ -289,26 +324,25 @@ export async function createBadge(data: {
   badgeType?: string;
   imageUrl?: string;
   iconName?: string;
-}): Promise<{ id: number } | null> {
-  const [row] = await db
-    .insert(badges)
-    .values({
-      key: data.key.trim(),
-      label: data.label.trim(),
-      description: data.description?.trim() || null,
-      color: data.color?.trim() || null,
-      sortOrder: data.sortOrder ?? 0,
-      badgeType: data.badgeType?.trim() || "label",
-      imageUrl: data.imageUrl?.trim() || null,
-      iconName: data.iconName?.trim() || null,
-    })
-    .returning({ id: badges.id });
-  return row ? { id: row.id } : null;
+}): Promise<{ id: string } | null> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const result = await db.collection(COLLECTIONS.badges).insertOne({
+    key: data.key.trim(),
+    label: data.label.trim(),
+    description: data.description?.trim() || null,
+    color: data.color?.trim() || null,
+    sortOrder: data.sortOrder ?? 0,
+    badgeType: data.badgeType?.trim() || "label",
+    imageUrl: data.imageUrl?.trim() || null,
+    iconName: data.iconName?.trim() || null,
+  });
+  return result.acknowledged ? { id: result.insertedId.toString() } : null;
 }
 
-/** Update a custom badge. Caller must be admin. */
 export async function updateBadge(
-  id: number,
+  id: string,
   data: {
     key?: string;
     label?: string;
@@ -320,45 +354,37 @@ export async function updateBadge(
     iconName?: string;
   }
 ): Promise<boolean> {
-  const updates: Partial<{
-    key: string;
-    label: string;
-    description: string | null;
-    color: string | null;
-    sortOrder: number;
-    badgeType: string | null;
-    imageUrl: string | null;
-    iconName: string | null;
-  }> = {};
+  const updates: Record<string, unknown> = {};
   if (data.key !== undefined) updates.key = data.key.trim();
   if (data.label !== undefined) updates.label = data.label.trim();
   if (data.description !== undefined) updates.description = data.description?.trim() || null;
   if (data.color !== undefined) updates.color = data.color?.trim() || null;
   if (data.sortOrder !== undefined) updates.sortOrder = data.sortOrder;
-  if (data.badgeType !== undefined) updates.badgeType = data.badgeType?.trim() || "label";
+  if (data.badgeType !== undefined) updates.badgeType = data.badgeType?.trim() || null;
   if (data.imageUrl !== undefined) updates.imageUrl = data.imageUrl?.trim() || null;
   if (data.iconName !== undefined) updates.iconName = data.iconName?.trim() || null;
   if (Object.keys(updates).length === 0) return true;
-  const [row] = await db.update(badges).set(updates).where(eq(badges.id, id)).returning({ id: badges.id });
-  return Boolean(row);
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client.db(dbName).collection(COLLECTIONS.badges).updateOne(
+    { _id: new ObjectId(id) },
+    { $set: updates }
+  );
+  return result.matchedCount > 0;
 }
 
-/** Delete a custom badge. Caller must be admin. */
-export async function deleteBadge(id: number): Promise<boolean> {
-  const [row] = await db.delete(badges).where(eq(badges.id, id)).returning({ id: badges.id });
-  return Boolean(row);
+export async function deleteBadge(id: string): Promise<boolean> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client.db(dbName).collection(COLLECTIONS.badges).deleteOne({
+    _id: new ObjectId(id),
+  });
+  if (result.deletedCount > 0) {
+    await client.db(dbName).collection(COLLECTIONS.userBadges).deleteMany({ badgeId: new ObjectId(id) });
+  }
+  return result.deletedCount > 0;
 }
-
-const ADMIN_USER_SELECT = {
-  id: users.id,
-  username: users.username,
-  displayName: users.displayName,
-  avatarUrl: users.avatarUrl,
-  approved: users.approved,
-  verified: users.verified,
-  staff: users.staff,
-  createdAt: users.createdAt,
-} as const;
 
 export type AdminUserRow = {
   id: string;
@@ -371,59 +397,91 @@ export type AdminUserRow = {
   createdAt: Date;
 };
 
-/** List all users for admin (id, username, displayName, avatarUrl, approved, verified, staff, createdAt). */
 export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
-  const rows = await db
-    .select(ADMIN_USER_SELECT)
-    .from(users)
-    .orderBy(desc(users.createdAt));
-  return rows;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const docs = await client
+    .db(dbName)
+    .collection(COLLECTIONS.users)
+    .find()
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, createdAt: 1 })
+    .sort({ createdAt: -1 })
+    .toArray();
+  return docs.map((d) => ({
+    id: d._id,
+    username: d.username ?? null,
+    displayName: d.displayName ?? null,
+    avatarUrl: d.avatarUrl ?? null,
+    approved: d.approved ?? false,
+    verified: d.verified ?? false,
+    staff: d.staff ?? false,
+    createdAt: d.createdAt,
+  }));
 }
 
-/** List users for admin with optional search (username, displayName, id). */
 export async function getUsersForAdminListSearch(search?: string): Promise<AdminUserRow[]> {
   const q = search?.trim();
-  const baseOrder = desc(users.createdAt);
-  if (!q) {
-    return db.select(ADMIN_USER_SELECT).from(users).orderBy(baseOrder);
-  }
-  const searchWhere = or(
-    ilike(users.username, `%${q}%`),
-    ilike(users.displayName, `%${q}%`),
-    ilike(users.id, `%${q}%`)
-  );
-  return db
-    .select(ADMIN_USER_SELECT)
-    .from(users)
-    .where(searchWhere)
-    .orderBy(baseOrder);
+  const client = await getDb();
+  const dbName = await getDbName();
+  const filter: Record<string, unknown> = q
+    ? {
+        $or: [
+          { username: { $regex: q, $options: "i" } },
+          { displayName: { $regex: q, $options: "i" } },
+          { _id: { $regex: q, $options: "i" } },
+        ],
+      }
+    : {};
+  const docs = await client
+    .db(dbName)
+    .collection(COLLECTIONS.users)
+    .find(filter)
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, createdAt: 1 })
+    .sort({ createdAt: -1 })
+    .toArray();
+  return docs.map((d) => ({
+    id: d._id,
+    username: d.username ?? null,
+    displayName: d.displayName ?? null,
+    avatarUrl: d.avatarUrl ?? null,
+    approved: d.approved ?? false,
+    verified: d.verified ?? false,
+    staff: d.staff ?? false,
+    createdAt: d.createdAt,
+  }));
 }
 
-/** Get or create the member's single profile. If slug is taken, appends a short suffix. */
 export async function getOrCreateMemberProfile(
   userId: string,
   defaults: { name: string; slug: string; avatarUrl?: string }
 ): Promise<ProfileRow> {
-  const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
-  if (existing) return existing;
-  let slug = defaults.slug;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const profiles = db.collection(COLLECTIONS.profiles);
+
+  const existing = await profiles.findOne({ userId });
+  if (existing) return toProfileRow(existing);
+
+  let slug = defaults.slug || "member";
   for (let i = 0; i < 10; i++) {
     try {
-      const [row] = await db
-        .insert(profiles)
-        .values({
-          userId,
-          slug: slug || "member",
-          name: defaults.name,
-          description: "",
-          avatarUrl: defaults.avatarUrl ?? null,
-        })
-        .returning();
-      if (!row) throw new Error("Failed to create profile");
-      return row;
+      const now = new Date();
+      const doc = {
+        _id: new ObjectId(),
+        userId,
+        slug,
+        name: defaults.name,
+        description: "",
+        avatarUrl: defaults.avatarUrl ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await profiles.insertOne(doc);
+      return toProfileRow(doc);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("unique") && msg.includes("slug") && i < 9) {
+      if ((msg.includes("duplicate") || msg.includes("E11000")) && i < 9) {
         slug = `${defaults.slug}-${userId.slice(-8)}`;
       } else {
         throw err;
@@ -433,28 +491,41 @@ export async function getOrCreateMemberProfile(
   throw new Error("Failed to create profile: slug conflict");
 }
 
-/** Get member profile by slug (for public page). Returns null if not found. */
 export async function getMemberProfileBySlug(slug: string): Promise<ProfileRow | null> {
-  const [row] = await db.select().from(profiles).where(eq(profiles.slug, slug)).limit(1);
-  return row ?? null;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne({ slug });
+  return doc ? toProfileRow(doc) : null;
 }
 
-/** Get member profile by id. Returns null if not found. Used for ownership checks. */
-export async function getMemberProfileById(profileId: number): Promise<ProfileRow | null> {
-  const [row] = await db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
-  return row ?? null;
+export async function getMemberProfileById(profileId: string): Promise<ProfileRow | null> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return null;
+  }
+  const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne({ _id: oid });
+  return doc ? toProfileRow(doc) : null;
 }
 
-/** Get profile slug for a user (for revalidation). Returns null if no profile. */
 export async function getProfileSlugByUserId(userId: string): Promise<string | null> {
-  const [row] = await db.select({ slug: profiles.slug }).from(profiles).where(eq(profiles.userId, userId)).limit(1);
-  return row?.slug ?? null;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne(
+    { userId },
+    { projection: { slug: 1 } }
+  );
+  return doc?.slug ?? null;
 }
 
-/** Get all member profile slugs (e.g. for sitemap). */
 export async function getAllMemberProfileSlugs(): Promise<string[]> {
-  const rows = await db.select({ slug: profiles.slug }).from(profiles);
-  return rows.map((r) => r.slug);
+  const client = await getDb();
+  const dbName = await getDbName();
+  const docs = await client.db(dbName).collection(COLLECTIONS.profiles).find({}, { projection: { slug: 1 } }).toArray();
+  return docs.map((d) => d.slug);
 }
 
 export interface VouchedByUser {
@@ -464,160 +535,176 @@ export interface VouchedByUser {
   avatarUrl: string | null;
 }
 
-/** Get vouch count and list of users who vouched for a profile. Returns empty if vouches table does not exist. */
-export async function getVouchesForProfile(profileId: number): Promise<{
+export async function getVouchesForProfile(profileId: string): Promise<{
   count: number;
   vouchedBy: VouchedByUser[];
 }> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
   try {
-    const rows = await db
-      .select({
-        userId: vouches.userId,
-        displayName: users.displayName,
-        username: users.username,
-        avatarUrl: users.avatarUrl,
-      })
-      .from(vouches)
-      .innerJoin(users, eq(vouches.userId, users.id))
-      .where(eq(vouches.profileId, profileId))
-      .orderBy(desc(vouches.createdAt));
-    return { count: rows.length, vouchedBy: rows };
-  } catch (err) {
-    if (isRelationNotFound(err)) return { count: 0, vouchedBy: [] };
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    return { count: 0, vouchedBy: [] };
   }
+
+  const vouches = await db
+    .collection(COLLECTIONS.vouches)
+    .find({ profileId: oid })
+    .sort({ createdAt: -1 })
+    .toArray();
+  if (vouches.length === 0) return { count: 0, vouchedBy: [] };
+
+  const userIds = [...new Set(vouches.map((v) => v.userId))];
+  const users = await db.collection(COLLECTIONS.users).find({ _id: { $in: userIds } }).toArray();
+  const userMap = new Map(users.map((u) => [u._id, u]));
+
+  const vouchedBy: VouchedByUser[] = vouches.map((v) => {
+    const u = userMap.get(v.userId);
+    return {
+      userId: v.userId,
+      displayName: u?.displayName ?? null,
+      username: u?.username ?? null,
+      avatarUrl: u?.avatarUrl ?? null,
+    };
+  });
+  return { count: vouchedBy.length, vouchedBy };
 }
 
-/** Add a vouch from a user for a profile. Returns true if added, false if already vouched or self-vouch. */
-export async function addVouch(profileId: number, userId: string): Promise<boolean> {
-  const [profile] = await db.select({ userId: profiles.userId }).from(profiles).where(eq(profiles.id, profileId)).limit(1);
-  if (!profile || profile.userId === userId) return false;
+export async function addVouch(profileId: string, userId: string): Promise<boolean> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
   try {
-    await db.insert(vouches).values({ profileId, userId });
+    oid = new ObjectId(profileId);
+  } catch {
+    return false;
+  }
+
+  const profile = await db.collection(COLLECTIONS.profiles).findOne({ _id: oid }, { projection: { userId: 1 } });
+  if (!profile || profile.userId === userId) return false;
+
+  try {
+    await db.collection(COLLECTIONS.vouches).insertOne({
+      _id: new ObjectId(),
+      profileId: oid,
+      userId,
+      createdAt: new Date(),
+    });
     return true;
   } catch (err) {
-    if (isRelationNotFound(err)) return false;
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("unique") || msg.includes("duplicate")) return false;
+    if (msg.includes("E11000") || msg.includes("duplicate")) return false;
     throw err;
   }
 }
 
-/** Remove a vouch. Returns true if removed. */
-export async function removeVouch(profileId: number, userId: string): Promise<boolean> {
+export async function removeVouch(profileId: string, userId: string): Promise<boolean> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
   try {
-    const deleted = await db
-      .delete(vouches)
-      .where(and(eq(vouches.profileId, profileId), eq(vouches.userId, userId)))
-      .returning({ id: vouches.id });
-    return deleted.length > 0;
-  } catch (err) {
-    if (isRelationNotFound(err)) return false;
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    return false;
   }
+  const result = await client.db(dbName).collection(COLLECTIONS.vouches).deleteOne({
+    profileId: oid,
+    userId,
+  });
+  return result.deletedCount > 0;
 }
 
-/** Check if a user has vouched for a profile. Returns false if vouches table does not exist. */
-export async function hasUserVouched(profileId: number, userId: string): Promise<boolean> {
+export async function hasUserVouched(profileId: string, userId: string): Promise<boolean> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
   try {
-    const [row] = await db
-      .select({ id: vouches.id })
-      .from(vouches)
-      .where(and(eq(vouches.profileId, profileId), eq(vouches.userId, userId)))
-      .limit(1);
-    return Boolean(row);
-  } catch (err) {
-    if (isRelationNotFound(err)) return false;
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    return false;
   }
+  const doc = await client.db(dbName).collection(COLLECTIONS.vouches).findOne({
+    profileId: oid,
+    userId,
+  });
+  return Boolean(doc);
 }
 
-/** Record a page view for a member profile. */
 export async function recordProfileView(
-  profileId: number,
+  profileId: string,
   visitorIp: string,
   userAgent?: string | null
 ): Promise<void> {
-  await db.insert(profileViews).values({
-    profileId,
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return;
+  }
+  await client.db(dbName).collection(COLLECTIONS.profileViews).insertOne({
+    _id: new ObjectId(),
+    profileId: oid,
     visitorIp,
     userAgent: userAgent ?? null,
+    viewedAt: new Date(),
   });
 }
 
-/** Get view count and recent views for a profile. */
 export async function getProfileViews(
-  profileId: number,
+  profileId: string,
   recentLimit = 50
 ): Promise<{ viewCount: number; recentViews: ProfileViewRow[] }> {
-  const all = await db
-    .select()
-    .from(profileViews)
-    .where(eq(profileViews.profileId, profileId))
-    .orderBy(desc(profileViews.viewedAt));
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return { viewCount: 0, recentViews: [] };
+  }
+  const all = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileViews)
+    .find({ profileId: oid })
+    .sort({ viewedAt: -1 })
+    .toArray();
   const viewCount = all.length;
-  const recentViews = all.slice(0, recentLimit);
+  const recentViews = all.slice(0, recentLimit).map((v) => ({
+    id: v._id.toString(),
+    profileId: v.profileId.toString(),
+    visitorIp: v.visitorIp,
+    userAgent: v.userAgent ?? null,
+    viewedAt: v.viewedAt,
+  }));
   return { viewCount, recentViews };
 }
 
-/** Update member profile. Caller must ensure profile belongs to user. */
 export async function updateMemberProfile(
-  profileId: number,
+  profileId: string,
   userId: string,
-  data: {
-    slug?: string;
-    name?: string;
-    tagline?: string;
-    description?: string;
-    avatarUrl?: string;
-    quote?: string;
-    tags?: string[] | null;
-    discord?: string;
-    roblox?: string;
-    banner?: string;
-    bannerSmall?: boolean;
-    bannerAnimatedFire?: boolean;
-    bannerStyle?: string;
-    useTerminalLayout?: boolean;
-    terminalTitle?: string;
-    terminalCommands?: string | null;
-    easterEgg?: boolean;
-    easterEggTaglineWord?: string;
-    easterEggLinkTrigger?: string;
-    easterEggLinkUrl?: string;
-    easterEggLinkPopupUrl?: string;
-    links?: string | null;
-    ogImageUrl?: string;
-    showUpdatedAt?: boolean;
-    accentColor?: string;
-    terminalPrompt?: string;
-    nameGreeting?: string;
-    cardStyle?: string;
-    pronouns?: string;
-    location?: string;
-    timezone?: string;
-    avatarShape?: string;
-    layoutDensity?: string;
-    noindex?: boolean;
-    metaDescription?: string;
-    showPageViews?: boolean;
-    showDiscordBadges?: boolean;
-    customFont?: string;
-    backgroundType?: string;
-    backgroundUrl?: string;
-    birthday?: string;
-  }
+  data: Record<string, unknown>
 ): Promise<ProfileRow> {
-  const [row] = await db
-    .update(profiles)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(profiles.id, profileId), eq(profiles.userId, userId)))
-    .returning();
-  if (!row) throw new Error("Profile not found or access denied");
-  return row;
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Profile not found or access denied");
+  }
+  const update: Record<string, unknown> = { ...data, updatedAt: new Date() };
+  const result = await client.db(dbName).collection(COLLECTIONS.profiles).findOneAndUpdate(
+    { _id: oid, userId },
+    { $set: update },
+    { returnDocument: "after" }
+  );
+  if (!result) throw new Error("Profile not found or access denied");
+  return toProfileRow(result);
 }
 
 function parseLinks(raw: string | null): { label: string; href: string }[] | undefined {
@@ -654,14 +741,13 @@ function formatUpdatedAt(d: Date): string {
   return new Date(d).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
-/** Convert DB profile row to the Profile shape used by ProfileContent. */
 export function memberProfileToProfile(
   row: ProfileRow,
   badgeFlags?: { verified: boolean; staff: boolean },
   discordPublicFlags?: number | null,
   customBadgesList?: CustomBadge[]
 ): Profile {
-  const links = parseLinks(row.links);
+  const links = parseLinks(row.links ?? null);
   const easterEggLink =
     row.easterEggLinkTrigger && row.easterEggLinkUrl
       ? {
@@ -686,7 +772,7 @@ export function memberProfileToProfile(
     bannerStyle: row.bannerAnimatedFire && !row.bannerStyle ? "fire" : (row.bannerStyle ?? undefined),
     useTerminalLayout: row.useTerminalLayout ?? undefined,
     terminalTitle: row.terminalTitle ?? undefined,
-    terminalCommands: parseTerminalCommands(row.terminalCommands),
+    terminalCommands: parseTerminalCommands(row.terminalCommands ?? null),
     easterEgg: row.easterEgg ?? undefined,
     easterEggTaglineWord: row.easterEggTaglineWord ?? undefined,
     easterEggLink,
@@ -732,159 +818,168 @@ export function memberProfileToProfile(
   };
 }
 
-/** Gallery item for profile display. */
 export interface GalleryItem {
-  id: number;
+  id: string;
   imageUrl: string;
   title?: string | null;
   description?: string | null;
   sortOrder: number;
 }
 
-/** True if the error is Postgres "relation does not exist" (e.g. gallery_items not migrated). */
-function isRelationNotFound(err: unknown): boolean {
-  const code = err && typeof err === "object" && "code" in err ? (err as { code: string }).code : "";
-  return code === "42P01";
-}
-
-/** Get gallery items for a profile, ordered by sortOrder then id. Returns [] if gallery_items table does not exist. */
-export async function getGalleryForProfile(profileId: number): Promise<GalleryItem[]> {
+export async function getGalleryForProfile(profileId: string): Promise<GalleryItem[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
   try {
-    const rows = await db
-      .select({
-        id: galleryItems.id,
-        imageUrl: galleryItems.imageUrl,
-        title: galleryItems.title,
-        description: galleryItems.description,
-        sortOrder: galleryItems.sortOrder,
-      })
-      .from(galleryItems)
-      .where(eq(galleryItems.profileId, profileId))
-      .orderBy(galleryItems.sortOrder, galleryItems.id);
-    return rows.map((r) => ({
-      id: r.id,
-      imageUrl: r.imageUrl,
-      title: r.title ?? undefined,
-      description: r.description ?? undefined,
-      sortOrder: r.sortOrder,
-    }));
-  } catch (err) {
-    if (isRelationNotFound(err)) return [];
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    return [];
   }
+  const docs = await client
+    .db(dbName)
+    .collection(COLLECTIONS.galleryItems)
+    .find({ profileId: oid })
+    .sort({ sortOrder: 1 })
+    .toArray();
+  return docs.map((d) => ({
+    id: d._id.toString(),
+    imageUrl: d.imageUrl,
+    title: d.title ?? undefined,
+    description: d.description ?? undefined,
+    sortOrder: d.sortOrder,
+  }));
 }
 
-/** Ensure profile belongs to userId; throw if not. */
-async function ensureProfileOwnership(profileId: number, userId: string): Promise<void> {
-  const [row] = await db
-    .select({ id: profiles.id })
-    .from(profiles)
-    .where(and(eq(profiles.id, profileId), eq(profiles.userId, userId)))
-    .limit(1);
-  if (!row) throw new Error("Profile not found or access denied");
+async function ensureProfileOwnership(profileId: string, userId: string): Promise<void> {
+  const profile = await getMemberProfileById(profileId);
+  if (!profile || profile.userId !== userId) throw new Error("Profile not found or access denied");
 }
 
-const GALLERY_NOT_MIGRATED =
-  "Gallery is not available. Run: npm run db:apply-missing (or psql \"$DATABASE_URL\" -f drizzle/apply-missing.sql)";
-
-/** Add a gallery item. Caller must own the profile. */
 export async function addGalleryItem(
-  profileId: number,
+  profileId: string,
   userId: string,
   data: { imageUrl: string; title?: string | null; description?: string | null }
 ): Promise<GalleryItem> {
+  await ensureProfileOwnership(profileId, userId);
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
   try {
-    await ensureProfileOwnership(profileId, userId);
-    const [max] = await db
-      .select({ max: sql<number>`coalesce(max(${galleryItems.sortOrder}), -1) + 1` })
-      .from(galleryItems)
-      .where(eq(galleryItems.profileId, profileId));
-    const sortOrder = max?.max ?? 0;
-    const [row] = await db
-      .insert(galleryItems)
-      .values({
-        profileId,
-        imageUrl: data.imageUrl.trim().slice(0, 2048),
-        title: data.title?.trim().slice(0, 200) ?? null,
-        description: data.description?.trim().slice(0, 1000) ?? null,
-        sortOrder,
-      })
-      .returning();
-    if (!row) throw new Error("Insert failed");
-    return {
-      id: row.id,
-      imageUrl: row.imageUrl,
-      title: row.title ?? undefined,
-      description: row.description ?? undefined,
-      sortOrder: row.sortOrder,
-    };
-  } catch (err) {
-    if (isRelationNotFound(err)) throw new Error(GALLERY_NOT_MIGRATED);
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
   }
+
+  const agg = await db
+    .collection(COLLECTIONS.galleryItems)
+    .aggregate([{ $match: { profileId: oid } }, { $group: { _id: null, max: { $max: "$sortOrder" } } }])
+    .toArray();
+  const sortOrder = (agg[0]?.max ?? -1) + 1;
+
+  const doc = {
+    _id: new ObjectId(),
+    profileId: oid,
+    imageUrl: data.imageUrl.trim().slice(0, 2048),
+    title: data.title?.trim().slice(0, 200) ?? null,
+    description: data.description?.trim().slice(0, 1000) ?? null,
+    sortOrder,
+  };
+  await db.collection(COLLECTIONS.galleryItems).insertOne(doc);
+  return {
+    id: doc._id.toString(),
+    imageUrl: doc.imageUrl,
+    title: doc.title ?? undefined,
+    description: doc.description ?? undefined,
+    sortOrder: doc.sortOrder,
+  };
 }
 
-/** Update a gallery item. Caller must own the profile. */
 export async function updateGalleryItem(
-  itemId: number,
+  itemId: string,
   userId: string,
   data: { title?: string | null; description?: string | null }
 ): Promise<GalleryItem> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
   try {
-    const [item] = await db.select().from(galleryItems).where(eq(galleryItems.id, itemId)).limit(1);
-    if (!item) throw new Error("Gallery item not found");
-    await ensureProfileOwnership(item.profileId, userId);
-    const [row] = await db
-      .update(galleryItems)
-      .set({
-        ...(data.title !== undefined && { title: data.title?.trim().slice(0, 200) ?? null }),
-        ...(data.description !== undefined && { description: data.description?.trim().slice(0, 1000) ?? null }),
-      })
-      .where(eq(galleryItems.id, itemId))
-      .returning();
-    if (!row) throw new Error("Update failed");
+    oid = new ObjectId(itemId);
+  } catch {
+    throw new Error("Gallery item not found");
+  }
+  const item = await db.collection(COLLECTIONS.galleryItems).findOne({ _id: oid });
+  if (!item) throw new Error("Gallery item not found");
+  await ensureProfileOwnership(item.profileId.toString(), userId);
+
+  const update: Record<string, unknown> = {};
+  if (data.title !== undefined) update.title = data.title?.trim().slice(0, 200) ?? null;
+  if (data.description !== undefined) update.description = data.description?.trim().slice(0, 1000) ?? null;
+  if (Object.keys(update).length === 0) {
     return {
-      id: row.id,
-      imageUrl: row.imageUrl,
-      title: row.title ?? undefined,
-      description: row.description ?? undefined,
-      sortOrder: row.sortOrder,
+      id: item._id.toString(),
+      imageUrl: item.imageUrl,
+      title: item.title ?? undefined,
+      description: item.description ?? undefined,
+      sortOrder: item.sortOrder,
     };
-  } catch (err) {
-    if (isRelationNotFound(err)) throw new Error(GALLERY_NOT_MIGRATED);
-    throw err;
   }
+
+  const result = await db.collection(COLLECTIONS.galleryItems).findOneAndUpdate(
+    { _id: oid },
+    { $set: update },
+    { returnDocument: "after" }
+  );
+  if (!result) throw new Error("Update failed");
+  return {
+    id: result._id.toString(),
+    imageUrl: result.imageUrl,
+    title: result.title ?? undefined,
+    description: result.description ?? undefined,
+    sortOrder: result.sortOrder,
+  };
 }
 
-/** Delete a gallery item. Caller must own the profile. */
-export async function deleteGalleryItem(itemId: number, userId: string): Promise<void> {
+export async function deleteGalleryItem(itemId: string, userId: string): Promise<void> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
   try {
-    const [item] = await db.select().from(galleryItems).where(eq(galleryItems.id, itemId)).limit(1);
-    if (!item) throw new Error("Gallery item not found");
-    await ensureProfileOwnership(item.profileId, userId);
-    await db.delete(galleryItems).where(eq(galleryItems.id, itemId));
-  } catch (err) {
-    if (isRelationNotFound(err)) throw new Error(GALLERY_NOT_MIGRATED);
-    throw err;
+    oid = new ObjectId(itemId);
+  } catch {
+    throw new Error("Gallery item not found");
   }
+  const item = await db.collection(COLLECTIONS.galleryItems).findOne({ _id: oid });
+  if (!item) throw new Error("Gallery item not found");
+  await ensureProfileOwnership(item.profileId.toString(), userId);
+  await db.collection(COLLECTIONS.galleryItems).deleteOne({ _id: oid });
 }
 
-/** Reorder gallery items by providing ordered ids. Caller must own the profile. */
-export async function setGalleryOrder(profileId: number, userId: string, orderedIds: number[]): Promise<void> {
+export async function setGalleryOrder(profileId: string, userId: string, orderedIds: string[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  await ensureProfileOwnership(profileId, userId);
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
   try {
-    await ensureProfileOwnership(profileId, userId);
-    const updates = orderedIds.map((id, index) =>
-      db.update(galleryItems).set({ sortOrder: index }).where(and(eq(galleryItems.id, id), eq(galleryItems.profileId, profileId)))
-    );
-    await Promise.all(updates);
-  } catch (err) {
-    if (isRelationNotFound(err)) throw new Error(GALLERY_NOT_MIGRATED);
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
   }
+
+  const updates = orderedIds.map((id, index) =>
+    db
+      .collection(COLLECTIONS.galleryItems)
+      .updateOne({ _id: new ObjectId(id), profileId: oid }, { $set: { sortOrder: index } })
+  );
+  await Promise.all(updates);
 }
 
-/** Normalize short-link slug: lowercase, alphanumeric, hyphen, underscore. Max 64 chars. */
 const SHORT_LINK_SLUG_MAX = 64;
 function normalizeShortLinkSlug(raw: string): string {
   return raw
@@ -895,51 +990,53 @@ function normalizeShortLinkSlug(raw: string): string {
     .slice(0, SHORT_LINK_SLUG_MAX) || "";
 }
 
-/** Get redirect URL for profile slug + link slug. Returns null if not found or table missing. */
 export async function getShortLinkRedirect(
   profileSlug: string,
   linkSlug: string
 ): Promise<{ url: string } | null> {
   const slug = normalizeShortLinkSlug(linkSlug);
   if (!slug) return null;
-  try {
-    const [row] = await db
-      .select({ url: profileShortLinks.url })
-      .from(profileShortLinks)
-      .innerJoin(profiles, eq(profiles.id, profileShortLinks.profileId))
-      .where(and(eq(profiles.slug, profileSlug), eq(profileShortLinks.slug, slug)))
-      .limit(1);
-    return row ?? null;
-  } catch (err) {
-    if (isRelationNotFound(err)) return null;
-    throw err;
-  }
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+
+  const profile = await db.collection(COLLECTIONS.profiles).findOne({ slug: profileSlug }, { projection: { _id: 1 } });
+  if (!profile) return null;
+
+  const link = await db.collection(COLLECTIONS.profileShortLinks).findOne({
+    profileId: profile._id,
+    slug,
+  });
+  return link ? { url: link.url } : null;
 }
 
 export interface ProfileShortLink {
-  id: number;
+  id: string;
   slug: string;
   url: string;
 }
 
-/** Get all short links for a profile. Returns [] if table missing. */
-export async function getShortLinksForProfile(profileId: number): Promise<ProfileShortLink[]> {
+export async function getShortLinksForProfile(profileId: string): Promise<ProfileShortLink[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
   try {
-    const rows = await db
-      .select({ id: profileShortLinks.id, slug: profileShortLinks.slug, url: profileShortLinks.url })
-      .from(profileShortLinks)
-      .where(eq(profileShortLinks.profileId, profileId))
-      .orderBy(profileShortLinks.slug);
-    return rows.map((r) => ({ id: r.id, slug: r.slug, url: r.url }));
-  } catch (err) {
-    if (isRelationNotFound(err)) return [];
-    throw err;
+    oid = new ObjectId(profileId);
+  } catch {
+    return [];
   }
+  const docs = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileShortLinks)
+    .find({ profileId: oid })
+    .sort({ slug: 1 })
+    .toArray();
+  return docs.map((d) => ({ id: d._id.toString(), slug: d.slug, url: d.url }));
 }
 
-/** Add a short link. Caller must own the profile. Slug is normalized. */
 export async function addShortLink(
-  profileId: number,
+  profileId: string,
   userId: string,
   data: { slug: string; url: string }
 ): Promise<ProfileShortLink> {
@@ -951,29 +1048,45 @@ export async function addShortLink(
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     throw new Error("URL must start with http:// or https://");
   }
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
   try {
-    const [row] = await db
-      .insert(profileShortLinks)
-      .values({
-        profileId,
-        slug,
-        url: url.slice(0, 2048),
-      })
-      .returning({ id: profileShortLinks.id, slug: profileShortLinks.slug, url: profileShortLinks.url });
-    if (!row) throw new Error("Insert failed");
-    return { id: row.id, slug: row.slug, url: row.url };
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
+  }
+
+  try {
+    const doc = {
+      _id: new ObjectId(),
+      profileId: oid,
+      slug,
+      url: url.slice(0, 2048),
+    };
+    await client.db(dbName).collection(COLLECTIONS.profileShortLinks).insertOne(doc);
+    return { id: doc._id.toString(), slug: doc.slug, url: doc.url };
   } catch (err) {
-    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "23505") {
+    if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000) {
       throw new Error("A link with this slug already exists");
     }
     throw err;
   }
 }
 
-/** Delete a short link. Caller must own the profile. */
-export async function deleteShortLink(linkId: number, userId: string): Promise<void> {
-  const [link] = await db.select().from(profileShortLinks).where(eq(profileShortLinks.id, linkId)).limit(1);
+export async function deleteShortLink(linkId: string, userId: string): Promise<void> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(linkId);
+  } catch {
+    throw new Error("Short link not found");
+  }
+  const link = await db.collection(COLLECTIONS.profileShortLinks).findOne({ _id: oid });
   if (!link) throw new Error("Short link not found");
-  await ensureProfileOwnership(link.profileId, userId);
-  await db.delete(profileShortLinks).where(eq(profileShortLinks.id, linkId));
+  await ensureProfileOwnership(link.profileId.toString(), userId);
+  await db.collection(COLLECTIONS.profileShortLinks).deleteOne({ _id: oid });
 }

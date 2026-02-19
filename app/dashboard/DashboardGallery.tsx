@@ -14,7 +14,7 @@ import {
 const dashIcon = { size: 14, weight: "regular" as const, className: "shrink-0" };
 
 type Props = {
-  profileId: number;
+  profileId: string;
   profileSlug: string;
   initialGallery: GalleryItem[];
 };
@@ -26,7 +26,7 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
   const [galleryAddDescription, setGalleryAddDescription] = useState("");
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [galleryAddError, setGalleryAddError] = useState<string | null>(null);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
 

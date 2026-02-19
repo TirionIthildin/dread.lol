@@ -9,7 +9,7 @@
 # 3. Assign the domain to the dread service.
 # 4. Set NEXT_PUBLIC_SITE_URL to this site's public URL (e.g. https://dread.lol)
 #    so metadata, sitemap, and Open Graph images use absolute URLs.
-# 5. Set POSTGRES_PASSWORD (and optionally POSTGRES_USER, POSTGRES_DB) for the DB.
+# 5. Set MONGO_PASSWORD (required). Optional: MONGO_USER (default: dread), MONGO_DB (default: dread).
 # 6. For Discord OAuth login: set DISCORD_OAUTH_CLIENT_ID, DISCORD_OAUTH_CLIENT_SECRET,
 #    AUTH_REDIRECT_URI (e.g. https://dread.lol/api/auth/discord/callback), and AUTH_SECRET.
 # 7. For live Discord status on profiles: set DISCORD_BOT_TOKEN and DISCORD_GUILD_ID.
@@ -17,17 +17,17 @@
 # ============================================
 
 services:
-  postgres:
-    image: postgres:16-alpine
+  mongodb:
+    image: mongo:8
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-dread}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dread}
-      POSTGRES_DB: ${POSTGRES_DB:-dread}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-dread}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-dread}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-dread}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dread} -d ${POSTGRES_DB:-dread}"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -65,7 +65,7 @@ services:
     image: registry.ithildin.co/poker/dread.lol
     restart: unless-stopped
     depends_on:
-      postgres: { condition: service_healthy }
+      mongodb: { condition: service_healthy }
       valkey: { condition: service_healthy }
       seaweed-volume:
         condition: service_started
@@ -75,7 +75,7 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_SITE_URL=${SERVICE_FQDN_DREAD_3000}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-dread}:${POSTGRES_PASSWORD:-dread}@postgres:5432/${POSTGRES_DB:-dread}
+      - DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:-dread}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin
       - VALKEY_URL=redis://valkey:6379
       - SEAWEED_MASTER_URL=http://seaweed-master:9333
       - DISCORD_OAUTH_CLIENT_ID=${DISCORD_OAUTH_CLIENT_ID:-}
@@ -104,5 +104,5 @@ services:
       - SETUID
 
 volumes:
-  postgres_data:
+  mongodb_data:
   valkey_data:

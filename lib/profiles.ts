@@ -79,7 +79,7 @@ export interface Profile {
   staff?: boolean;
   /** Custom badges (admin-created and assigned). */
   customBadges?: {
-    id: number;
+    id: string;
     key: string;
     label: string;
     description?: string;
@@ -92,7 +92,7 @@ export interface Profile {
   /** Discord badge keys to show (when user opted in via showDiscordBadges). */
   discordBadges?: string[];
   /** Gallery: images with optional title and description. */
-  gallery?: { id: number; imageUrl: string; title?: string; description?: string; sortOrder: number }[];
+  gallery?: { id: string; imageUrl: string; title?: string; description?: string; sortOrder: number }[];
   /** Live Discord status + Rich Presence (from presence bot). */
   discordPresence?: {
     status: "online" | "idle" | "dnd" | "offline";

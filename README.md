@@ -20,22 +20,22 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Development (dashboard + member profiles)
 
-Member profiles and Discord login need Postgres, Valkey (Redis), and env config.
+Member profiles and Discord login need MongoDB, Valkey (Redis), and env config.
 
 1. **Start databases** (from project root):
    ```bash
    docker compose up -d
    ```
-   This starts Postgres (port 5432) and Valkey (port 6379).
+   This starts MongoDB (port 27017) and Valkey (port 6379).
 
 2. **Env** — Copy `.env.example` to `.env` and set:
-   - `DATABASE_URL` — e.g. `postgresql://dread:dread@localhost:5432/dread`
+   - `DATABASE_URL` — e.g. `mongodb://dread:dread@localhost:27017/dread?authSource=admin`
    - `VALKEY_URL` — e.g. `redis://localhost:6379`
    - Discord OAuth: create an app at [Discord Developer Portal](https://discord.com/developers/applications), then set `DISCORD_OAUTH_CLIENT_ID`, `DISCORD_OAUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URI` (e.g. `http://localhost:3000/api/auth/discord/callback`), and `AUTH_SECRET` (e.g. `openssl rand -base64 32`).
 
-3. **Migrations** — Create `users`, `profiles`, and `profile_views` tables:
+3. **Indexes** — Run before first deploy (or let entrypoint do it):
    ```bash
-   npm run db:migrate
+   npm run db:migrate-prod
    ```
 
 4. Visit `/dashboard`, log in with Discord, and edit your profile. Your page is at `/{your-slug}`.
@@ -47,9 +47,7 @@ Member profiles and Discord login need Postgres, Valkey (Redis), and env config.
 - `npm run start` — run production server
 - `npm run lint` — run ESLint
 - `npm run typecheck` — run TypeScript check
-- `npm run db:migrate` — run database migrations
-- `npm run db:generate` — generate migrations from schema (Drizzle)
-- `npm run db:studio` — open Drizzle Studio
+- `npm run db:migrate-prod` — create MongoDB indexes (run before deploy)
 
 ## Theme
 
