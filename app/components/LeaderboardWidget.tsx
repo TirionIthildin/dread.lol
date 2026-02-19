@@ -2,7 +2,12 @@ import Link from "next/link";
 import { getLeaderboardTopVouches } from "@/lib/member-profiles";
 
 export default async function LeaderboardWidget() {
-  const entries = await getLeaderboardTopVouches(5);
+  let entries: { slug: string; name: string; count: number }[] = [];
+  try {
+    entries = await getLeaderboardTopVouches(5);
+  } catch {
+    // MongoDB unavailable (e.g. during Docker build or CI)
+  }
   const now = new Date();
   const monthName = now.toLocaleString("default", { month: "short" });
 

@@ -5,6 +5,9 @@ import SignInWidget from "@/app/components/SignInWidget";
 import TerminalWindow from "@/app/components/TerminalWindow";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_OG_IMAGE } from "@/lib/site";
 
+/** Rendered at request time — LeaderboardWidget requires MongoDB. */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: SITE_NAME,
   description: SITE_DESCRIPTION,
