@@ -6,6 +6,7 @@ import {
   getMemberProfileBySlug,
   recordProfileView,
   memberProfileToProfile,
+  getProfileViewCount,
   getUserBadges,
   getCustomBadgesForUser,
   getUserDiscordFlags,
@@ -79,7 +80,8 @@ export default async function ProfilePage({ params }: Props) {
   const { slug } = await params;
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
-  const [ip, userAgent, badgeFlags, customBadges, discordFlags, vouchesData, session, discordPresence] = await Promise.all([
+  const showPageViews = memberRow.showPageViews ?? true;
+  const [ip, userAgent, badgeFlags, customBadges, discordFlags, vouchesData, session, discordPresence, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getUserBadges(memberRow.userId),
@@ -88,6 +90,7 @@ export default async function ProfilePage({ params }: Props) {
     getVouchesForProfile(memberRow.id),
     getSession(),
     getDiscordPresence(memberRow.userId),
+    showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent);
   const currentUserHasVouched = session
@@ -95,6 +98,7 @@ export default async function ProfilePage({ params }: Props) {
     : false;
   const canVouch = session != null && session.sub !== memberRow.userId;
   const profile = memberProfileToProfile(memberRow, badgeFlags, discordFlags, customBadges);
+  if (showPageViews) profile.viewCount = viewCount;
   if (discordPresence) {
     profile.discordPresence = {
       status: discordPresence.status,

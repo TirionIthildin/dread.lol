@@ -94,3 +94,17 @@ export async function getFile(fid: string): Promise<Response> {
   }
   return res;
 }
+
+/**
+ * Delete a file from SeaweedFS by fid.
+ * Uses soft delete; disk space reclaimed by background vacuum.
+ */
+export async function deleteFile(fid: string): Promise<void> {
+  if (!isSeaweedConfigured()) return;
+  const baseUrl = await lookupVolumeUrl(fid);
+  const url = `${baseUrl.replace(/\/$/, "")}/${fid}`;
+  const res = await fetch(url, { method: "DELETE" });
+  if (!res.ok) {
+    console.error(`SeaweedFS delete failed for ${fid}: ${res.status}`);
+  }
+}

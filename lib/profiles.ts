@@ -65,10 +65,14 @@ export interface Profile {
   avatarShape?: string;
   /** Layout density: default, compact, spacious. */
   layoutDensity?: string;
-  /** Custom font key (default, jetbrains-mono, fira-code, space-mono). */
+  /** Custom font key (default, jetbrains-mono, fira-code, space-mono, custom) or URL when custom. */
   customFont?: string;
-  /** Cursor style when viewing profile: default, crosshair, pointer, text, grab, minimal, beam. */
+  /** Custom font file URL when customFont is "custom". */
+  customFontUrl?: string;
+  /** Cursor style when viewing profile: default, crosshair, pointer, text, grab, minimal, beam, custom. */
   cursorStyle?: string;
+  /** Custom cursor image URL when cursorStyle is "custom". */
+  cursorImageUrl?: string;
   /** Animation preset: none, fade-in, slide-up, scale-in, glow, shimmer. */
   animationPreset?: string;
   /** Background type: none, image, video, audio, youtube. */
@@ -79,6 +83,10 @@ export interface Profile {
   noindex?: boolean;
   /** Override meta/OG description for social sharing. */
   metaDescription?: string;
+  /** When true, show view count on profile (member profiles only). */
+  showPageViews?: boolean;
+  /** View count to display when showPageViews is true. */
+  viewCount?: number;
   /** Admin-granted verified badge (member profiles only). */
   verified?: boolean;
   /** Admin-granted staff badge (member profiles only). */
@@ -104,5 +112,9 @@ export interface Profile {
     status: "online" | "idle" | "dnd" | "offline";
     activities: { name: string; state?: string | null; details?: string | null }[];
   };
+  /** When true, show an audio player widget on the profile. */
+  showAudioPlayer?: boolean;
+  /** Audio tracks for the player: url and optional title. */
+  audioTracks?: { url: string; title?: string }[];
 }
 

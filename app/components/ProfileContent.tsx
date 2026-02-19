@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, Cake, Eye } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 
 const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
@@ -13,9 +13,19 @@ import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
+import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
+import { SITE_URL } from "@/lib/site";
+
+function resolveMediaUrl(url: string): string {
+  if (!url?.trim()) return "";
+  const u = url.trim();
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  if (u.startsWith("/")) return `${SITE_URL.replace(/\/$/, "")}${u}`;
+  return u;
+}
 
 const ACCENT_THEMES = ["cyan", "green", "purple", "orange", "rose"] as const;
 /** Preset class names for custom badge colors (key = badge.color value from admin). */
@@ -133,13 +143,22 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
       : "default";
   const densityClass = density !== "default" ? `profile-density-${density}` : "";
   const fontClass =
-    profile.customFont && CUSTOM_FONTS.includes(profile.customFont as (typeof CUSTOM_FONTS)[number])
-      ? `profile-font-${profile.customFont}`
-      : "";
+    profile.customFontUrl
+      ? "profile-font-custom"
+      : profile.customFont && CUSTOM_FONTS.includes(profile.customFont as (typeof CUSTOM_FONTS)[number])
+        ? `profile-font-${profile.customFont}`
+        : "";
   const cursorClass =
-    profile.cursorStyle && CURSOR_STYLES.includes(profile.cursorStyle as (typeof CURSOR_STYLES)[number]) && profile.cursorStyle !== "default"
-      ? `profile-cursor-${profile.cursorStyle}`
-      : "";
+    profile.cursorImageUrl
+      ? ""
+      : profile.cursorStyle && CURSOR_STYLES.includes(profile.cursorStyle as (typeof CURSOR_STYLES)[number]) && profile.cursorStyle !== "default"
+        ? `profile-cursor-${profile.cursorStyle}`
+        : "";
+  const cursorStyleInline =
+    profile.cursorImageUrl
+      ? { cursor: `url("${resolveMediaUrl(profile.cursorImageUrl).replace(/"/g, "%22")}") 0 0, auto` }
+      : undefined;
+  const customFontUrlResolved = profile.customFontUrl ? resolveMediaUrl(profile.customFontUrl) : "";
   const animationClass =
     profile.animationPreset && ANIMATION_PRESETS.includes(profile.animationPreset as (typeof ANIMATION_PRESETS)[number]) && profile.animationPreset !== "none"
       ? `profile-animate-${profile.animationPreset}`
@@ -148,7 +167,18 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
   const cardOpacity = profile.cardOpacity != null ? Math.max(50, Math.min(100, profile.cardOpacity)) : 95;
 
   return (
-    <div className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass} ${cursorClass}`}>
+    <>
+      {customFontUrlResolved && (
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `@font-face{font-family:profile-custom-font;src:url("${customFontUrlResolved.replace(/"/g, "%22")}");}.profile-font-custom{font-family:profile-custom-font,ui-monospace,monospace}`,
+          }}
+        />
+      )}
+    <div
+      className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass} ${cursorClass}`}
+      style={cursorStyleInline}
+    >
       <article
         className={`rounded-xl border border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden transition-shadow duration-300 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)] ${cardClass} ${densityClass} ${animationClass}`}
         style={{ backgroundColor: `color-mix(in srgb, var(--surface) ${cardOpacity}%, transparent)` }}
@@ -365,6 +395,9 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
           <div className="mt-4">
             <ProfileGalleryButton slug={profile.slug} />
           </div>
+          {profile.showAudioPlayer && profile.audioTracks && profile.audioTracks.length > 0 && (
+            <ProfileAudioPlayer tracks={profile.audioTracks} />
+          )}
           {vouches && (
             <ProfileVouches
               slug={vouches.slug}
@@ -374,9 +407,15 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
               canVouch={vouches.canVouch}
             />
           )}
-          {profile.updatedAt && (
-            <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)]">
-              Last updated {profile.updatedAt}
+          {(profile.updatedAt || (profile.showPageViews && profile.viewCount != null)) && (
+            <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)] flex flex-wrap items-center gap-x-3 gap-y-1">
+              {profile.updatedAt && <span>Last updated {profile.updatedAt}</span>}
+              {profile.showPageViews && profile.viewCount != null && (
+                <span className="inline-flex items-center gap-1">
+                  <Eye {...profileMetaIconProps} aria-hidden />
+                  {profile.viewCount} view{profile.viewCount !== 1 ? "s" : ""}
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -388,5 +427,6 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
         )}
       </article>
     </div>
+    </>
   );
 }

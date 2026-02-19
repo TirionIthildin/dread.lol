@@ -14,10 +14,9 @@ import {
   Circle,
   UploadSimple,
   DiscordLogo,
-  YoutubeLogo,
-  VideoCamera,
+  MusicNotes,
+  Trash,
 } from "@phosphor-icons/react";
-import { getYoutubeVideoId } from "@/lib/youtube";
 import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -39,7 +38,7 @@ const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" }
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
-type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "statusIndicator";
+type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "audio" | "statusIndicator";
 const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNode }[] = [
   { id: "basics", label: "Basics", icon: <Notebook {...dashIcon} aria-hidden /> },
   { id: "links", label: "Links", icon: <LinkIcon {...dashIcon} aria-hidden /> },
@@ -47,6 +46,7 @@ const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNo
   { id: "terminal", label: "Terminal", icon: <Terminal {...dashIcon} aria-hidden /> },
   { id: "display", label: "Display & SEO", icon: <Palette {...dashIcon} aria-hidden /> },
   { id: "fun", label: "Styling", icon: <SlidersHorizontal {...dashIcon} aria-hidden /> },
+  { id: "audio", label: "Audio Manager", icon: <MusicNotes {...dashIcon} aria-hidden /> },
   { id: "statusIndicator", label: "Status, quotes & tags", icon: <Circle {...dashIcon} aria-hidden /> },
 ];
 
@@ -127,303 +127,12 @@ function parseTerminalCommandsForEditor(raw: string | null): { command: string; 
   }
 }
 
-function BackgroundImageModal({
-  currentUrl,
-  onConfirm,
-  onCancel,
-}: {
-  currentUrl: string;
-  onConfirm: (url: string) => void;
-  onCancel: () => void;
-}) {
-  const [url, setUrl] = useState(currentUrl);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onCancel]);
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-image-modal-title">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
-        <h3 id="bg-image-modal-title" className="text-base font-semibold text-[var(--foreground)]">Background image</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">Upload an image or paste a URL (JPEG, PNG, GIF, WebP, SVG)</p>
-        <div className="mt-3 space-y-2">
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => { setUrl(e.target.value); setError(null); }}
-            placeholder="https://… or paste upload URL"
-            className="block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-          />
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/x-gif,image/webp,image/svg+xml"
-              className="sr-only"
-              aria-hidden
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setError(null);
-                setUploading(true);
-                try {
-                  const form = new FormData();
-                  form.append("file", file);
-                  const res = await fetch("/api/upload", { method: "POST", body: form });
-                  const data = await res.json();
-                  if (!res.ok) setError(data.error ?? "Upload failed");
-                  else {
-                    const base = typeof window !== "undefined" ? window.location.origin : "";
-                    setUrl(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
-                  }
-                } finally {
-                  setUploading(false);
-                  e.target.value = "";
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium"
-            >
-              <UploadSimple size={16} weight="regular" />
-              {uploading ? "Uploading…" : "Upload"}
-            </button>
-          </div>
-          {error && <p className="text-xs text-[var(--warning)]">{error}</p>}
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">Cancel</button>
-          <button type="button" onClick={() => onConfirm(url.trim())} disabled={!url.trim()} className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] disabled:opacity-50">
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BackgroundYouTubeModal({
-  currentUrl,
-  onConfirm,
-  onCancel,
-}: {
-  currentUrl: string;
-  onConfirm: (url: string) => void;
-  onCancel: () => void;
-}) {
-  const [url, setUrl] = useState(currentUrl);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onCancel]);
-
-  const handleConfirm = () => {
-    const videoId = getYoutubeVideoId(url);
-    if (!videoId) {
-      setError("Enter a valid YouTube URL (e.g. youtube.com/watch?v=… or youtu.be/…)");
-      return;
-    }
-    setError(null);
-    onConfirm(url.trim());
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-youtube-modal-title">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
-        <h3 id="bg-youtube-modal-title" className="text-base font-semibold text-[var(--foreground)] flex items-center gap-2">
-          <YoutubeLogo size={20} weight="fill" className="text-red-500" />
-          YouTube background
-        </h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">Paste a YouTube video URL</p>
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => { setUrl(e.target.value); setError(null); }}
-          placeholder="https://youtube.com/watch?v=… or youtu.be/…"
-          className="mt-3 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-        />
-        {error && <p className="mt-1 text-xs text-[var(--warning)]">{error}</p>}
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">Cancel</button>
-          <button type="button" onClick={handleConfirm} className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)]">
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BackgroundVideoModal({
-  onConfirm,
-  onCancel,
-}: {
-  onConfirm: (url: string) => void;
-  onCancel: () => void;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onCancel]);
-
-  const handleUpload = async (file: File) => {
-    if (file.size > 20 * 1024 * 1024) {
-      setError("Video must be 20 MB or smaller");
-      return;
-    }
-    setError(null);
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("purpose", "background-video");
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) setError(data.error ?? "Upload failed");
-      else {
-        const base = typeof window !== "undefined" ? window.location.origin : "";
-        const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
-        onConfirm(url);
-      }
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-video-modal-title">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
-        <h3 id="bg-video-modal-title" className="text-base font-semibold text-[var(--foreground)] flex items-center gap-2">
-          <VideoCamera size={20} weight="regular" />
-          Video background
-        </h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">Upload a video (MP4, WebM, OGG; max 20 MB)</p>
-        <div className="mt-3">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="video/mp4,video/webm,video/ogg,video/quicktime"
-            className="block w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--accent)]/20 file:px-3 file:py-1.5 file:text-xs file:text-[var(--accent)] file:font-medium"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleUpload(file);
-            }}
-          />
-          {error && <p className="mt-1 text-xs text-[var(--warning)]">{error}</p>}
-        </div>
-        <div className="mt-4 flex justify-end">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">
-            {uploading ? "Uploading…" : "Cancel"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BackgroundAudioModal({
-  currentUrl,
-  onConfirm,
-  onCancel,
-}: {
-  currentUrl: string;
-  onConfirm: (url: string) => void;
-  onCancel: () => void;
-}) {
-  const [url, setUrl] = useState(currentUrl);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onCancel]);
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-audio-modal-title">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
-        <h3 id="bg-audio-modal-title" className="text-base font-semibold text-[var(--foreground)]">Audio background</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">Upload or paste URL (MP3, WAV, OGG; max 15 MB)</p>
-        <div className="mt-3 space-y-2">
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => { setUrl(e.target.value); setError(null); }}
-            placeholder="https://… or paste upload URL"
-            className="block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-          />
-          <input
-            ref={inputRef}
-            type="file"
-            accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm"
-            className="sr-only"
-            aria-hidden
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setError(null);
-              setUploading(true);
-              try {
-                const form = new FormData();
-                form.append("file", file);
-                const res = await fetch("/api/upload", { method: "POST", body: form });
-                const data = await res.json();
-                if (!res.ok) setError(data.error ?? "Upload failed");
-                else {
-                  const base = typeof window !== "undefined" ? window.location.origin : "";
-                  setUrl(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
-                }
-              } finally {
-                setUploading(false);
-                e.target.value = "";
-              }
-            }}
-          />
-          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium">
-            <UploadSimple size={16} weight="regular" /> {uploading ? "Uploading…" : "Upload"}
-          </button>
-          {error && <p className="text-xs text-[var(--warning)]">{error}</p>}
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">Cancel</button>
-          <button type="button" onClick={() => onConfirm(url.trim())} disabled={!url.trim()} className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] disabled:opacity-50">Confirm</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// .png, .jpg, .jpeg, .gif, .webp
+const BACKGROUND_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/x-gif", "image/webp"];
+// .mp4, .m4v, .webm, .mov, .mkv
+const BACKGROUND_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/webm", "video/quicktime", "video/x-matroska"];
+// .mp3, .aac
+const BACKGROUND_AUDIO_TYPES = ["audio/mpeg", "audio/mp3", "audio/aac", "audio/x-aac"];
 
 interface DashboardMyProfileProps {
   profile: ProfileRow;
@@ -581,11 +290,54 @@ export default function DashboardMyProfile({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
-  const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(
-    ((profile as { backgroundType?: string }).backgroundType ?? "none")
-  );
-  const [backgroundUrlValue, setBackgroundUrlValue] = useState((profile as { backgroundUrl?: string }).backgroundUrl ?? "");
-  const [backgroundModalOpen, setBackgroundModalOpen] = useState<"image" | "youtube" | "video" | "audio" | null>(null);
+  const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(() => {
+    const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
+    return ["image", "video", "audio"].includes(t) ? t : "none";
+  });
+  const [backgroundUrlValue, setBackgroundUrlValue] = useState(() => {
+    const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
+    return ["image", "video", "audio"].includes(t) ? ((profile as { backgroundUrl?: string }).backgroundUrl ?? "") : "";
+  });
+  const [backgroundUploading, setBackgroundUploading] = useState(false);
+  const [backgroundUploadError, setBackgroundUploadError] = useState<string | null>(null);
+  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
+  const [customFontValue, setCustomFontValue] = useState(() => {
+    const p = profile as { customFont?: string; customFontUrl?: string };
+    return p.customFontUrl ? "custom" : (p.customFont ?? "");
+  });
+  const [customFontUrlValue, setCustomFontUrlValue] = useState((profile as { customFontUrl?: string }).customFontUrl ?? "");
+  const [customFontUploading, setCustomFontUploading] = useState(false);
+  const [customFontUploadError, setCustomFontUploadError] = useState<string | null>(null);
+  const customFontFileRef = useRef<HTMLInputElement>(null);
+  const [cursorStyleValue, setCursorStyleValue] = useState(() => {
+    const p = profile as { cursorStyle?: string; cursorImageUrl?: string };
+    return p.cursorImageUrl ? "custom" : (p.cursorStyle ?? "default");
+  });
+  const [cursorImageUrlValue, setCursorImageUrlValue] = useState((profile as { cursorImageUrl?: string }).cursorImageUrl ?? "");
+  const [cursorUploading, setCursorUploading] = useState(false);
+  const [cursorUploadError, setCursorUploadError] = useState<string | null>(null);
+  const cursorFileRef = useRef<HTMLInputElement>(null);
+  const [showAudioPlayerValue, setShowAudioPlayerValue] = useState((profile as { showAudioPlayer?: boolean }).showAudioPlayer ?? false);
+  const [audioTracksValue, setAudioTracksValue] = useState<{ url: string; title?: string }[]>(() => {
+    const raw = (profile as { audioTracks?: string }).audioTracks;
+    if (typeof raw === "string") {
+      try {
+        const arr = JSON.parse(raw) as unknown;
+        if (Array.isArray(arr)) {
+          return arr
+            .filter((x: unknown): x is { url: string; title?: string } => x != null && typeof (x as { url?: unknown }).url === "string")
+            .map((x) => ({ url: (x as { url: string }).url, title: (x as { title?: string }).title }));
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    if (Array.isArray(raw)) return raw as { url: string; title?: string }[];
+    return [];
+  });
+  const [audioTrackUploading, setAudioTrackUploading] = useState(false);
+  const [audioTrackUploadError, setAudioTrackUploadError] = useState<string | null>(null);
+  const audioTrackFileRef = useRef<HTMLInputElement>(null);
   const [cardOpacityValue, setCardOpacityValue] = useState((profile as { cardOpacity?: number }).cardOpacity ?? 95);
   const slugCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -843,31 +595,30 @@ export default function DashboardMyProfile({
             </label>
             <div className="space-y-2">
               <label className="block text-xs font-medium text-[var(--muted)]">
-                Avatar URL
-                <input
-                  type="url"
-                  name="avatarUrl"
-                  value={avatarUrlValue}
-                  onChange={(e) => { setAvatarUrlValue(e.target.value); setAvatarUploadError(null); }}
-                  placeholder="https://…"
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
+                Avatar
+                <input type="hidden" name="avatarUrl" value={avatarUrlValue} />
               </label>
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   ref={avatarFileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   className="sr-only"
                   aria-hidden
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                      setAvatarUploadError("Avatar must be 5 MB or smaller");
+                      e.target.value = "";
+                      return;
+                    }
                     setAvatarUploadError(null);
                     setAvatarUploading(true);
                     try {
                       const form = new FormData();
                       form.append("file", file);
+                      form.append("purpose", "avatar");
                       const res = await fetch("/api/upload", { method: "POST", body: form });
                       const data = await res.json();
                       if (!res.ok) {
@@ -1266,7 +1017,7 @@ export default function DashboardMyProfile({
               </label>
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
                 <input type="checkbox" name="showPageViews" defaultChecked={profile.showPageViews ?? true} className="rounded border-[var(--border)]" />
-                Display page views in dashboard
+                Display page views <span className="text-[var(--muted)]/70">(on profile and in dashboard logs)</span>
               </label>
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
                 <input type="checkbox" name="showDiscordBadges" defaultChecked={profile.showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
@@ -1370,20 +1121,71 @@ export default function DashboardMyProfile({
                 Font
                 <select
                   name="customFont"
-                  defaultValue={(profile as { customFont?: string }).customFont ?? ""}
+                  value={customFontValue}
+                  onChange={(e) => { setCustomFontValue(e.target.value); if (e.target.value !== "custom") setCustomFontUrlValue(""); }}
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 >
                   <option value="">Default (JetBrains Mono)</option>
                   <option value="jetbrains-mono">JetBrains Mono</option>
                   <option value="fira-code">Fira Code</option>
                   <option value="space-mono">Space Mono</option>
+                  <option value="custom">Custom (upload)</option>
                 </select>
+                {customFontValue === "custom" && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="customFontUrl" value={customFontUrlValue} />
+                    <input
+                      ref={customFontFileRef}
+                      type="file"
+                      accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"
+                      className="sr-only"
+                      aria-hidden
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                          setCustomFontUploadError("Font must be 5 MB or smaller");
+                          e.target.value = "";
+                          return;
+                        }
+                        setCustomFontUploadError(null);
+                        setCustomFontUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          form.append("purpose", "font");
+                          const res = await fetch("/api/upload", { method: "POST", body: form });
+                          const data = await res.json();
+                          if (!res.ok) setCustomFontUploadError(data.error ?? "Upload failed");
+                          else {
+                            const base = typeof window !== "undefined" ? window.location.origin : "";
+                            setCustomFontUrlValue(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                          }
+                        } finally {
+                          setCustomFontUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => customFontFileRef.current?.click()}
+                      disabled={customFontUploading}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                    >
+                      <UploadSimple size={16} weight="regular" />
+                      {customFontUploading ? "Uploading…" : "Upload .ttf, .otf, .woff"}
+                    </button>
+                    {customFontUploadError && <p className="text-xs text-[var(--warning)]">{customFontUploadError}</p>}
+                  </div>
+                )}
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Cursor <span className="text-[var(--muted)]/70">(when viewing your profile)</span>
                 <select
                   name="cursorStyle"
-                  defaultValue={(profile as { cursorStyle?: string }).cursorStyle ?? "default"}
+                  value={cursorStyleValue}
+                  onChange={(e) => { setCursorStyleValue(e.target.value); if (e.target.value !== "custom") setCursorImageUrlValue(""); }}
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 >
                   <option value="default">Default</option>
@@ -1393,7 +1195,56 @@ export default function DashboardMyProfile({
                   <option value="grab">Grab</option>
                   <option value="minimal">Minimal (dot)</option>
                   <option value="beam">Beam (terminal)</option>
+                  <option value="custom">Custom (upload)</option>
                 </select>
+                {cursorStyleValue === "custom" && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="cursorImageUrl" value={cursorImageUrlValue} />
+                    <input
+                      ref={cursorFileRef}
+                      type="file"
+                      accept=".cur,.png,.jpg,.jpeg,.gif,.webp,image/x-icon,image/png,image/jpeg,image/gif,image/webp"
+                      className="sr-only"
+                      aria-hidden
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                          setCursorUploadError("Cursor must be 5 MB or smaller");
+                          e.target.value = "";
+                          return;
+                        }
+                        setCursorUploadError(null);
+                        setCursorUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          form.append("purpose", "cursor");
+                          const res = await fetch("/api/upload", { method: "POST", body: form });
+                          const data = await res.json();
+                          if (!res.ok) setCursorUploadError(data.error ?? "Upload failed");
+                          else {
+                            const base = typeof window !== "undefined" ? window.location.origin : "";
+                            setCursorImageUrlValue(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                          }
+                        } finally {
+                          setCursorUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => cursorFileRef.current?.click()}
+                      disabled={cursorUploading}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                    >
+                      <UploadSimple size={16} weight="regular" />
+                      {cursorUploading ? "Uploading…" : "Upload .cur, .png, .jpg, .gif, .webp"}
+                    </button>
+                    {cursorUploadError && <p className="text-xs text-[var(--warning)]">{cursorUploadError}</p>}
+                  </div>
+                )}
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Animations
@@ -1413,11 +1264,11 @@ export default function DashboardMyProfile({
               </label>
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-[var(--muted)]">
-                  Custom background <span className="text-[var(--muted)]/70">(image, video, audio, or YouTube behind profile)</span>
+                  Custom background <span className="text-[var(--muted)]/70">(image, video, or audio behind profile)</span>
                 </label>
                 <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
                 <input type="hidden" name="backgroundUrl" value={backgroundTypeValue === "none" ? "" : backgroundUrlValue} />
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
                     <input
                       type="radio"
@@ -1425,104 +1276,191 @@ export default function DashboardMyProfile({
                       onChange={() => {
                         setBackgroundTypeValue("none");
                         setBackgroundUrlValue("");
-                        setBackgroundModalOpen(null);
+                        setBackgroundUploadError(null);
                       }}
                       className="rounded border-[var(--border)]"
                     />
                     None
                   </label>
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      checked={backgroundTypeValue === "image"}
-                      onChange={() => setBackgroundModalOpen("image")}
-                      className="rounded border-[var(--border)]"
-                    />
-                    Image
-                  </label>
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      checked={backgroundTypeValue === "video"}
-                      onChange={() => setBackgroundModalOpen("video")}
-                      className="rounded border-[var(--border)]"
-                    />
-                    Video
-                  </label>
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      checked={backgroundTypeValue === "audio"}
-                      onChange={() => setBackgroundModalOpen("audio")}
-                      className="rounded border-[var(--border)]"
-                    />
-                    Audio
-                  </label>
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      checked={backgroundTypeValue === "youtube"}
-                      onChange={() => setBackgroundModalOpen("youtube")}
-                      className="rounded border-[var(--border)]"
-                    />
-                    YouTube
-                  </label>
+                  <input
+                    ref={backgroundFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/x-m4v,video/webm,video/quicktime,video/x-matroska,audio/mpeg,audio/mp3,audio/aac"
+                    className="sr-only"
+                    aria-hidden
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const type = file.type?.toLowerCase().split(";")[0]?.trim();
+                      const isVideo = type && BACKGROUND_VIDEO_TYPES.includes(type);
+                      const isImage = type && BACKGROUND_IMAGE_TYPES.includes(type);
+                      const isAudio = type && BACKGROUND_AUDIO_TYPES.includes(type);
+                      if (!isImage && !isVideo && !isAudio) {
+                        setBackgroundUploadError("Use PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, MKV, MP3, or AAC");
+                        e.target.value = "";
+                        return;
+                      }
+                      if (isVideo && file.size > 100 * 1024 * 1024) {
+                        setBackgroundUploadError("Video must be 100 MB or smaller");
+                        e.target.value = "";
+                        return;
+                      }
+                      if (isImage && file.size > 100 * 1024 * 1024) {
+                        setBackgroundUploadError("Image must be 100 MB or smaller");
+                        e.target.value = "";
+                        return;
+                      }
+                      if (isAudio && file.size > 10 * 1024 * 1024) {
+                        setBackgroundUploadError("Audio must be 10 MB or smaller");
+                        e.target.value = "";
+                        return;
+                      }
+                      setBackgroundUploadError(null);
+                      setBackgroundUploading(true);
+                      try {
+                        const form = new FormData();
+                        form.append("file", file);
+                        if (isVideo) form.append("purpose", "background-video");
+                        else if (isImage) form.append("purpose", "background-image");
+                        else if (isAudio) form.append("purpose", "background-audio");
+                        const prevUrl = backgroundUrlValue.trim();
+                        if (prevUrl && prevUrl.includes("/api/files/")) {
+                          const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
+                          if (match) form.append("replaceFid", match[1]);
+                        }
+                        const res = await fetch("/api/upload", { method: "POST", body: form });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          setBackgroundUploadError(data.error ?? "Upload failed");
+                        } else {
+                          const base = typeof window !== "undefined" ? window.location.origin : "";
+                          const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+                          setBackgroundTypeValue(isVideo ? "video" : isAudio ? "audio" : "image");
+                          setBackgroundUrlValue(url);
+                        }
+                      } finally {
+                        setBackgroundUploading(false);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => backgroundFileInputRef.current?.click()}
+                    disabled={backgroundUploading}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                  >
+                    <UploadSimple size={16} weight="regular" />
+                    {backgroundUploading ? "Uploading…" : "Upload a file"}
+                  </button>
                 </div>
                 {backgroundTypeValue !== "none" && backgroundUrlValue && (
                   <p className="text-[10px] text-[var(--muted)]">
-                    {backgroundTypeValue === "image" && "Image"}
-                    {backgroundTypeValue === "video" && "Video"}
-                    {backgroundTypeValue === "audio" && "Audio"}
-                    {backgroundTypeValue === "youtube" && "YouTube"}
-                    {" URL set. Click the option again to change, or None to remove."}
+                    {backgroundTypeValue === "image" ? "Image" : backgroundTypeValue === "video" ? "Video" : "Audio"} set. Upload again to replace (old file removed), or None to remove.
                   </p>
                 )}
+                {backgroundUploadError && (
+                  <p className="text-[10px] text-[var(--warning)]">{backgroundUploadError}</p>
+                )}
                 <p className="text-[10px] text-[var(--muted)]">
-                  Select an option to open its setup modal. None removes custom background. Media uses a &quot;Click to view profile&quot; overlay.
+                  Images/video: PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, MKV (max 100 MB). Audio: MP3, AAC (max 10 MB). Media uses a &quot;Click to view profile&quot; overlay.
                 </p>
               </div>
-              {backgroundModalOpen === "image" && (
-                <BackgroundImageModal
-                  currentUrl={backgroundTypeValue === "image" ? backgroundUrlValue : ""}
-                  onConfirm={(url) => {
-                    setBackgroundTypeValue("image");
-                    setBackgroundUrlValue(url);
-                    setBackgroundModalOpen(null);
-                  }}
-                  onCancel={() => setBackgroundModalOpen(null)}
-                />
-              )}
-              {backgroundModalOpen === "youtube" && (
-                <BackgroundYouTubeModal
-                  currentUrl={backgroundTypeValue === "youtube" ? backgroundUrlValue : ""}
-                  onConfirm={(url) => {
-                    setBackgroundTypeValue("youtube");
-                    setBackgroundUrlValue(url);
-                    setBackgroundModalOpen(null);
-                  }}
-                  onCancel={() => setBackgroundModalOpen(null)}
-                />
-              )}
-              {backgroundModalOpen === "video" && (
-                <BackgroundVideoModal
-                  onConfirm={(url) => {
-                    setBackgroundTypeValue("video");
-                    setBackgroundUrlValue(url);
-                    setBackgroundModalOpen(null);
-                  }}
-                  onCancel={() => setBackgroundModalOpen(null)}
-                />
-              )}
-              {backgroundModalOpen === "audio" && (
-                <BackgroundAudioModal
-                  currentUrl={backgroundTypeValue === "audio" ? backgroundUrlValue : ""}
-                  onConfirm={(url) => {
-                    setBackgroundTypeValue("audio");
-                    setBackgroundUrlValue(url);
-                    setBackgroundModalOpen(null);
-                  }}
-                  onCancel={() => setBackgroundModalOpen(null)}
-                />
+            </div>
+
+            <div className={activeEditorSection === "audio" ? "block space-y-4" : "hidden"}>
+              <div className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
+                <p className="text-xs text-[var(--muted)] mb-3">
+                  An audio player widget will be displayed on your profile where visitors can control your tracks.
+                </p>
+                <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--foreground)]">
+                  <input
+                    type="checkbox"
+                    name="showAudioPlayer"
+                    checked={showAudioPlayerValue}
+                    onChange={(e) => setShowAudioPlayerValue(e.target.checked)}
+                    className="rounded border-[var(--border)]"
+                  />
+                  Audio Player
+                </label>
+              </div>
+              {showAudioPlayerValue && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-[var(--muted)]">Tracks</p>
+                  <input type="hidden" name="audioTracks" value={JSON.stringify(audioTracksValue)} />
+                  <ul className="space-y-2">
+                    {audioTracksValue.map((track, i) => (
+                      <li
+                        key={`${track.url}-${i}`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 px-3 py-2 text-sm"
+                      >
+                        <span className="truncate min-w-0" title={track.url}>
+                          {track.title || `Track ${i + 1}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAudioTracksValue((prev) => prev.filter((_, j) => j !== i))}
+                          className="shrink-0 rounded p-1 text-[var(--muted)] hover:bg-[var(--warning)]/20 hover:text-[var(--warning)] transition-colors"
+                          aria-label="Remove track"
+                        >
+                          <Trash size={16} weight="regular" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={audioTrackFileRef}
+                      type="file"
+                      accept=".mp3,.aac,audio/mpeg,audio/mp3,audio/aac"
+                      className="sr-only"
+                      aria-hidden
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 10 * 1024 * 1024) {
+                          setAudioTrackUploadError("Track must be 10 MB or smaller");
+                          e.target.value = "";
+                          return;
+                        }
+                        setAudioTrackUploadError(null);
+                        setAudioTrackUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          form.append("purpose", "audio-player");
+                          const res = await fetch("/api/upload", { method: "POST", body: form });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            setAudioTrackUploadError(data.error ?? "Upload failed");
+                          } else {
+                            const base = typeof window !== "undefined" ? window.location.origin : "";
+                            const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+                            setAudioTracksValue((prev) => [...prev, { url, title: file.name.replace(/\.[^.]*$/, "") || undefined }]);
+                          }
+                        } finally {
+                          setAudioTrackUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => audioTrackFileRef.current?.click()}
+                      disabled={audioTrackUploading}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                    >
+                      <UploadSimple size={16} weight="regular" />
+                      {audioTrackUploading ? "Uploading…" : "Add track"}
+                    </button>
+                  </div>
+                  {audioTrackUploadError && (
+                    <p className="text-xs text-[var(--warning)]">{audioTrackUploadError}</p>
+                  )}
+                  <p className="text-[10px] text-[var(--muted)]">
+                    MP3 or AAC, max 10 MB per track.
+                  </p>
+                </div>
               )}
             </div>
 

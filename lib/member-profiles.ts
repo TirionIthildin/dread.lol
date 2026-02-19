@@ -670,6 +670,18 @@ export async function recordProfileView(
   });
 }
 
+export async function getProfileViewCount(profileId: string): Promise<number> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return 0;
+  }
+  return client.db(dbName).collection(COLLECTIONS.profileViews).countDocuments({ profileId: oid });
+}
+
 export async function getProfileViews(
   profileId: string,
   recentLimit = 50
@@ -756,6 +768,23 @@ function formatUpdatedAt(d: Date): string {
   return new Date(d).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
+function parseAudioTracks(raw: string | null | undefined): { url: string; title?: string }[] | undefined {
+  if (!raw?.trim()) return undefined;
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return undefined;
+    return arr
+      .filter(
+        (x): x is { url: string; title?: string } =>
+          x && typeof x === "object" && typeof (x as { url?: unknown }).url === "string"
+      )
+      .map((x) => ({ url: (x as { url: string }).url.trim(), title: (x as { title?: string }).title?.trim() }))
+      .filter((x) => x.url.length > 0);
+  } catch {
+    return undefined;
+  }
+}
+
 export function memberProfileToProfile(
   row: ProfileRow,
   badgeFlags?: { verified: boolean; staff: boolean },
@@ -806,12 +835,17 @@ export function memberProfileToProfile(
     avatarShape: row.avatarShape ?? undefined,
     layoutDensity: row.layoutDensity ?? undefined,
     customFont: row.customFont ?? undefined,
+    customFontUrl: row.customFontUrl ?? undefined,
     cursorStyle: row.cursorStyle ?? undefined,
+    cursorImageUrl: row.cursorImageUrl ?? undefined,
     animationPreset: row.animationPreset ?? undefined,
     backgroundType: row.backgroundType ?? undefined,
     backgroundUrl: row.backgroundUrl ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,
+    showPageViews: row.showPageViews ?? true,
+    showAudioPlayer: row.showAudioPlayer ?? undefined,
+    audioTracks: parseAudioTracks(row.audioTracks ?? null),
     ...(badgeFlags && {
       verified: badgeFlags.verified || undefined,
       staff: badgeFlags.staff || undefined,

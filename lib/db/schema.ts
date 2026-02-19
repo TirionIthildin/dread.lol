@@ -57,17 +57,22 @@ export interface ProfileDoc {
   pronouns?: string | null;
   location?: string | null;
   timezone?: string | null;
+  birthday?: string | null;
   avatarShape?: string | null;
   layoutDensity?: string | null;
   noindex?: boolean;
   metaDescription?: string | null;
   showPageViews?: boolean;
   customFont?: string | null;
+  customFontUrl?: string | null;
   cursorStyle?: string | null;
+  cursorImageUrl?: string | null;
   animationPreset?: string | null;
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   showDiscordBadges?: boolean;
+  showAudioPlayer?: boolean;
+  audioTracks?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

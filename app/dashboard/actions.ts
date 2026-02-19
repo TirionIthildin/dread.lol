@@ -23,6 +23,27 @@ import { normalizeSlug } from "@/lib/slug";
 import { getProfileTemplate } from "@/lib/profile-templates";
 import { validateUrlOrEmpty, requireSafeUrl, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 
+function parseAudioTracksValue(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return null;
+    const valid = arr
+      .filter(
+        (x): x is { url: string; title?: string } =>
+          x && typeof x === "object" && typeof (x as { url?: unknown }).url === "string"
+      )
+      .map((x) => ({
+        url: validateBackgroundUrl((x as { url: string }).url.trim()) ?? "",
+        title: ((x as { title?: string }).title?.trim() || undefined)?.slice(0, 100),
+      }))
+      .filter((x) => x.url.length > 0);
+    return valid.length > 0 ? JSON.stringify(valid) : null;
+  } catch {
+    return null;
+  }
+}
+
 export type ProfileFormState = { error?: string; success?: boolean; savedAt?: string } | null;
 
 function parseLinksValue(linksRaw: string | null | undefined): string | null {
@@ -73,7 +94,7 @@ export async function updateProfileAction(
   const banner = validateUrlOrEmpty(formData.get("banner") as string);
   const ogImageUrl = validateUrlOrEmpty(formData.get("ogImageUrl") as string);
   const bgType = (formData.get("backgroundType") as string)?.trim();
-  const usesBackgroundUrl = ["image", "youtube", "video", "audio"].includes(bgType ?? "");
+  const usesBackgroundUrl = ["image", "video", "audio"].includes(bgType ?? "");
   const rawBackgroundUrl = usesBackgroundUrl
     ? (formData.get("backgroundUrl") as string)?.trim()
     : undefined;
@@ -140,11 +161,29 @@ export async function updateProfileAction(
       metaDescription: ((formData.get("metaDescription") as string)?.trim() || undefined)?.slice(0, 200),
       showPageViews: formData.get("showPageViews") === "on",
       showDiscordBadges: formData.get("showDiscordBadges") === "on",
-      customFont: (formData.get("customFont") as string)?.trim() || undefined,
-      cursorStyle: (formData.get("cursorStyle") as string)?.trim() || undefined,
+      customFont: (() => {
+        const f = (formData.get("customFont") as string)?.trim();
+        const url = validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim());
+        if (f === "custom" && !url) return null;
+        return f || undefined;
+      })(),
+      customFontUrl: (formData.get("customFont") as string)?.trim() === "custom"
+        ? (validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim()) ?? null)
+        : null,
+      cursorStyle: (() => {
+        const c = (formData.get("cursorStyle") as string)?.trim();
+        const url = validateBackgroundUrl((formData.get("cursorImageUrl") as string)?.trim());
+        if (c === "custom" && !url) return null;
+        return c || undefined;
+      })(),
+      cursorImageUrl: (formData.get("cursorStyle") as string)?.trim() === "custom"
+        ? (validateBackgroundUrl((formData.get("cursorImageUrl") as string)?.trim()) ?? null)
+        : null,
       animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
       backgroundType: usesBackgroundUrl ? bgType : null,
       backgroundUrl: usesBackgroundUrl ? backgroundUrl : null,
+      showAudioPlayer: formData.get("showAudioPlayer") === "on",
+      audioTracks: parseAudioTracksValue((formData.get("audioTracks") as string) ?? undefined),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";
