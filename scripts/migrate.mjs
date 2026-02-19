@@ -40,7 +40,7 @@ while (attempt < maxAttempts) {
 const db = client.db(dbName);
 
 try {
-  await db.collection("users").createIndex({ _id: 1 }, { unique: true });
+  // _id index is created automatically by MongoDB for every collection
   await db.collection("users").createIndex({ discordUserId: 1 }, { unique: true });
   await db.collection("users").createIndex({ approved: 1, createdAt: -1 });
 
