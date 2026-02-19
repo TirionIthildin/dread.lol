@@ -8,6 +8,8 @@ import {
   deleteBadgeAction,
 } from "@/app/dashboard/actions";
 import { BADGE_ICON_OPTIONS, getBadgeIcon } from "@/lib/badge-icons";
+import { toast } from "sonner";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 export type CustomBadge = {
   id: string;
@@ -36,6 +38,8 @@ export default function AdminBadgesPanel() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formIconName, setFormIconName] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
+  const [badgeToDelete, setBadgeToDelete] = useState<CustomBadge | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBadges = useCallback(async () => {
@@ -151,14 +155,24 @@ export default function AdminBadgesPanel() {
     });
   }
 
-  function handleDelete(id: string) {
-    if (!confirm("Delete this badge? It will be removed from all users.")) return;
+  function handleDelete(badge: CustomBadge) {
+    setBadgeToDelete(badge);
+  }
+
+  async function confirmDeleteBadge() {
+    if (!badgeToDelete) return;
+    setDeleting(true);
     setError(null);
-    startTransition(async () => {
-      const result = await deleteBadgeAction(id);
-      if (result.error) setError(result.error);
-      else fetchBadges();
-    });
+    const result = await deleteBadgeAction(badgeToDelete.id);
+    setDeleting(false);
+    if (result.error) {
+      setError(result.error);
+      toast.error(result.error);
+    } else {
+      setBadgeToDelete(null);
+      fetchBadges();
+      toast.success("Badge deleted");
+    }
   }
 
   return (
@@ -444,7 +458,7 @@ export default function AdminBadgesPanel() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(b.id)}
+                    onClick={() => handleDelete(b)}
                     disabled={isPending}
                     className="rounded px-2 py-1 text-xs text-[var(--warning)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
                   >
@@ -456,6 +470,17 @@ export default function AdminBadgesPanel() {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={badgeToDelete != null}
+        title="Delete badge?"
+        message={badgeToDelete ? `"${badgeToDelete.label}" will be removed from all users.` : ""}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={confirmDeleteBadge}
+        onCancel={() => setBadgeToDelete(null)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 
 const baseClass = "profile-markdown";
 
@@ -80,7 +81,7 @@ export default function ProfileMarkdown({ content, className = "", inline = fals
   const Wrapper = inline ? "span" : "div";
   return (
     <Wrapper className={inline ? `${wrapClass} inline` : wrapClass}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={resolvedComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} components={resolvedComponents}>
         {content.trim()}
       </ReactMarkdown>
     </Wrapper>

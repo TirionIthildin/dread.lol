@@ -14,10 +14,15 @@ import {
   Circle,
   UploadSimple,
   DiscordLogo,
+  YoutubeLogo,
+  VideoCamera,
 } from "@phosphor-icons/react";
+import { getYoutubeVideoId } from "@/lib/youtube";
 import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import type { ProfileRow } from "@/lib/db/schema";
 import {
   updateProfileAction,
@@ -120,6 +125,304 @@ function parseTerminalCommandsForEditor(raw: string | null): { command: string; 
   } catch {
     return [];
   }
+}
+
+function BackgroundImageModal({
+  currentUrl,
+  onConfirm,
+  onCancel,
+}: {
+  currentUrl: string;
+  onConfirm: (url: string) => void;
+  onCancel: () => void;
+}) {
+  const [url, setUrl] = useState(currentUrl);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-image-modal-title">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+        <h3 id="bg-image-modal-title" className="text-base font-semibold text-[var(--foreground)]">Background image</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Upload an image or paste a URL (JPEG, PNG, GIF, WebP, SVG)</p>
+        <div className="mt-3 space-y-2">
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => { setUrl(e.target.value); setError(null); }}
+            placeholder="https://… or paste upload URL"
+            className="block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+          />
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/x-gif,image/webp,image/svg+xml"
+              className="sr-only"
+              aria-hidden
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setError(null);
+                setUploading(true);
+                try {
+                  const form = new FormData();
+                  form.append("file", file);
+                  const res = await fetch("/api/upload", { method: "POST", body: form });
+                  const data = await res.json();
+                  if (!res.ok) setError(data.error ?? "Upload failed");
+                  else {
+                    const base = typeof window !== "undefined" ? window.location.origin : "";
+                    setUrl(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                  }
+                } finally {
+                  setUploading(false);
+                  e.target.value = "";
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium"
+            >
+              <UploadSimple size={16} weight="regular" />
+              {uploading ? "Uploading…" : "Upload"}
+            </button>
+          </div>
+          {error && <p className="text-xs text-[var(--warning)]">{error}</p>}
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">Cancel</button>
+          <button type="button" onClick={() => onConfirm(url.trim())} disabled={!url.trim()} className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] disabled:opacity-50">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BackgroundYouTubeModal({
+  currentUrl,
+  onConfirm,
+  onCancel,
+}: {
+  currentUrl: string;
+  onConfirm: (url: string) => void;
+  onCancel: () => void;
+}) {
+  const [url, setUrl] = useState(currentUrl);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
+  const handleConfirm = () => {
+    const videoId = getYoutubeVideoId(url);
+    if (!videoId) {
+      setError("Enter a valid YouTube URL (e.g. youtube.com/watch?v=… or youtu.be/…)");
+      return;
+    }
+    setError(null);
+    onConfirm(url.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-youtube-modal-title">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+        <h3 id="bg-youtube-modal-title" className="text-base font-semibold text-[var(--foreground)] flex items-center gap-2">
+          <YoutubeLogo size={20} weight="fill" className="text-red-500" />
+          YouTube background
+        </h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Paste a YouTube video URL</p>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => { setUrl(e.target.value); setError(null); }}
+          placeholder="https://youtube.com/watch?v=… or youtu.be/…"
+          className="mt-3 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+        />
+        {error && <p className="mt-1 text-xs text-[var(--warning)]">{error}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">Cancel</button>
+          <button type="button" onClick={handleConfirm} className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)]">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BackgroundVideoModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (url: string) => void;
+  onCancel: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
+  const handleUpload = async (file: File) => {
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Video must be 20 MB or smaller");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("purpose", "background-video");
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) setError(data.error ?? "Upload failed");
+      else {
+        const base = typeof window !== "undefined" ? window.location.origin : "";
+        const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+        onConfirm(url);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-video-modal-title">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+        <h3 id="bg-video-modal-title" className="text-base font-semibold text-[var(--foreground)] flex items-center gap-2">
+          <VideoCamera size={20} weight="regular" />
+          Video background
+        </h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Upload a video (MP4, WebM, OGG; max 20 MB)</p>
+        <div className="mt-3">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="video/mp4,video/webm,video/ogg,video/quicktime"
+            className="block w-full text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--accent)]/20 file:px-3 file:py-1.5 file:text-xs file:text-[var(--accent)] file:font-medium"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleUpload(file);
+            }}
+          />
+          {error && <p className="mt-1 text-xs text-[var(--warning)]">{error}</p>}
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">
+            {uploading ? "Uploading…" : "Cancel"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BackgroundAudioModal({
+  currentUrl,
+  onConfirm,
+  onCancel,
+}: {
+  currentUrl: string;
+  onConfirm: (url: string) => void;
+  onCancel: () => void;
+}) {
+  const [url, setUrl] = useState(currentUrl);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="bg-audio-modal-title">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} aria-hidden />
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+        <h3 id="bg-audio-modal-title" className="text-base font-semibold text-[var(--foreground)]">Audio background</h3>
+        <p className="mt-1 text-sm text-[var(--muted)]">Upload or paste URL (MP3, WAV, OGG; max 15 MB)</p>
+        <div className="mt-3 space-y-2">
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => { setUrl(e.target.value); setError(null); }}
+            placeholder="https://… or paste upload URL"
+            className="block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+          />
+          <input
+            ref={inputRef}
+            type="file"
+            accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm"
+            className="sr-only"
+            aria-hidden
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setError(null);
+              setUploading(true);
+              try {
+                const form = new FormData();
+                form.append("file", file);
+                const res = await fetch("/api/upload", { method: "POST", body: form });
+                const data = await res.json();
+                if (!res.ok) setError(data.error ?? "Upload failed");
+                else {
+                  const base = typeof window !== "undefined" ? window.location.origin : "";
+                  setUrl(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                }
+              } finally {
+                setUploading(false);
+                e.target.value = "";
+              }
+            }}
+          />
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium">
+            <UploadSimple size={16} weight="regular" /> {uploading ? "Uploading…" : "Upload"}
+          </button>
+          {error && <p className="text-xs text-[var(--warning)]">{error}</p>}
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)]">Cancel</button>
+          <button type="button" onClick={() => onConfirm(url.trim())} disabled={!url.trim()} className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] disabled:opacity-50">Confirm</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 interface DashboardMyProfileProps {
@@ -268,6 +571,8 @@ export default function DashboardMyProfile({
   const [shortLinkUrl, setShortLinkUrl] = useState("");
   const [shortLinkAdding, setShortLinkAdding] = useState(false);
   const [shortLinkError, setShortLinkError] = useState<string | null>(null);
+  const [shortLinkToDelete, setShortLinkToDelete] = useState<ProfileShortLink | null>(null);
+  const [shortLinkDeleting, setShortLinkDeleting] = useState(false);
   const [avatarUrlValue, setAvatarUrlValue] = useState(profile.avatarUrl ?? "");
   const [slugCheck, setSlugCheck] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [templateModal, setTemplateModal] = useState<ProfileTemplate | null>(null);
@@ -276,9 +581,13 @@ export default function DashboardMyProfile({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(
+    ((profile as { backgroundType?: string }).backgroundType ?? "none")
+  );
   const [backgroundUrlValue, setBackgroundUrlValue] = useState((profile as { backgroundUrl?: string }).backgroundUrl ?? "");
-  const [backgroundUploading, setBackgroundUploading] = useState(false);
-  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
+  const [backgroundModalOpen, setBackgroundModalOpen] = useState<"image" | "youtube" | "video" | "audio" | null>(null);
+  const [cardOpacityValue, setCardOpacityValue] = useState((profile as { cardOpacity?: number }).cardOpacity ?? 95);
+  const slugCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
   const checkSlugAvailability = useCallback(async () => {
@@ -298,6 +607,23 @@ export default function DashboardMyProfile({
       setSlugCheck("idle");
     }
   }, [slugValue, profile.id]);
+
+  const debouncedCheckSlug = useCallback(() => {
+    if (slugCheckTimeoutRef.current) clearTimeout(slugCheckTimeoutRef.current);
+    slugCheckTimeoutRef.current = setTimeout(() => {
+      slugCheckTimeoutRef.current = null;
+      checkSlugAvailability();
+    }, 400);
+  }, [checkSlugAvailability]);
+
+  useEffect(() => () => { if (slugCheckTimeoutRef.current) clearTimeout(slugCheckTimeoutRef.current); }, []);
+
+  // After successful save, refresh server data so form reset uses fresh profile (fixes revert-to-old-value bug)
+  useEffect(() => {
+    if (state?.success) router.refresh();
+  }, [state?.success, router]);
+
+  const formKey = `${profile.id}-${(profile as { updatedAt?: Date }).updatedAt?.getTime?.() ?? 0}`;
 
   return (
     <div className="space-y-6">
@@ -371,7 +697,7 @@ export default function DashboardMyProfile({
             </div>
           </nav>
           <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4">
-          <form action={formAction} className="space-y-4 max-w-2xl">
+          <form key={formKey} action={formAction} className="space-y-4 max-w-2xl">
             <input type="hidden" name="profileId" value={profile.id} />
             {(() => {
               const payload = linkEntriesToFormPayload(linkEntries);
@@ -393,7 +719,7 @@ export default function DashboardMyProfile({
                   name="slug"
                   value={slugValue}
                   onChange={(e) => { setSlugValue(e.target.value.slice(0, SLUG_MAX_LENGTH)); setSlugCheck("idle"); }}
-                  onBlur={checkSlugAvailability}
+                  onBlur={debouncedCheckSlug}
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   pattern="[a-z0-9_-]+"
                   title="Letters, numbers, hyphen, underscore only"
@@ -494,6 +820,26 @@ export default function DashboardMyProfile({
                   ))}
                 </select>
               </div>
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Quote <span className="text-[var(--muted)]/70">(Markdown ok)</span>
+              <input
+                type="text"
+                name="quote"
+                defaultValue={profile.quote ?? ""}
+                placeholder="Optional"
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Tags <span className="text-[var(--muted)]/70">(comma-separated)</span>
+              <input
+                type="text"
+                name="tags"
+                defaultValue={profile.tags?.join(", ") ?? ""}
+                placeholder="Vibe Coder, LOTR"
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
             </label>
             <div className="space-y-2">
               <label className="block text-xs font-medium text-[var(--muted)]">
@@ -693,13 +1039,7 @@ export default function DashboardMyProfile({
                         <span className="text-xs text-[var(--muted)] truncate max-w-[180px]" title={link.url}>{link.url}</span>
                         <button
                           type="button"
-                          onClick={async () => {
-                            if (!confirm("Remove this short link?")) return;
-                            setShortLinkError(null);
-                            const result = await deleteShortLinkAction(link.id);
-                            if (result.error) setShortLinkError(result.error);
-                            else setShortLinks((prev) => prev.filter((l) => l.id !== link.id));
-                          }}
+                          onClick={() => setShortLinkToDelete(link)}
                           className="ml-auto shrink-0 rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted)] hover:text-[var(--warning)]"
                         >
                           Remove
@@ -744,6 +1084,7 @@ export default function DashboardMyProfile({
                         setShortLinks((prev) => [...prev, { id, slug, url }]);
                         setShortLinkSlug("");
                         setShortLinkUrl("");
+                        toast.success("Short link added");
                       }
                     }}
                     className="rounded border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
@@ -1008,6 +1349,24 @@ export default function DashboardMyProfile({
                 </select>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
+                Box opacity
+                <div className="mt-1 flex items-center gap-3">
+                  <input
+                    type="range"
+                    name="cardOpacity"
+                    min={50}
+                    max={100}
+                    value={cardOpacityValue}
+                    onChange={(e) => setCardOpacityValue(parseInt(e.target.value, 10))}
+                    className="flex-1 h-2 rounded-lg appearance-none cursor-pointer bg-[var(--border)] accent-[var(--accent)]"
+                  />
+                  <span className="text-xs text-[var(--muted)] w-10 tabular-nums">
+                    {cardOpacityValue}%
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[10px] text-[var(--muted)]">Lower = more transparent. Default 95%.</p>
+              </label>
+              <label className="block text-xs font-medium text-[var(--muted)]">
                 Font
                 <select
                   name="customFont"
@@ -1020,17 +1379,54 @@ export default function DashboardMyProfile({
                   <option value="space-mono">Space Mono</option>
                 </select>
               </label>
+              <label className="block text-xs font-medium text-[var(--muted)]">
+                Cursor <span className="text-[var(--muted)]/70">(when viewing your profile)</span>
+                <select
+                  name="cursorStyle"
+                  defaultValue={(profile as { cursorStyle?: string }).cursorStyle ?? "default"}
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                >
+                  <option value="default">Default</option>
+                  <option value="crosshair">Crosshair</option>
+                  <option value="pointer">Pointer</option>
+                  <option value="text">Text</option>
+                  <option value="grab">Grab</option>
+                  <option value="minimal">Minimal (dot)</option>
+                  <option value="beam">Beam (terminal)</option>
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-[var(--muted)]">
+                Animations
+                <select
+                  name="animationPreset"
+                  defaultValue={(profile as { animationPreset?: string }).animationPreset ?? "none"}
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                >
+                  <option value="none">None</option>
+                  <option value="fade-in">Fade in</option>
+                  <option value="slide-up">Slide up</option>
+                  <option value="scale-in">Scale in</option>
+                  <option value="glow">Glow on hover</option>
+                  <option value="shimmer">Shimmer on links</option>
+                </select>
+                <p className="mt-0.5 text-[10px] text-[var(--muted)]">Entrance: fade/slide/scale. Effects: glow (card) or shimmer (links).</p>
+              </label>
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-[var(--muted)]">
-                  Custom background <span className="text-[var(--muted)]/70">(image or YouTube video behind profile)</span>
+                  Custom background <span className="text-[var(--muted)]/70">(image, video, audio, or YouTube behind profile)</span>
                 </label>
+                <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
+                <input type="hidden" name="backgroundUrl" value={backgroundTypeValue === "none" ? "" : backgroundUrlValue} />
                 <div className="flex flex-wrap gap-2">
                   <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
                     <input
                       type="radio"
-                      name="backgroundType"
-                      value="none"
-                      defaultChecked={((profile as { backgroundType?: string }).backgroundType ?? "none") === "none"}
+                      checked={backgroundTypeValue === "none"}
+                      onChange={() => {
+                        setBackgroundTypeValue("none");
+                        setBackgroundUrlValue("");
+                        setBackgroundModalOpen(null);
+                      }}
                       className="rounded border-[var(--border)]"
                     />
                     None
@@ -1038,9 +1434,8 @@ export default function DashboardMyProfile({
                   <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
                     <input
                       type="radio"
-                      name="backgroundType"
-                      value="image"
-                      defaultChecked={(profile as { backgroundType?: string }).backgroundType === "image"}
+                      checked={backgroundTypeValue === "image"}
+                      onChange={() => setBackgroundModalOpen("image")}
                       className="rounded border-[var(--border)]"
                     />
                     Image
@@ -1048,89 +1443,93 @@ export default function DashboardMyProfile({
                   <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
                     <input
                       type="radio"
-                      name="backgroundType"
-                      value="youtube"
-                      defaultChecked={(profile as { backgroundType?: string }).backgroundType === "youtube"}
+                      checked={backgroundTypeValue === "video"}
+                      onChange={() => setBackgroundModalOpen("video")}
                       className="rounded border-[var(--border)]"
                     />
-                    YouTube video
+                    Video
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      checked={backgroundTypeValue === "audio"}
+                      onChange={() => setBackgroundModalOpen("audio")}
+                      className="rounded border-[var(--border)]"
+                    />
+                    Audio
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      checked={backgroundTypeValue === "youtube"}
+                      onChange={() => setBackgroundModalOpen("youtube")}
+                      className="rounded border-[var(--border)]"
+                    />
+                    YouTube
                   </label>
                 </div>
-                <div className="mt-2 space-y-2" id="background-url-section">
-                  <input
-                    type="url"
-                    name="backgroundUrl"
-                    value={backgroundUrlValue}
-                    onChange={(e) => setBackgroundUrlValue(e.target.value)}
-                    placeholder="https://… or paste upload URL"
-                    className="block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      ref={backgroundFileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      className="sr-only"
-                      aria-hidden
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setBackgroundUploading(true);
-                        try {
-                          const form = new FormData();
-                          form.append("file", file);
-                          const res = await fetch("/api/upload", { method: "POST", body: form });
-                          const data = await res.json();
-                          if (!res.ok) return;
-                          const base = typeof window !== "undefined" ? window.location.origin : "";
-                          setBackgroundUrlValue(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
-                        } finally {
-                          setBackgroundUploading(false);
-                          e.target.value = "";
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => backgroundFileInputRef.current?.click()}
-                      disabled={backgroundUploading}
-                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
-                    >
-                      <UploadSimple size={16} weight="regular" />
-                      {backgroundUploading ? "Uploading…" : "Upload image"}
-                    </button>
-                  </div>
-                </div>
+                {backgroundTypeValue !== "none" && backgroundUrlValue && (
+                  <p className="text-[10px] text-[var(--muted)]">
+                    {backgroundTypeValue === "image" && "Image"}
+                    {backgroundTypeValue === "video" && "Video"}
+                    {backgroundTypeValue === "audio" && "Audio"}
+                    {backgroundTypeValue === "youtube" && "YouTube"}
+                    {" URL set. Click the option again to change, or None to remove."}
+                  </p>
+                )}
                 <p className="text-[10px] text-[var(--muted)]">
-                  Image: upload or paste a direct URL. YouTube: paste video URL (e.g. youtube.com/watch?v=…). Video shows behind profile with a &quot;Click to view profile&quot; overlay for autoplay.
+                  Select an option to open its setup modal. None removes custom background. Media uses a &quot;Click to view profile&quot; overlay.
                 </p>
               </div>
+              {backgroundModalOpen === "image" && (
+                <BackgroundImageModal
+                  currentUrl={backgroundTypeValue === "image" ? backgroundUrlValue : ""}
+                  onConfirm={(url) => {
+                    setBackgroundTypeValue("image");
+                    setBackgroundUrlValue(url);
+                    setBackgroundModalOpen(null);
+                  }}
+                  onCancel={() => setBackgroundModalOpen(null)}
+                />
+              )}
+              {backgroundModalOpen === "youtube" && (
+                <BackgroundYouTubeModal
+                  currentUrl={backgroundTypeValue === "youtube" ? backgroundUrlValue : ""}
+                  onConfirm={(url) => {
+                    setBackgroundTypeValue("youtube");
+                    setBackgroundUrlValue(url);
+                    setBackgroundModalOpen(null);
+                  }}
+                  onCancel={() => setBackgroundModalOpen(null)}
+                />
+              )}
+              {backgroundModalOpen === "video" && (
+                <BackgroundVideoModal
+                  onConfirm={(url) => {
+                    setBackgroundTypeValue("video");
+                    setBackgroundUrlValue(url);
+                    setBackgroundModalOpen(null);
+                  }}
+                  onCancel={() => setBackgroundModalOpen(null)}
+                />
+              )}
+              {backgroundModalOpen === "audio" && (
+                <BackgroundAudioModal
+                  currentUrl={backgroundTypeValue === "audio" ? backgroundUrlValue : ""}
+                  onConfirm={(url) => {
+                    setBackgroundTypeValue("audio");
+                    setBackgroundUrlValue(url);
+                    setBackgroundModalOpen(null);
+                  }}
+                  onCancel={() => setBackgroundModalOpen(null)}
+                />
+              )}
             </div>
 
             <div className={activeEditorSection === "statusIndicator" ? "block space-y-3" : "hidden"}>
               <p className="text-xs text-[var(--muted)] rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
                 Status and presence come from Discord when you’re in our server. Join the Discord and your live status (online/idle/busy) plus Rich Presence (e.g. “Playing X”) will appear on your profile.
               </p>
-              <label className="block text-xs font-medium text-[var(--muted)]">
-                Quote <span className="text-[var(--muted)]/70">(Markdown ok)</span>
-                <input
-                  type="text"
-                  name="quote"
-                  defaultValue={profile.quote ?? ""}
-                  placeholder="Optional"
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-              <label className="block text-xs font-medium text-[var(--muted)]">
-                Tags <span className="text-[var(--muted)]/70">(comma-separated)</span>
-                <input
-                  type="text"
-                  name="tags"
-                  defaultValue={profile.tags?.join(", ") ?? ""}
-                  placeholder="Vibe Coder, LOTR"
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
             </div>
 
             {state?.success && (
@@ -1187,15 +1586,41 @@ export default function DashboardMyProfile({
             const result = await applyTemplateAction(profile.id, templateModal.id);
             setTemplateApplying(false);
             if (result.error) {
-              alert(result.error);
+              toast.error(result.error);
             } else {
               setTemplateModal(null);
+              toast.success("Template applied");
               router.refresh();
             }
           }}
           applying={templateApplying}
         />
       )}
+
+      <ConfirmDialog
+        open={shortLinkToDelete != null}
+        title="Remove short link?"
+        message={shortLinkToDelete ? `/${profile.slug}/${shortLinkToDelete.slug} will no longer redirect.` : ""}
+        confirmLabel="Remove"
+        variant="danger"
+        loading={shortLinkDeleting}
+        onConfirm={async () => {
+          if (!shortLinkToDelete) return;
+          setShortLinkDeleting(true);
+          setShortLinkError(null);
+          const result = await deleteShortLinkAction(shortLinkToDelete.id);
+          setShortLinkDeleting(false);
+          if (result.error) {
+            setShortLinkError(result.error);
+            toast.error(result.error);
+          } else {
+            setShortLinks((prev) => prev.filter((l) => l.id !== shortLinkToDelete.id));
+            setShortLinkToDelete(null);
+            toast.success("Short link removed");
+          }
+        }}
+        onCancel={() => setShortLinkToDelete(null)}
+      />
     </div>
   );
 }

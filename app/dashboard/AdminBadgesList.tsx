@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useTransition, useState } from "react";
+import { toast } from "sonner";
 import { setUserBadgesAction } from "@/app/dashboard/actions";
 import type { AdminUser } from "@/app/dashboard/AdminUserModal";
 
@@ -19,7 +20,7 @@ export default function AdminBadgesList({ users, onUpdate }: Props) {
     startTransition(async () => {
       const result = await setUserBadgesAction(userId, { [badge]: value });
       if (result.error) {
-        alert(result.error);
+        toast.error(result.error);
       } else {
         onUpdate();
       }

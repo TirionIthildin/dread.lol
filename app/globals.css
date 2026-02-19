@@ -402,6 +402,62 @@
   .profile-font-fira-code { font-family: var(--font-fira-code), ui-monospace, monospace; }
   .profile-font-space-mono { font-family: var(--font-space-mono), ui-monospace, monospace; }
 
+  /* Profile custom cursors (applied to profile container) */
+  .profile-cursor-crosshair { cursor: crosshair; }
+  .profile-cursor-pointer { cursor: pointer; }
+  .profile-cursor-text { cursor: text; }
+  .profile-cursor-grab { cursor: grab; }
+  .profile-cursor-minimal {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='2' fill='%2322c55e'/%3E%3C/svg%3E") 8 8, auto;
+  }
+  .profile-cursor-beam {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='20' viewBox='0 0 12 20'%3E%3Crect x='5' y='0' width='2' height='20' fill='%2306b6d4'/%3E%3C/svg%3E") 6 2, text;
+  }
+
+  /* Profile animation presets */
+  .profile-animate-fade-in {
+    animation: profile-fade-in 0.4s ease-out both;
+  }
+  .profile-animate-slide-up {
+    animation: profile-slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-animate-scale-in {
+    animation: profile-scale-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-animate-glow:hover {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+      0 0 32px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  }
+  .profile-animate-shimmer .profile-content-inner a {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 18%, transparent), transparent);
+    background-size: 200% 100%;
+    background-position: 100% 0;
+    transition: background-position 0.5s ease;
+  }
+  .profile-animate-shimmer .profile-content-inner a:hover {
+    background-position: 0 0;
+  }
+  @keyframes profile-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes profile-slide-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes profile-scale-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .profile-animate-fade-in,
+    .profile-animate-slide-up,
+    .profile-animate-scale-in {
+      animation: profile-fade-in 0.2s ease-out both;
+    }
+  }
+
   @keyframes dashboard-panel-in {
     from {
       opacity: 0;

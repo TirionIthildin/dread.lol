@@ -2,13 +2,33 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { uploadFile, isSeaweedConfigured } from "@/lib/seaweed";
 
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MiB
-const ALLOWED_TYPES = new Set([
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MiB
+const VIDEO_MAX_BYTES = 50 * 1024 * 1024; // 50 MiB (general use)
+const VIDEO_BACKGROUND_MAX_BYTES = 20 * 1024 * 1024; // 20 MiB for profile background
+const AUDIO_MAX_BYTES = 15 * 1024 * 1024; // 15 MiB
+
+const IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/gif",
+  "image/x-gif", // alternate MIME for GIF
   "image/webp",
   "image/svg+xml",
+]);
+const VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+  "video/quicktime", // .mov
+]);
+const AUDIO_TYPES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/wave",
+  "audio/ogg",
+  "audio/webm",
+  "audio/x-wav",
 ]);
 
 export async function POST(req: Request) {
@@ -38,16 +58,24 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  const type = file.type?.toLowerCase();
-  if (!type || !ALLOWED_TYPES.has(type)) {
+  const type = file.type?.toLowerCase().split(";")[0]?.trim();
+  const purpose = (formData.get("purpose") as string)?.toLowerCase();
+  let maxBytes: number;
+  if (type && IMAGE_TYPES.has(type)) {
+    maxBytes = IMAGE_MAX_BYTES;
+  } else if (type && VIDEO_TYPES.has(type)) {
+    maxBytes = purpose === "background-video" ? VIDEO_BACKGROUND_MAX_BYTES : VIDEO_MAX_BYTES;
+  } else if (type && AUDIO_TYPES.has(type)) {
+    maxBytes = AUDIO_MAX_BYTES;
+  } else {
     return NextResponse.json(
-      { error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, SVG" },
+      { error: "Invalid file type. Allowed: images (JPEG, PNG, GIF, WebP, SVG), video (MP4, WebM, OGG), audio (MP3, WAV, OGG, WebM)" },
       { status: 400 }
     );
   }
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > maxBytes) {
     return NextResponse.json(
-      { error: `File too large. Max ${MAX_SIZE_BYTES / 1024 / 1024} MiB` },
+      { error: `File too large. Max ${maxBytes / 1024 / 1024} MiB for this file type` },
       { status: 400 }
     );
   }

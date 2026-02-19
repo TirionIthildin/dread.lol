@@ -51,6 +51,8 @@ export interface Profile {
   nameGreeting?: string;
   /** Card style: default, sharp, glass. */
   cardStyle?: string;
+  /** Box opacity (50–100). Controls profile card transparency. */
+  cardOpacity?: number;
   /** Pronouns (e.g. they/them). */
   pronouns?: string;
   /** Location or "Based in" (e.g. NYC, Berlin). */
@@ -65,7 +67,11 @@ export interface Profile {
   layoutDensity?: string;
   /** Custom font key (default, jetbrains-mono, fira-code, space-mono). */
   customFont?: string;
-  /** Background type: none, image, youtube. */
+  /** Cursor style when viewing profile: default, crosshair, pointer, text, grab, minimal, beam. */
+  cursorStyle?: string;
+  /** Animation preset: none, fade-in, slide-up, scale-in, glow, shimmer. */
+  animationPreset?: string;
+  /** Background type: none, image, video, audio, youtube. */
   backgroundType?: string;
   /** Background URL (image URL or YouTube URL). */
   backgroundUrl?: string;

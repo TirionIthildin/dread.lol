@@ -52,6 +52,7 @@ export interface ProfileDoc {
   terminalPrompt?: string | null;
   nameGreeting?: string | null;
   cardStyle?: string | null;
+  cardOpacity?: number | null;
   displayStatus?: string | null;
   pronouns?: string | null;
   location?: string | null;
@@ -62,6 +63,8 @@ export interface ProfileDoc {
   metaDescription?: string | null;
   showPageViews?: boolean;
   customFont?: string | null;
+  cursorStyle?: string | null;
+  animationPreset?: string | null;
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   showDiscordBadges?: boolean;

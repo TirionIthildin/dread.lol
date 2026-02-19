@@ -4,6 +4,8 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { ImagesSquare, Trash } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import type { GalleryItem } from "@/lib/member-profiles";
 import {
   addGalleryItemAction,
@@ -29,6 +31,8 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [itemToDelete, setItemToDelete] = useState<GalleryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setGallery(initialGallery);
@@ -133,12 +137,7 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              if (!confirm("Remove this image from your gallery?")) return;
-                              const res = await deleteGalleryItemAction(item.id);
-                              if (res.error) setGalleryAddError(res.error);
-                              else setGallery((prev) => prev.filter((p) => p.id !== item.id));
-                            }}
+                            onClick={() => setItemToDelete(item)}
                             className="text-xs text-[var(--muted)] hover:text-[var(--warning)] inline-flex items-center gap-1"
                             aria-label="Delete"
                           >
@@ -183,6 +182,7 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
                     setGallery((prev) => [...prev, { id: result.id!, imageUrl: data.url, title: galleryAddTitle || undefined, description: galleryAddDescription || undefined, sortOrder: prev.length }]);
                     setGalleryAddTitle("");
                     setGalleryAddDescription("");
+                    toast.success("Image added to gallery");
                   }
                 } finally {
                   setGalleryUploading(false);
@@ -242,6 +242,7 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
                 setGalleryAddUrl("");
                 setGalleryAddTitle("");
                 setGalleryAddDescription("");
+                toast.success("Image added to gallery");
               }
             }}
             className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -250,6 +251,31 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={itemToDelete != null}
+        title="Remove image?"
+        message="This image will be removed from your gallery."
+        confirmLabel="Remove"
+        variant="danger"
+        loading={deleting}
+        onConfirm={async () => {
+          if (!itemToDelete) return;
+          setDeleting(true);
+          setGalleryAddError(null);
+          const res = await deleteGalleryItemAction(itemToDelete.id);
+          setDeleting(false);
+          if (res.error) {
+            setGalleryAddError(res.error);
+            toast.error(res.error);
+          } else {
+            setGallery((prev) => prev.filter((p) => p.id !== itemToDelete.id));
+            setItemToDelete(null);
+            toast.success("Image removed from gallery");
+          }
+        }}
+        onCancel={() => setItemToDelete(null)}
+      />
     </section>
   );
 }

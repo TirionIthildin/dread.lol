@@ -21,6 +21,7 @@ import {
 } from "@/lib/member-profiles";
 import { normalizeSlug } from "@/lib/slug";
 import { getProfileTemplate } from "@/lib/profile-templates";
+import { validateUrlOrEmpty, requireSafeUrl, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 
 export type ProfileFormState = { error?: string; success?: boolean; savedAt?: string } | null;
 
@@ -33,7 +34,7 @@ function parseLinksValue(linksRaw: string | null | undefined): string | null {
       if (!Array.isArray(arr)) return null;
       const valid = arr.filter(
         (x): x is { label: string; href: string } =>
-          x && typeof x === "object" && typeof (x as { label?: string }).label === "string" && typeof (x as { href?: string }).href === "string"
+          x && typeof x === "object" && typeof (x as { label?: string }).label === "string" && typeof (x as { href?: string }).href === "string" && isSafeUrl((x as { href: string }).href)
       );
       return valid.length > 0 ? JSON.stringify(valid) : null;
     } catch {
@@ -48,7 +49,7 @@ function parseLinksValue(linksRaw: string | null | undefined): string | null {
       if (i === -1) return null;
       const label = line.slice(0, i).trim();
       const href = line.slice(i + 1).trim();
-      return label && href ? { label, href } : null;
+      return label && href && isSafeUrl(href) ? { label, href } : null;
     })
     .filter(Boolean);
   return parsed.length > 0 ? JSON.stringify(parsed) : null;
@@ -67,13 +68,30 @@ export async function updateProfileAction(
   const rawSlug = (formData.get("slug") as string)?.trim();
   const slug = rawSlug ? normalizeSlug(rawSlug) : undefined;
   const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
+
+  const avatarUrl = validateUrlOrEmpty(formData.get("avatarUrl") as string);
+  const banner = validateUrlOrEmpty(formData.get("banner") as string);
+  const ogImageUrl = validateUrlOrEmpty(formData.get("ogImageUrl") as string);
+  const bgType = (formData.get("backgroundType") as string)?.trim();
+  const usesBackgroundUrl = ["image", "youtube", "video", "audio"].includes(bgType ?? "");
+  const rawBackgroundUrl = usesBackgroundUrl
+    ? (formData.get("backgroundUrl") as string)?.trim()
+    : undefined;
+  const backgroundUrl = validateBackgroundUrl(rawBackgroundUrl);
+
+  if ((formData.get("avatarUrl") as string)?.trim() && !avatarUrl) return { error: "Avatar URL must use https or http" };
+  if ((formData.get("banner") as string)?.trim() && !banner) return { error: "Banner URL must use https or http" };
+  if ((formData.get("ogImageUrl") as string)?.trim() && !ogImageUrl) return { error: "OG image URL must use https or http" };
+  if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
+  if (usesBackgroundUrl && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
+
   try {
     await updateMemberProfile(profileId, session.sub, {
       slug,
       name: ((formData.get("name") as string)?.trim() || undefined)?.slice(0, 100),
       tagline: ((formData.get("tagline") as string)?.trim() || undefined)?.slice(0, 120),
       description: ((formData.get("description") as string) ?? undefined)?.slice(0, 2000) ?? undefined,
-      avatarUrl: (formData.get("avatarUrl") as string)?.trim() || undefined,
+      avatarUrl,
       quote: (formData.get("quote") as string)?.trim() || undefined,
       tags: formData.get("tags")
         ? (formData.get("tags") as string)
@@ -83,7 +101,7 @@ export async function updateProfileAction(
         : undefined,
       discord: (formData.get("discord") as string)?.trim() || undefined,
       roblox: (formData.get("roblox") as string)?.trim() || undefined,
-      banner: (formData.get("banner") as string)?.trim() || undefined,
+      banner,
       bannerSmall: formData.get("bannerSmall") === "on",
       bannerAnimatedFire: formData.get("bannerAnimatedFire") === "on",
       bannerStyle: (formData.get("bannerStyle") as string)?.trim() || undefined,
@@ -91,15 +109,31 @@ export async function updateProfileAction(
       terminalTitle: (formData.get("terminalTitle") as string)?.trim() || undefined,
       terminalCommands: (formData.get("terminalCommands") as string)?.trim() || null,
       links: linksJson,
-      ogImageUrl: (formData.get("ogImageUrl") as string)?.trim() || undefined,
+      ogImageUrl,
       showUpdatedAt: formData.get("showUpdatedAt") === "on",
       accentColor: (formData.get("accentColor") as string)?.trim() || undefined,
       terminalPrompt: (formData.get("terminalPrompt") as string)?.trim() || undefined,
       nameGreeting: (formData.get("nameGreeting") as string)?.trim() || undefined,
       cardStyle: (formData.get("cardStyle") as string)?.trim() || undefined,
+      cardOpacity: (() => {
+        const v = formData.get("cardOpacity");
+        if (v == null || v === "") return undefined;
+        const n = typeof v === "string" ? parseInt(v, 10) : Number(v);
+        if (Number.isNaN(n)) return undefined;
+        return Math.max(50, Math.min(100, n));
+      })(),
       pronouns: ((formData.get("pronouns") as string)?.trim() || undefined)?.slice(0, 40),
       location: ((formData.get("location") as string)?.trim() || undefined)?.slice(0, 80),
       timezone: ((formData.get("timezone") as string)?.trim() || undefined)?.slice(0, 64),
+      birthday: (() => {
+        const mm = (formData.get("birthdayMonth") as string)?.trim();
+        const dd = (formData.get("birthdayDay") as string)?.trim();
+        if (!mm || !dd || !/^\d{2}$/.test(mm) || !/^\d{2}$/.test(dd)) return null;
+        const m = parseInt(mm, 10);
+        const d = parseInt(dd, 10);
+        if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+        return `${mm}-${dd}`;
+      })(),
       avatarShape: (formData.get("avatarShape") as string)?.trim() || undefined,
       layoutDensity: (formData.get("layoutDensity") as string)?.trim() || undefined,
       noindex: formData.get("noindex") === "on",
@@ -107,12 +141,10 @@ export async function updateProfileAction(
       showPageViews: formData.get("showPageViews") === "on",
       showDiscordBadges: formData.get("showDiscordBadges") === "on",
       customFont: (formData.get("customFont") as string)?.trim() || undefined,
-      backgroundType: (formData.get("backgroundType") as string)?.trim() || undefined,
-      backgroundUrl: (() => {
-        const t = (formData.get("backgroundType") as string)?.trim();
-        if (t !== "image" && t !== "youtube") return undefined;
-        return (formData.get("backgroundUrl") as string)?.trim() || undefined;
-      })(),
+      cursorStyle: (formData.get("cursorStyle") as string)?.trim() || undefined,
+      animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
+      backgroundType: usesBackgroundUrl ? bgType : null,
+      backgroundUrl: usesBackgroundUrl ? backgroundUrl : null,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";
@@ -177,8 +209,9 @@ export async function addGalleryItemAction(
   if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
   if (!data.imageUrl?.trim()) return { error: "Image URL required" };
   try {
+    const imageUrl = requireSafeUrl(data.imageUrl.trim(), "Image URL");
     const item = await addGalleryItem(profileId, session.sub, {
-      imageUrl: data.imageUrl.trim(),
+      imageUrl,
       title: data.title?.trim() || null,
       description: data.description?.trim() || null,
     });
@@ -258,7 +291,8 @@ export async function addShortLinkAction(
   const user = await getOrCreateUser(session);
   if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
   try {
-    const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url: data.url.trim() });
+    const url = requireSafeUrl(data.url.trim(), "URL");
+    const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url });
     revalidatePath("/dashboard");
     const slug = await getProfileSlugByUserId(session.sub);
     if (slug) revalidatePath(`/${slug}`);

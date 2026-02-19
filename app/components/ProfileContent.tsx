@@ -32,6 +32,8 @@ const BANNER_STYLES = ["accent", "fire", "cyan", "green", "purple", "orange", "r
 const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
+const CURSOR_STYLES = ["default", "crosshair", "pointer", "text", "grab", "minimal", "beam"] as const;
+const ANIMATION_PRESETS = ["none", "fade-in", "slide-up", "scale-in", "glow", "shimmer"] as const;
 
 /** Gradient styles use background-clip: text, which makes space chars invisible. Render spaces as 1ch spans. */
 const GRADIENT_BANNER_STYLES = ["fire", "cyan", "green", "purple", "orange", "rose"] as const;
@@ -134,27 +136,33 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
     profile.customFont && CUSTOM_FONTS.includes(profile.customFont as (typeof CUSTOM_FONTS)[number])
       ? `profile-font-${profile.customFont}`
       : "";
+  const cursorClass =
+    profile.cursorStyle && CURSOR_STYLES.includes(profile.cursorStyle as (typeof CURSOR_STYLES)[number]) && profile.cursorStyle !== "default"
+      ? `profile-cursor-${profile.cursorStyle}`
+      : "";
+  const animationClass =
+    profile.animationPreset && ANIMATION_PRESETS.includes(profile.animationPreset as (typeof ANIMATION_PRESETS)[number]) && profile.animationPreset !== "none"
+      ? `profile-animate-${profile.animationPreset}`
+      : "";
   const useTerminalLayout = Boolean(profile.useTerminalLayout && (profile.terminalCommands?.length || profile.terminalTitle != null));
+  const cardOpacity = profile.cardOpacity != null ? Math.max(50, Math.min(100, profile.cardOpacity)) : 95;
 
   return (
-    <div className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass}`}>
-      <div className="mb-3">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)]/60 px-3 py-2 text-sm text-[var(--muted)] transition-all duration-200 hover:border-[var(--accent)]/50 hover:text-[var(--accent)] hover:shadow-[0_0_12px_rgba(6,182,212,0.08)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--bg)]"
-        >
-          <span className="text-[var(--terminal)]">{prompt}</span> cd ..
-        </Link>
-      </div>
+    <div className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass} ${cursorClass}`}>
       <article
-        className={`rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden transition-shadow duration-300 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)] ${cardClass} ${densityClass}`}
+        className={`rounded-xl border border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden transition-shadow duration-300 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)] ${cardClass} ${densityClass} ${animationClass}`}
+        style={{ backgroundColor: `color-mix(in srgb, var(--surface) ${cardOpacity}%, transparent)` }}
         aria-labelledby="profile-name"
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/90 px-3 py-2.5 sm:px-4">
-          <div className="flex gap-1.5 items-center shrink-0" aria-hidden>
-            <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#eab308] shadow-[0_0_6px_rgba(234,179,8,0.4)]" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
+          <div className="flex gap-1.5 items-center shrink-0">
+            <Link
+              href="/"
+              className="h-2.5 w-2.5 min-w-[10px] min-h-[10px] rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)] transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] cursor-pointer block"
+              aria-label="Back to home"
+            />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#eab308] shadow-[0_0_6px_rgba(234,179,8,0.4)]" aria-hidden />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_rgba(34,197,94,0.4)]" aria-hidden />
           </div>
           <span className="ml-2 font-mono text-xs text-[var(--muted)] truncate flex-1 min-w-0">
             {profile.slug}.txt

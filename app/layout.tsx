@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Toaster } from "sonner";
 import { JetBrains_Mono, Fira_Code, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_OG_IMAGE } from "@/lib/site";
@@ -85,6 +86,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased font-mono">
+        <Toaster richColors position="top-center" theme="dark" />
         <div className="relative z-10">{children}</div>
       </body>
     </html>
