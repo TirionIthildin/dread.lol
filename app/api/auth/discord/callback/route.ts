@@ -5,32 +5,34 @@ import {
   createSession,
   getSessionCookieConfig,
 } from "@/lib/auth/session";
+import { SITE_URL } from "@/lib/site";
 
 const DASHBOARD_PATH = "/dashboard";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const error = searchParams.get("error");
+  const baseUrl = SITE_URL;
 
   if (error) {
     const desc = searchParams.get("error_description") ?? error;
     return NextResponse.redirect(
-      new URL(`/dashboard?error=discord&message=${encodeURIComponent(desc)}`, origin)
+      new URL(`/dashboard?error=discord&message=${encodeURIComponent(desc)}`, baseUrl)
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=callback_missing", origin)
+      new URL("/dashboard?error=callback_missing", baseUrl)
     );
   }
 
   const stateConsumed = await consumeOAuthState(state);
   if (stateConsumed === null) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=invalid_state", origin)
+      new URL("/dashboard?error=invalid_state", baseUrl)
     );
   }
 
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
       ...(userInfo.public_flags != null && { public_flags: userInfo.public_flags }),
     });
     const config = getSessionCookieConfig(sessionValue);
-    const res = NextResponse.redirect(new URL(DASHBOARD_PATH, origin));
+    const res = NextResponse.redirect(new URL(DASHBOARD_PATH, baseUrl));
     res.cookies.set(config.name, config.value, {
       httpOnly: config.httpOnly,
       secure: config.secure,
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("Discord OAuth callback error:", err);
     return NextResponse.redirect(
-      new URL("/dashboard?error=token_exchange", request.nextUrl.origin)
+      new URL("/dashboard?error=token_exchange", SITE_URL)
     );
   }
 }
