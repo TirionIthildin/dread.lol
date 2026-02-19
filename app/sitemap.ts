@@ -1,6 +1,8 @@
 import { SITE_URL } from "@/lib/site";
 import { getAllMemberProfileSlugs } from "@/lib/member-profiles";
 
+export const dynamic = "force-dynamic";
+
 export default async function sitemap() {
   const profiles = await getAllMemberProfileSlugs();
   return [
