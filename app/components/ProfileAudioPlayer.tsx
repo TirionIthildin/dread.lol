@@ -70,7 +70,7 @@ export default function ProfileAudioPlayer({ tracks }: ProfileAudioPlayerProps) 
   };
   const goPrev = () => {
     if (currentTime > 2) {
-      audioRef.current && (audioRef.current.currentTime = 0);
+      if (audioRef.current) audioRef.current.currentTime = 0;
       setCurrentTime(0);
     } else if (currentIndex > 0) {
       setCurrentIndex((i) => i - 1);

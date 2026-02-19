@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -120,12 +121,12 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
     <form onSubmit={handleSubmit} className="space-y-4">
       {!isLoggedIn && (
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-sm text-[var(--foreground)]">
-          <a
+          <Link
             href="/api/auth/discord"
             className="inline-flex items-center gap-2 font-medium text-[var(--accent)] hover:underline"
           >
             Log in with Discord to create pastes
-          </a>
+          </Link>
         </div>
       )}
       <div>

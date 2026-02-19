@@ -11,7 +11,6 @@ import {
   Palette,
   SlidersHorizontal,
   Terminal,
-  Circle,
   UploadSimple,
   DiscordLogo,
   MusicNotes,

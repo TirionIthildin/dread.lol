@@ -73,8 +73,8 @@ export async function GET(request: Request) {
 
   const hasToken = Boolean(process.env.DISCORD_BOT_TOKEN?.trim());
   const apiTrace: Record<string, unknown> = { tokenSet: hasToken };
-  let finalFlags = flagsRedis ?? flagsDb;
-  let finalPremium = premiumRedis ?? premiumDb;
+  const finalFlags = flagsRedis ?? flagsDb;
+  const finalPremium = premiumRedis ?? premiumDb;
   if (!hasToken) {
     apiTrace.note = "DISCORD_BOT_TOKEN not set, skipping API fetch";
   } else {

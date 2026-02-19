@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Flag } from "@phosphor-icons/react";
 
@@ -121,12 +122,12 @@ export default function ProfileReportButton({ slug, canSubmit = true }: ProfileR
                   >
                     Cancel
                   </button>
-                  <a
+                  <Link
                     href="/dashboard"
                     className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20"
                   >
                     Sign in
-                  </a>
+                  </Link>
                 </>
               ) : (
                 <>
