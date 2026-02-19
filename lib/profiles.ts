@@ -1,6 +1,6 @@
 /**
- * Profile type used by profile pages. Static profiles removed;
- * use profile templates in the dashboard instead.
+ * Profile type used by profile pages.
+ * Use profile templates in the dashboard and member profiles (DB-backed) for content.
  */
 export interface Profile {
   slug: string;
@@ -37,8 +37,6 @@ export interface Profile {
   tags?: string[];
   /** Extra links (GitHub, Twitter, website, etc.). */
   links?: { label: string; href: string }[];
-  /** Optional status line (e.g. "Building Ithildin"). */
-  status?: string;
   /** Optional quote or fun fact. */
   quote?: string;
   /** Custom OG/social image URL (member profiles only). */
@@ -53,8 +51,6 @@ export interface Profile {
   nameGreeting?: string;
   /** Card style: default, sharp, glass. */
   cardStyle?: string;
-  /** User-chosen status indicator (online, idle, busy, offline). Not synced with Discord. */
-  displayStatus?: string;
   /** Pronouns (e.g. they/them). */
   pronouns?: string;
   /** Location or "Based in" (e.g. NYC, Berlin). */
@@ -67,6 +63,12 @@ export interface Profile {
   avatarShape?: string;
   /** Layout density: default, compact, spacious. */
   layoutDensity?: string;
+  /** Custom font key (default, jetbrains-mono, fira-code, space-mono). */
+  customFont?: string;
+  /** Background type: none, image, youtube. */
+  backgroundType?: string;
+  /** Background URL (image URL or YouTube URL). */
+  backgroundUrl?: string;
   /** When true, ask search engines not to index this profile. */
   noindex?: boolean;
   /** Override meta/OG description for social sharing. */
@@ -75,19 +77,26 @@ export interface Profile {
   verified?: boolean;
   /** Admin-granted staff badge (member profiles only). */
   staff?: boolean;
+  /** Custom badges (admin-created and assigned). */
+  customBadges?: {
+    id: number;
+    key: string;
+    label: string;
+    description?: string;
+    color?: string;
+    sortOrder: number;
+    badgeType?: string;
+    imageUrl?: string;
+    iconName?: string;
+  }[];
   /** Discord badge keys to show (when user opted in via showDiscordBadges). */
   discordBadges?: string[];
   /** Gallery: images with optional title and description. */
   gallery?: { id: number; imageUrl: string; title?: string; description?: string; sortOrder: number }[];
+  /** Live Discord status + Rich Presence (from presence bot). */
+  discordPresence?: {
+    status: "online" | "idle" | "dnd" | "offline";
+    activities: { name: string; state?: string | null; details?: string | null }[];
+  };
 }
 
-/** Static profiles removed; use profile templates in the dashboard instead. */
-export const PROFILES: Profile[] = [];
-
-export function getProfileBySlug(_slug: string): Profile | undefined {
-  return undefined;
-}
-
-export function getProfileSlugs(): string[] {
-  return [];
-}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useTransition, useState } from "react";
 import { approveUserAction } from "@/app/dashboard/actions";
 
@@ -30,7 +31,8 @@ export default function AdminPendingList({ pending, onApproved }: Props) {
         setError(result.error);
         setApprovingId(null);
       } else {
-        onApproved?.() ?? window.location.reload();
+        if (onApproved) onApproved();
+        else window.location.reload();
         setApprovingId(null);
       }
     });
@@ -56,12 +58,13 @@ export default function AdminPendingList({ pending, onApproved }: Props) {
           >
             <div className="flex items-center gap-3">
               {u.avatarUrl ? (
-                <img
+                <Image
                   src={u.avatarUrl}
                   alt=""
                   className="h-10 w-10 rounded-full border border-[var(--border)]"
                   width={40}
                   height={40}
+                  unoptimized
                 />
               ) : (
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] text-sm">

@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { SITE_NAME } from "@/lib/site";
-import { PROFILES } from "@/lib/profiles";
 
 const PROMPT = "$";
 
@@ -40,7 +39,6 @@ const INTRO_LINES: Array<{ type: "command" | "output"; content: ReactNode }> = [
 const HELP_LINES = [
   "help — show this message",
   "cat intro.txt — show intro",
-  ...PROFILES.map((p) => `open ${p.slug} — ${p.name}'s profile`),
   "login — sign in with Discord",
   "whoami — current user",
   "ls — list files",
@@ -68,15 +66,13 @@ function runCommand(cmd: string): { output: ReactNode; navigate?: string; redire
   const c = cmd.trim().toLowerCase();
   if (c === "help" || c === "?") return { output: HELP_OUTPUT };
   if (c === "cat intro.txt" || c === "cat intro") return { output: INTRO_OUTPUT };
-  const profile = PROFILES.find((p) => c === `open ${p.slug}` || c === p.slug);
-  if (profile) return { output: `Opening ${profile.name}...`, navigate: `/${profile.slug}` };
   if (c === "login") return { output: "Redirecting to sign in...", redirect: "/api/auth/discord" };
   if (c === "whoami") return { output: "guest" };
   if (c === "ls" || c === "ls -la" || c === "ls -l") {
     return {
       output: (
         <span className="text-[var(--foreground)]">
-          {[...PROFILES.map((p) => p.slug), "intro.txt", "help", "login"].join("  ")}
+          {"intro.txt help login".split(" ").join("  ")}
         </span>
       ),
     };

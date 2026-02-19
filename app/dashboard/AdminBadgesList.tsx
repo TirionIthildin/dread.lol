@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useTransition, useState } from "react";
 import { setUserBadgesAction } from "@/app/dashboard/actions";
 import type { AdminUser } from "@/app/dashboard/AdminUserModal";
@@ -38,12 +39,13 @@ export default function AdminBadgesList({ users, onUpdate }: Props) {
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
               {u.avatarUrl ? (
-                <img
+                <Image
                   src={u.avatarUrl}
                   alt=""
                   className="h-8 w-8 rounded-full border border-[var(--border)] shrink-0"
                   width={32}
                   height={32}
+                  unoptimized
                 />
               ) : (
                 <div className="h-8 w-8 rounded-full border border-[var(--border)] bg-[var(--surface)] shrink-0 flex items-center justify-center text-xs text-[var(--muted)]">

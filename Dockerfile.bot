@@ -1,0 +1,14 @@
+# Discord presence bot – runs alongside the site in production
+FROM public.ecr.aws/docker/library/node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+
+COPY scripts/ ./scripts/
+
+ENV NODE_ENV=production
+
+# Uses DISCORD_BOT_TOKEN, DISCORD_GUILD_ID (optional), VALKEY_URL
+CMD ["node", "scripts/discord-presence-bot.mjs"]

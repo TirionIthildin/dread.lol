@@ -26,7 +26,6 @@ export interface ProfileTemplate {
     easterEggLinkPopupUrl?: string;
     tags?: string[] | null;
     links?: string | null;
-    status?: string;
     quote?: string;
   };
 }
@@ -114,7 +113,6 @@ export const PROFILE_TEMPLATES: ProfileTemplate[] = [
       roblox: "https://www.roblox.com/users/1553094661/profile",
       easterEgg: true,
       tags: ["Hustler", "Klass", "Income"],
-      status: "Outcome → income",
       quote: "Long as the outcome is income.",
     },
   },
@@ -128,7 +126,6 @@ export const PROFILE_TEMPLATES: ProfileTemplate[] = [
       description: "I must not only punish, but punish with impunity.",
       discord: "@fluffynuttts_exodus",
       tags: ["Larp", "Sanity", "Intervals"],
-      status: "Waiting. Always waiting.",
       quote: "There are only long intervals of horrible sanity.",
       bannerSmall: true,
       banner: BALATRO_BANNER,
@@ -149,7 +146,6 @@ export const PROFILE_TEMPLATES: ProfileTemplate[] = [
       banner: TIRION_BANNER,
       tags: ["Vibe Coder", "Ithildin", "LOTR", "Tirion"],
       links: JSON.stringify([{ label: "Ithildin", href: "https://ithildin.co" }]),
-      status: "Coding by starlight",
       quote: "Speak friend and enter. ✧",
     },
   },

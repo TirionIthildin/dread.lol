@@ -80,8 +80,6 @@ export default function DonutAnimation() {
           const yp = Math.floor(HEIGHT / 2 - K1 * ooz * y);
           const o = xp + WIDTH * yp;
 
-          const Nx =
-            costheta * (cosB * cosphi + sinA * sinB * sinphi) - sintheta * cosA * sinB;
           const Ny =
             costheta * (sinB * cosphi - sinA * cosB * sinphi) + sintheta * cosA * cosB;
           const Nz = cosA * costheta * sinphi + sinA * sintheta;

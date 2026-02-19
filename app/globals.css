@@ -15,7 +15,7 @@
   --accent-dim: #0891b2;
   --warning: #f59e0b;
   --radius: 6px;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, "Cascadia Code", monospace;
+  --font-mono: var(--font-jetbrains-mono, "JetBrains Mono"), "Fira Code", ui-monospace, "Cascadia Code", monospace;
 
   --background: var(--bg);
   --foreground: var(--text);
@@ -396,6 +396,11 @@
   }
   .profile-density-spacious .profile-content-inner .profile-name-block h1 { font-size: 1.375rem; }
   .profile-density-spacious .profile-content-inner .profile-avatar { width: 5rem; height: 5rem; }
+
+  /* Profile custom font overrides */
+  .profile-font-jetbrains-mono { font-family: var(--font-jetbrains-mono), ui-monospace, monospace; }
+  .profile-font-fira-code { font-family: var(--font-fira-code), ui-monospace, monospace; }
+  .profile-font-space-mono { font-family: var(--font-space-mono), ui-monospace, monospace; }
 
   @keyframes dashboard-panel-in {
     from {

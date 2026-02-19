@@ -1,14 +1,8 @@
 import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
-import {
-  getOrCreateUser,
-  getOrCreateMemberProfile,
-  getProfileViews,
-  getGalleryForProfile,
-} from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile } from "@/lib/member-profiles";
 import { slugFromUsername } from "@/lib/slug";
-import DashboardAuth from "@/app/dashboard/DashboardAuth";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
 import UnapprovedMessage from "@/app/components/UnapprovedMessage";
 
@@ -18,20 +12,13 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-type Props = { searchParams: Promise<{ error?: string; message?: string }> };
-
-export default async function DashboardPage({ searchParams }: Props) {
+export default async function DashboardPage() {
   const session = await getSession();
-  const { error, message } = await searchParams;
   const user = session ? await getOrCreateUser(session) : null;
   const canUseDashboard = user && (user.approved || user.isAdmin);
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up">
-        <DashboardAuth user={session} error={error} message={message} />
-      </div>
-
       {session && !canUseDashboard && (
         <div className="animate-fade-in-up animate-delay-100">
           <UnapprovedMessage />
@@ -39,25 +26,9 @@ export default async function DashboardPage({ searchParams }: Props) {
       )}
 
       {session && canUseDashboard && (
-        <>
-          <div className="animate-fade-in-up animate-delay-100">
-            <h1 id="my-profile-heading" className="text-xl font-semibold text-[var(--foreground)] inline-flex items-center gap-2">
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-[var(--accent)]/15 text-[var(--accent)]" aria-hidden>
-                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </span>
-              My profile
-            </h1>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Edit your page and see who viewed it (IP and time).
-            </p>
-          </div>
-          <div className="animate-fade-in-up animate-delay-200">
-            <MemberProfileSection session={session} />
-          </div>
-        </>
+        <div className="animate-fade-in-up animate-delay-100">
+          <MemberProfileSection session={session} />
+        </div>
       )}
     </div>
   );
@@ -77,16 +48,12 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [{ viewCount, recentViews }, gallery] = await Promise.all([
-      getProfileViews(profile.id),
-      getGalleryForProfile(profile.id),
-    ]);
+    const shortLinks = await getShortLinksForProfile(profile.id);
     return (
       <DashboardMyProfile
         profile={profile}
-        viewCount={viewCount}
-        recentViews={recentViews}
-        gallery={gallery}
+        shortLinks={shortLinks}
+        discordAvatarUrl={session.picture ?? undefined}
       />
     );
   } catch (err) {

@@ -1,31 +1,94 @@
 import Link from "next/link";
 import Image from "next/image";
+import { MapPin, Clock, Cake } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
+
+const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
 import { DISCORD_BADGE_INFO, type DiscordBadgeKey } from "@/lib/discord-badges";
+import { getBadgeIcon } from "@/lib/badge-icons";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
 import ProfileTags from "@/app/components/ProfileTags";
-import ProfileStatus from "@/app/components/ProfileStatus";
 import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
+import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 
 const ACCENT_THEMES = ["cyan", "green", "purple", "orange", "rose"] as const;
+/** Preset class names for custom badge colors (key = badge.color value from admin). */
+const CUSTOM_BADGE_COLORS: Record<string, string> = {
+  amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  green: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  purple: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
+  cyan: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
+  rose: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+  orange: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
+};
 const CARD_STYLES = ["default", "sharp", "glass"] as const;
 const BANNER_STYLES = ["accent", "fire", "cyan", "green", "purple", "orange", "rose"] as const;
-const DISPLAY_STATUSES = ["online", "idle", "busy", "offline"] as const;
+const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
 
-const STATUS_DOT_STYLES: Record<string, { bg: string; label: string }> = {
-  online: { bg: "bg-[#22c55e]", label: "Online" },
-  idle: { bg: "bg-[#faa61a]", label: "Idle" },
-  busy: { bg: "bg-[#f04747]", label: "Busy" },
-  offline: { bg: "bg-[#747f8d]", label: "Offline" },
-};
+/** Gradient styles use background-clip: text, which makes space chars invisible. Render spaces as 1ch spans. */
+const GRADIENT_BANNER_STYLES = ["fire", "cyan", "green", "purple", "orange", "rose"] as const;
+
+function BannerPre({
+  banner,
+  bannerClass,
+  bannerSmall,
+}: {
+  banner: string;
+  bannerClass: string;
+  bannerSmall?: boolean;
+}) {
+  const isGradient = GRADIENT_BANNER_STYLES.some((s) => bannerClass === `banner-style-${s}`);
+  const preStyle = {
+    fontSize: bannerSmall ? "clamp(2px, 0.5vh, 5px)" : "clamp(5px, 1.1vh, 10px)",
+    lineHeight: 1.12,
+    maxHeight: "min(260px, 32vh)",
+    whiteSpace: "pre" as const,
+  };
+  if (!isGradient) {
+    return (
+      <pre
+        className={`leading-tight whitespace-pre font-mono mt-1.5 mb-4 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
+        style={preStyle}
+        aria-hidden
+      >
+        {banner}
+      </pre>
+    );
+  }
+  return (
+    <pre
+      className={`leading-tight whitespace-pre font-mono mt-1.5 mb-4 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
+      style={preStyle}
+      aria-hidden
+    >
+      {banner.split("").map((char, i) =>
+        char === " " ? (
+          <span
+            key={i}
+            className={bannerClass}
+            style={{
+              display: "inline-block",
+              width: "1ch",
+              WebkitBackgroundClip: "padding-box",
+              backgroundClip: "padding-box",
+            }}
+            aria-hidden
+          />
+        ) : (
+          char
+        )
+      )}
+    </pre>
+  );
+}
 
 export interface ProfileVouchesData {
   slug: string;
@@ -67,10 +130,14 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
       ? profile.layoutDensity
       : "default";
   const densityClass = density !== "default" ? `profile-density-${density}` : "";
+  const fontClass =
+    profile.customFont && CUSTOM_FONTS.includes(profile.customFont as (typeof CUSTOM_FONTS)[number])
+      ? `profile-font-${profile.customFont}`
+      : "";
   const useTerminalLayout = Boolean(profile.useTerminalLayout && (profile.terminalCommands?.length || profile.terminalTitle != null));
 
   return (
-    <div className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass}`}>
+    <div className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass}`}>
       <div className="mb-3">
         <Link
           href="/"
@@ -98,17 +165,7 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
             <span className="text-[var(--muted)]">{prompt}</span> cat {profile.slug}.txt
           </p>
           {profile.banner && (
-            <pre
-              className={`leading-tight whitespace-pre font-mono mt-1.5 mb-4 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
-              style={{
-                fontSize: profile.bannerSmall ? "clamp(2px, 0.5vh, 5px)" : "clamp(5px, 1.1vh, 10px)",
-                lineHeight: 1.12,
-                maxHeight: "min(260px, 32vh)",
-              }}
-              aria-hidden
-            >
-              {profile.banner}
-            </pre>
+            <BannerPre banner={profile.banner} bannerClass={bannerClass} bannerSmall={profile.bannerSmall} />
           )}
           <div className="mt-4 flex items-center gap-4">
             {profile.avatar && (
@@ -121,29 +178,23 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                   className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
                 />
               ) : (
-                <img
+                <Image
                   src={profile.avatar}
                   alt=""
                   width={64}
                   height={64}
                   className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
+                  unoptimized
                 />
               )
             )}
             <div className="profile-name-block min-w-0 flex-1">
               <h1 id="profile-name" className="text-xl font-semibold text-[var(--foreground)] tracking-tight flex items-center gap-2 flex-wrap">
-                {profile.displayStatus && DISPLAY_STATUSES.includes(profile.displayStatus as (typeof DISPLAY_STATUSES)[number]) && (
-                  <span
-                    className={`shrink-0 inline-block h-2.5 w-2.5 rounded-full ${STATUS_DOT_STYLES[profile.displayStatus]?.bg ?? "bg-[#747f8d]"} ring-2 ring-[var(--surface)]`}
-                    title={STATUS_DOT_STYLES[profile.displayStatus]?.label ?? "Status"}
-                    aria-hidden
-                  />
-                )}
                 {profile.nameGreeting?.trim() && (
                   <span className="text-[var(--muted)] font-normal">{profile.nameGreeting.trim()} </span>
                 )}
                 {profile.name}
-                {(profile.verified || profile.staff || (profile.discordBadges?.length ?? 0) > 0) && (
+                {(profile.verified || profile.staff || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
                   <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
                     {profile.verified && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member of the community">
@@ -161,6 +212,27 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                         Staff
                       </span>
                     )}
+                    {profile.customBadges?.map((b) => {
+                      const isHex = b.color?.startsWith("#");
+                      const preset = !isHex && b.color ? CUSTOM_BADGE_COLORS[b.color] : null;
+                      const className = preset
+                        ? `inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${preset}`
+                        : "inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]";
+                      const style =
+                        isHex && b.color
+                          ? { backgroundColor: `${b.color}20`, color: b.color }
+                          : undefined;
+                      return (
+                        <span key={b.id} className={className} style={style} title={b.description || b.label}>
+                          {b.imageUrl && (b.imageUrl.startsWith("/") || b.imageUrl.startsWith("http")) ? (
+                            <Image src={b.imageUrl} alt="" width={14} height={14} className="shrink-0 object-contain inline-block align-middle" unoptimized />
+                          ) : b.iconName ? (
+                            getBadgeIcon(b.iconName)
+                          ) : null}
+                          {b.label}
+                        </span>
+                      );
+                    })}
                     {profile.discordBadges?.map((key) => {
                       const info = (key as DiscordBadgeKey) in DISCORD_BADGE_INFO ? DISCORD_BADGE_INFO[key as DiscordBadgeKey] : null;
                       if (!info) return null;
@@ -188,7 +260,10 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                 />
               )}
               {profile.location?.trim() && (
-                <p className="text-xs text-[var(--muted)] mt-0.5">📍 {profile.location.trim()}</p>
+                <p className="text-xs text-[var(--muted)] mt-0.5 inline-flex items-center gap-1.5">
+                  <MapPin {...profileMetaIconProps} aria-hidden />
+                  {profile.location.trim()}
+                </p>
               )}
               {profile.timezone?.trim() && (() => {
                 try {
@@ -199,8 +274,9 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                   });
                   const localTime = formatter.format(new Date());
                   return (
-                    <p className="text-xs text-[var(--muted)] mt-0.5" title={`Current time in ${profile.timezone}`}>
-                      🕐 {localTime}
+                    <p className="text-xs text-[var(--muted)] mt-0.5 inline-flex items-center gap-1.5" title={`Current time in ${profile.timezone}`}>
+                      <Clock {...profileMetaIconProps} aria-hidden />
+                      {localTime}
                     </p>
                   );
                 } catch {
@@ -211,11 +287,59 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
                 const countdown = getBirthdayCountdown(profile.birthday);
                 if (!countdown) return null;
                 return (
-                  <p className="text-xs text-[var(--muted)] mt-0.5">
-                    🎂 {countdown}
+                  <p className="text-xs text-[var(--muted)] mt-0.5 inline-flex items-center gap-1.5">
+                    <Cake {...profileMetaIconProps} aria-hidden />
+                    {countdown}
                   </p>
                 );
               })()}
+              {profile.discordPresence && (
+                <div className="mt-2.5 flex flex-wrap items-center justify-start gap-2">
+                  <span
+                    className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                      profile.discordPresence.status === "online"
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : profile.discordPresence.status === "idle"
+                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          : profile.discordPresence.status === "dnd"
+                            ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                            : "bg-zinc-500/15 text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        profile.discordPresence.status === "online"
+                          ? "bg-emerald-500"
+                          : profile.discordPresence.status === "idle"
+                            ? "bg-amber-500"
+                            : profile.discordPresence.status === "dnd"
+                              ? "bg-red-500"
+                              : "bg-zinc-500"
+                      }`}
+                      aria-hidden
+                    />
+                    <span className="capitalize">{profile.discordPresence.status}</span>
+                  </span>
+                  {profile.discordPresence.activities?.length > 0 &&
+                    profile.discordPresence.activities.slice(0, 2).map((a, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-start gap-1.5 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/50 px-2.5 py-1 text-xs text-[var(--foreground)]/90 min-w-0"
+                          title={[a.name, a.state, a.details].filter(Boolean).join(" · ")}
+                        >
+                          <span className="shrink-0 text-[var(--muted)] mt-0.5" aria-hidden>
+                            {a.name.includes("Spotify") || a.name.includes("Listening") ? "♪" : "▶"}
+                          </span>
+                          <span className="break-words min-w-0">
+                            {a.name}
+                            {(a.state || a.details) && (
+                              <span className="text-[var(--muted)]"> — {a.state || a.details}</span>
+                            )}
+                          </span>
+                        </span>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
           {profile.description && (
@@ -224,64 +348,15 @@ export default function ProfileContent({ profile, vouches }: ProfileContentProps
           {profile.tags && profile.tags.length > 0 && (
             <ProfileTags tags={profile.tags} />
           )}
-          {profile.status && <ProfileStatus status={profile.status} />}
           {profile.quote && <ProfileQuote quote={profile.quote} />}
           <ProfileLinks
             discord={profile.discord}
             roblox={profile.roblox}
             links={profile.links}
           />
-          {profile.gallery && profile.gallery.length > 0 && (
-            <section className="mt-6" aria-labelledby="gallery-heading">
-              <h2 id="gallery-heading" className="text-sm font-medium text-[var(--muted)] mb-3">
-                Gallery
-              </h2>
-              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 list-none p-0 m-0">
-                {profile.gallery.map((item) => (
-                  <li key={item.id} className="rounded-lg border border-[var(--border)] overflow-hidden bg-[var(--bg)]/50">
-                    <a
-                      href={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] rounded-lg"
-                    >
-                      {item.imageUrl.includes("cdn.discordapp.com") ? (
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.title ?? ""}
-                          width={240}
-                          height={240}
-                          className="w-full aspect-square object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
-                          alt={item.title ?? ""}
-                          width={240}
-                          height={240}
-                          className="w-full aspect-square object-cover"
-                        />
-                      )}
-                    </a>
-                    {(item.title || item.description) && (
-                      <div className="p-2">
-                        {item.title && (
-                          <p className="font-medium text-[var(--foreground)] text-sm truncate" title={item.title}>
-                            {item.title}
-                          </p>
-                        )}
-                        {item.description && (
-                          <p className="text-xs text-[var(--muted)] line-clamp-2" title={item.description}>
-                            {item.description}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <div className="mt-4">
+            <ProfileGalleryButton slug={profile.slug} />
+          </div>
           {vouches && (
             <ProfileVouches
               slug={vouches.slug}

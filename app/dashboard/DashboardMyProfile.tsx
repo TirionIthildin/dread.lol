@@ -1,40 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import NextImage from "next/image";
 import {
   PencilSimple,
   Eye,
-  List,
   Notebook,
   Link as LinkIcon,
-  Image,
-  ImagesSquare,
+  Image as ImageIcon,
   Palette,
   SlidersHorizontal,
   Terminal,
-  Trash,
+  Circle,
+  UploadSimple,
+  DiscordLogo,
 } from "@phosphor-icons/react";
-import { useActionState, useState, useCallback, useEffect } from "react";
+import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import type { ProfileRow, ProfileViewRow } from "@/lib/db/schema";
-import type { GalleryItem } from "@/lib/member-profiles";
+import type { ProfileRow } from "@/lib/db/schema";
 import {
   updateProfileAction,
   applyTemplateAction,
-  addGalleryItemAction,
-  updateGalleryItemAction,
-  deleteGalleryItemAction,
+  addShortLinkAction,
+  deleteShortLinkAction,
   type ProfileFormState,
 } from "@/app/dashboard/actions";
 import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
 import { PROFILE_TEMPLATES, type ProfileTemplate } from "@/lib/profile-templates";
+import type { ProfileShortLink } from "@/lib/member-profiles";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
-const SECTION_KEYS = ["basics", "links", "banner", "terminal", "display", "fun"] as const;
+type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "statusIndicator";
+const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNode }[] = [
+  { id: "basics", label: "Basics", icon: <Notebook {...dashIcon} aria-hidden /> },
+  { id: "links", label: "Links", icon: <LinkIcon {...dashIcon} aria-hidden /> },
+  { id: "banner", label: "Banner", icon: <ImageIcon {...dashIcon} aria-hidden /> },
+  { id: "terminal", label: "Terminal", icon: <Terminal {...dashIcon} aria-hidden /> },
+  { id: "display", label: "Display & SEO", icon: <Palette {...dashIcon} aria-hidden /> },
+  { id: "fun", label: "Styling", icon: <SlidersHorizontal {...dashIcon} aria-hidden /> },
+  { id: "statusIndicator", label: "Status, quotes & tags", icon: <Circle {...dashIcon} aria-hidden /> },
+];
 
 function TemplateConfirmModal({
   template,
@@ -115,16 +124,9 @@ function parseTerminalCommandsForEditor(raw: string | null): { command: string; 
 
 interface DashboardMyProfileProps {
   profile: ProfileRow;
-  viewCount: number;
-  recentViews: ProfileViewRow[];
-  gallery: GalleryItem[];
-}
-
-function formatDate(d: Date) {
-  return new Date(d).toLocaleString(undefined, {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+  shortLinks?: ProfileShortLink[];
+  /** Current user's Discord avatar URL (from session), for "Use Discord avatar" button. */
+  discordAvatarUrl?: string | null;
 }
 
 const LINK_TYPES = [
@@ -217,26 +219,6 @@ function SubmitButton() {
   );
 }
 
-function CopyProfileUrlButton({ slug }: { slug: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = useCallback(() => {
-    const url = typeof window !== "undefined" ? `${window.location.origin}/${slug}` : "";
-    void navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [slug]);
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--accent)]/50 hover:text-[var(--accent)]"
-    >
-      {copied ? "Copied!" : "Copy URL"}
-    </button>
-  );
-}
-
 function TabButton({
   active,
   onClick,
@@ -260,13 +242,12 @@ function TabButton({
   );
 }
 
-type DashboardTab = "editor" | "preview" | "gallery" | "logs";
+type DashboardTab = "editor" | "preview";
 
 export default function DashboardMyProfile({
   profile,
-  viewCount,
-  recentViews,
-  gallery: initialGallery,
+  shortLinks: initialShortLinks = [],
+  discordAvatarUrl,
 }: DashboardMyProfileProps) {
   const [tab, setTab] = useState<DashboardTab>("editor");
   const [state, formAction] = useActionState<ProfileFormState, FormData>(
@@ -274,23 +255,6 @@ export default function DashboardMyProfile({
     null
   );
 
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({
-    basics: true,
-    links: false,
-    banner: false,
-    terminal: false,
-    display: false,
-    fun: false,
-  }));
-  const [gallery, setGallery] = useState<GalleryItem[]>(initialGallery);
-  const [galleryAddUrl, setGalleryAddUrl] = useState("");
-  const [galleryAddTitle, setGalleryAddTitle] = useState("");
-  const [galleryAddDescription, setGalleryAddDescription] = useState("");
-  const [galleryUploading, setGalleryUploading] = useState(false);
-  const [galleryAddError, setGalleryAddError] = useState<string | null>(null);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
   const [slugValue, setSlugValue] = useState(profile.slug);
   const [terminalCommandEntries, setTerminalCommandEntries] = useState<{ command: string; output: string }[]>(
     () => parseTerminalCommandsForEditor(profile.terminalCommands ?? null)
@@ -299,15 +263,23 @@ export default function DashboardMyProfile({
   const [descriptionValue, setDescriptionValue] = useState(profile.description);
   const [bannerValue, setBannerValue] = useState(profile.banner ?? "");
   const [linkEntries, setLinkEntries] = useState<LinkEntry[]>(() => parseLinkEntries(profile));
+  const [shortLinks, setShortLinks] = useState<ProfileShortLink[]>(initialShortLinks);
+  const [shortLinkSlug, setShortLinkSlug] = useState("");
+  const [shortLinkUrl, setShortLinkUrl] = useState("");
+  const [shortLinkAdding, setShortLinkAdding] = useState(false);
+  const [shortLinkError, setShortLinkError] = useState<string | null>(null);
   const [avatarUrlValue, setAvatarUrlValue] = useState(profile.avatarUrl ?? "");
   const [slugCheck, setSlugCheck] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [templateModal, setTemplateModal] = useState<ProfileTemplate | null>(null);
   const [templateApplying, setTemplateApplying] = useState(false);
+  const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>("basics");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const [backgroundUrlValue, setBackgroundUrlValue] = useState((profile as { backgroundUrl?: string }).backgroundUrl ?? "");
+  const [backgroundUploading, setBackgroundUploading] = useState(false);
+  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    setGallery(initialGallery);
-  }, [initialGallery]);
 
   const checkSlugAvailability = useCallback(async () => {
     const s = normalizeSlug(slugValue);
@@ -327,35 +299,12 @@ export default function DashboardMyProfile({
     }
   }, [slugValue, profile.id]);
 
-  const expandAll = () => setOpenSections(Object.fromEntries(SECTION_KEYS.map((k) => [k, true])));
-  const collapseAll = () => setOpenSections(Object.fromEntries(SECTION_KEYS.map((k) => [k, false])));
-
   return (
     <div className="space-y-6">
-      {/* Nav bar: link + copy + view count + tab switcher */}
       <nav
-        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm transition-shadow duration-200 hover:shadow-md"
-        aria-label="Profile dashboard"
+        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+        aria-label="Profile editor"
       >
-        <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
-            <span>Your page:{" "}</span>
-            <Link
-              href={`/${profile.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[var(--accent)] hover:underline"
-            >
-              /{profile.slug}
-            </Link>
-            <CopyProfileUrlButton slug={profile.slug} />
-          </div>
-          {(profile.showPageViews ?? true) && (
-            <p className="text-sm font-medium text-[var(--foreground)]">
-              {viewCount} view{viewCount !== 1 ? "s" : ""}
-            </p>
-          )}
-        </div>
         <div className="flex border-b border-[var(--border)] bg-[var(--bg)]/50">
           <TabButton active={tab === "editor"} onClick={() => setTab("editor")} icon={<PencilSimple {...dashIcon} />}>
             Editor
@@ -363,18 +312,12 @@ export default function DashboardMyProfile({
           <TabButton active={tab === "preview"} onClick={() => setTab("preview")} icon={<Eye {...dashIcon} />}>
             Preview
           </TabButton>
-          <TabButton active={tab === "gallery"} onClick={() => setTab("gallery")} icon={<ImagesSquare {...dashIcon} />}>
-            Gallery
-          </TabButton>
-          <TabButton active={tab === "logs"} onClick={() => setTab("logs")} icon={<List {...dashIcon} />}>
-            Logs
-          </TabButton>
         </div>
       </nav>
 
       {tab === "editor" && (
-      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
-        <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80">
+      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm flex flex-col h-[min(75vh,800px)]">
+        <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444]" aria-hidden />
             <span className="h-2.5 w-2.5 rounded-full bg-[#eab308]" aria-hidden />
@@ -383,36 +326,65 @@ export default function DashboardMyProfile({
               <PencilSimple size={14} weight="regular" /> Editor
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`/${profile.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-[var(--accent)] hover:underline"
-            >
-              Preview in new tab
-            </Link>
-            <span className="text-[var(--border)]">|</span>
-            <button type="button" onClick={expandAll} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">
-              Expand all
-            </button>
-            <button type="button" onClick={collapseAll} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">
-              Collapse all
-            </button>
-          </div>
+          <Link
+            href={`/${profile.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[var(--accent)] hover:underline"
+          >
+            Preview in new tab
+          </Link>
         </div>
-        <div className="p-4 space-y-4">
-          <form action={formAction} className="space-y-4">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <nav
+            className="w-48 shrink-0 border-r border-[var(--border)] bg-[var(--bg)]/50 p-2 flex flex-col gap-0.5 overflow-hidden"
+            aria-label="Editor sections"
+          >
+            {EDITOR_SECTIONS.map(({ id, label, icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveEditorSection(id)}
+                aria-current={activeEditorSection === id ? "true" : undefined}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  activeEditorSection === id
+                    ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
+                    : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
+                }`}
+              >
+                {icon}
+                <span className="truncate">{label}</span>
+              </button>
+            ))}
+            <div className="mt-auto pt-3 border-t border-[var(--border)] space-y-2">
+              <p className="text-xs font-medium text-[var(--muted)] px-2">Templates</p>
+              {PROFILE_TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTemplateModal(t)}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-left text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </nav>
+          <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4">
+          <form action={formAction} className="space-y-4 max-w-2xl">
             <input type="hidden" name="profileId" value={profile.id} />
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.basics}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, basics: (e.target as HTMLDetailsElement).open }))}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2"><Notebook {...dashIcon} /> Basics</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
+            {(() => {
+              const payload = linkEntriesToFormPayload(linkEntries);
+              return (
+                <>
+                  <input type="hidden" name="discord" value={payload.discord} />
+                  <input type="hidden" name="roblox" value={payload.roblox} />
+                  <input type="hidden" name="links" value={payload.linksJson} />
+                  <input type="hidden" name="terminalCommands" value={JSON.stringify(terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()))} />
+                </>
+              );
+            })()}
+            <div className={activeEditorSection === "basics" ? "block space-y-3" : "hidden"}>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Slug (URL path)
@@ -523,25 +495,80 @@ export default function DashboardMyProfile({
                 </select>
               </div>
             </label>
-            <div className="flex gap-3 items-start">
-              <label className="flex-1 min-w-0 block text-xs font-medium text-[var(--muted)]">
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-[var(--muted)]">
                 Avatar URL
                 <input
                   type="url"
                   name="avatarUrl"
                   value={avatarUrlValue}
-                  onChange={(e) => setAvatarUrlValue(e.target.value)}
+                  onChange={(e) => { setAvatarUrlValue(e.target.value); setAvatarUploadError(null); }}
                   placeholder="https://…"
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
               </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                  className="sr-only"
+                  aria-hidden
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setAvatarUploadError(null);
+                    setAvatarUploading(true);
+                    try {
+                      const form = new FormData();
+                      form.append("file", file);
+                      const res = await fetch("/api/upload", { method: "POST", body: form });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        setAvatarUploadError(data.error ?? "Upload failed");
+                        return;
+                      }
+                      const base = typeof window !== "undefined" ? window.location.origin : "";
+                      setAvatarUrlValue(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                    } finally {
+                      setAvatarUploading(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                >
+                  <UploadSimple size={16} weight="regular" />
+                  {avatarUploading ? "Uploading…" : "Upload"}
+                </button>
+                {discordAvatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrlValue(discordAvatarUrl)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[#5865F2]/50 hover:text-[#5865F2] transition-colors"
+                  >
+                    <DiscordLogo size={16} weight="fill" />
+                    Use Discord avatar
+                  </button>
+                )}
+              </div>
+              {avatarUploadError && (
+                <p className="text-xs text-[var(--warning)]">{avatarUploadError}</p>
+              )}
               {avatarUrlValue && (
-                <div className="shrink-0 pt-6">
-                  <img
+                <div className="pt-1">
+                  <NextImage
                     src={avatarUrlValue}
                     alt=""
+                    width={48}
+                    height={48}
                     className="h-12 w-12 rounded-full border border-[var(--border)] object-cover bg-[var(--bg)]"
                     onError={(e) => (e.currentTarget.style.display = "none")}
+                    unoptimized
                   />
                 </div>
               )}
@@ -571,59 +598,9 @@ export default function DashboardMyProfile({
               />
               <span className="mt-0.5 block text-[10px] text-[var(--muted)]">{descriptionValue.length} / {DESCRIPTION_MAX}</span>
             </label>
-            <label className="block text-xs font-medium text-[var(--muted)]">
-              Status <span className="text-[var(--muted)]/70">(Markdown ok)</span>
-              <input
-                type="text"
-                name="status"
-                defaultValue={profile.status ?? ""}
-                placeholder="e.g. Building something"
-                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              />
-            </label>
-            <label className="block text-xs font-medium text-[var(--muted)]">
-              Quote <span className="text-[var(--muted)]/70">(Markdown ok)</span>
-              <input
-                type="text"
-                name="quote"
-                defaultValue={profile.quote ?? ""}
-                placeholder="Optional"
-                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              />
-            </label>
-            <label className="block text-xs font-medium text-[var(--muted)]">
-              Tags <span className="text-[var(--muted)]/70">(comma-separated)</span>
-              <input
-                type="text"
-                name="tags"
-                defaultValue={profile.tags?.join(", ") ?? ""}
-                placeholder="Vibe Coder, LOTR"
-                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              />
-            </label>
-              </div>
-            </details>
+            </div>
 
-            {(() => {
-              const payload = linkEntriesToFormPayload(linkEntries);
-              return (
-                <>
-                  <input type="hidden" name="discord" value={payload.discord} />
-                  <input type="hidden" name="roblox" value={payload.roblox} />
-                  <input type="hidden" name="links" value={payload.linksJson} />
-                  <input type="hidden" name="terminalCommands" value={JSON.stringify(terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()))} />
-                </>
-              );
-            })()}
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.links}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, links: (e.target as HTMLDetailsElement).open }))}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2"><LinkIcon {...dashIcon} /> Links</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
+            <div className={activeEditorSection === "links" ? "block space-y-3" : "hidden"}>
               <p className="text-xs font-medium text-[var(--muted)] mb-1">Choose an icon and enter URL or username</p>
               <div className="space-y-3">
                 {linkEntries.map((entry, index) => (
@@ -699,40 +676,124 @@ export default function DashboardMyProfile({
                   + Add link
                 </button>
               </div>
+              <div className="mt-4 pt-3 border-t border-[var(--border)]/50">
+                <p className="text-xs font-medium text-[var(--muted)] mb-2">Short links (URL shortener)</p>
+                <p className="text-[10px] text-[var(--muted)] mb-2">
+                  <code className="rounded bg-[var(--bg)]/80 px-1">/{profile.slug}/SLUG</code> will redirect to a URL you set (e.g. <code className="rounded bg-[var(--bg)]/80 px-1">twitch</code> → your Twitch).
+                </p>
+                {shortLinks.length > 0 && (
+                  <ul className="space-y-2 mb-3">
+                    {shortLinks.map((link) => (
+                      <li
+                        key={link.id}
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/60 px-2 py-2"
+                      >
+                        <code className="text-xs text-[var(--accent)]">/{profile.slug}/{link.slug}</code>
+                        <span className="text-[10px] text-[var(--muted)]">→</span>
+                        <span className="text-xs text-[var(--muted)] truncate max-w-[180px]" title={link.url}>{link.url}</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm("Remove this short link?")) return;
+                            setShortLinkError(null);
+                            const result = await deleteShortLinkAction(link.id);
+                            if (result.error) setShortLinkError(result.error);
+                            else setShortLinks((prev) => prev.filter((l) => l.id !== link.id));
+                          }}
+                          className="ml-auto shrink-0 rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted)] hover:text-[var(--warning)]"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {shortLinkError && <p className="text-xs text-[var(--warning)] mb-2">{shortLinkError}</p>}
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="text-xs font-medium text-[var(--muted)]">
+                    Slug
+                    <input
+                      type="text"
+                      value={shortLinkSlug}
+                      onChange={(e) => { setShortLinkSlug(e.target.value); setShortLinkError(null); }}
+                      placeholder="twitch"
+                      className="mt-0.5 block w-24 rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                  <label className="min-w-0 flex-1 text-xs font-medium text-[var(--muted)]">
+                    URL
+                    <input
+                      type="url"
+                      value={shortLinkUrl}
+                      onChange={(e) => { setShortLinkUrl(e.target.value); setShortLinkError(null); }}
+                      placeholder="https://…"
+                      className="mt-0.5 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!shortLinkSlug.trim() || !shortLinkUrl.trim() || shortLinkAdding}
+                    onClick={async () => {
+                      setShortLinkError(null);
+                      setShortLinkAdding(true);
+                      const result = await addShortLinkAction(profile.id, { slug: shortLinkSlug.trim(), url: shortLinkUrl.trim() });
+                      setShortLinkAdding(false);
+                      if (result.error) setShortLinkError(result.error);
+                      else if (result.id != null && result.slug != null && result.url != null) {
+                        const { id, slug, url } = result;
+                        setShortLinks((prev) => [...prev, { id, slug, url }]);
+                        setShortLinkSlug("");
+                        setShortLinkUrl("");
+                      }
+                    }}
+                    className="rounded border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+                  >
+                    {shortLinkAdding ? "Adding…" : "Add short link"}
+                  </button>
+                </div>
               </div>
-            </details>
+            </div>
 
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.banner}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, banner: (e.target as HTMLDetailsElement).open }))}
+            <div
+              className={
+                activeEditorSection === "banner"
+                  ? "flex min-h-[min(70vh,800px)] flex-col gap-3"
+                  : "hidden"
+              }
             >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2"><Image {...dashIcon} /> Banner</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
-              <p className="text-xs font-medium text-[var(--muted)] mb-1">ASCII banner and options</p>
-              <div className="flex items-end gap-2">
-                <label className="flex-1 min-w-0 block text-xs font-medium text-[var(--muted)]">
-                  ASCII banner <span className="text-[var(--muted)]/70">(optional, shown at top of profile)</span>
+              <p className="text-xs font-medium text-[var(--muted)] shrink-0">ASCII banner and options</p>
+              <p className="text-[10px] text-[var(--muted)] shrink-0">
+                Create text art:{" "}
+                <a
+                  href="https://patorjk.com/software/taag/#p=display&f=Ghost&t=Tirion&x=none"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--accent)] hover:underline"
+                >
+                  TAAG (e.g. Ghost font)
+                </a>
+              </p>
+              <div className="flex flex-1 min-h-0 gap-2">
+                <label className="flex min-h-0 flex-1 min-w-0 flex-col text-xs font-medium text-[var(--muted)]">
+                  <span className="shrink-0">ASCII banner <span className="text-[var(--muted)]/70">(optional, shown at top of profile)</span></span>
                   <textarea
                     name="banner"
-                    rows={4}
                     value={bannerValue}
                     onChange={(e) => setBannerValue(e.target.value)}
                     placeholder="Paste ASCII art here…"
-                    className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] font-mono"
+                    rows={16}
+                    className="mt-1 min-h-[240px] w-full flex-1 resize-y rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm leading-tight text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] font-mono"
                   />
                 </label>
                 <button
                   type="button"
                   onClick={() => setBannerValue("")}
-                  className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2.5 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                  className="h-fit shrink-0 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2.5 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
                 >
                   Clear
                 </button>
               </div>
-              <div className="flex flex-wrap gap-4 mt-2">
+              <div className="flex flex-wrap gap-4 shrink-0">
                 <label className="block text-xs font-medium text-[var(--muted)]">
                   Banner gradient
                   <select
@@ -756,18 +817,9 @@ export default function DashboardMyProfile({
                   Smaller font
                 </label>
               </div>
-              </div>
-            </details>
+            </div>
 
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.terminal}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, terminal: (e.target as HTMLDetailsElement).open }))}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2"><Terminal {...dashIcon} /> Command window</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
+            <div className={activeEditorSection === "terminal" ? "block space-y-3" : "hidden"}>
               <p className="text-xs font-medium text-[var(--muted)] mb-1">Show your profile as a terminal with custom commands (like the homepage)</p>
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
                 <input
@@ -776,7 +828,7 @@ export default function DashboardMyProfile({
                   defaultChecked={profile.useTerminalLayout ?? false}
                   className="rounded border-[var(--border)]"
                 />
-                Use terminal layout
+                Enable terminal commands
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Window title
@@ -839,18 +891,9 @@ export default function DashboardMyProfile({
                   + Add command
                 </button>
               </div>
-              </div>
-            </details>
+            </div>
 
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.display}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, display: (e.target as HTMLDetailsElement).open }))}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2"><Palette {...dashIcon} /> Display & sharing</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
+            <div className={activeEditorSection === "display" ? "block space-y-3" : "hidden"}>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Custom OG image URL <span className="text-[var(--muted)]/70">(for social previews; leave blank to use avatar)</span>
                 <input
@@ -885,21 +928,12 @@ export default function DashboardMyProfile({
                 Display page views in dashboard
               </label>
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input type="checkbox" name="showDiscordBadges" defaultChecked={(profile as { showDiscordBadges?: boolean }).showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
+                <input type="checkbox" name="showDiscordBadges" defaultChecked={profile.showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
                 Show my Discord badges on profile <span className="text-[var(--muted)]/70">(Staff, Partner, HypeSquad, etc.)</span>
               </label>
-              </div>
-            </details>
+            </div>
 
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.fun}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, fun: (e.target as HTMLDetailsElement).open }))}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2"><SlidersHorizontal {...dashIcon} /> Fun & style</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
+            <div className={activeEditorSection === "fun" ? "block space-y-3" : "hidden"}>
               <p className="text-xs font-medium text-[var(--muted)] mb-1">Accent color, terminal prompt, greeting, card look</p>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Accent color
@@ -973,53 +1007,130 @@ export default function DashboardMyProfile({
                   <option value="glass">Glass (blur)</option>
                 </select>
               </label>
-              </div>
-            </details>
-
-            <details
-              className="group rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 transition-colors duration-200 hover:border-[var(--border)]"
-              open={openSections.statusIndicator}
-              onToggle={(e) => setOpenSections((s) => ({ ...s, statusIndicator: (e.target as HTMLDetailsElement).open }))}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-[var(--muted)] select-none [&::-webkit-details-marker]:hidden">
-                <span className="inline-flex items-center gap-2">Status indicator</span>
-              </summary>
-              <div className="px-3 pb-3 pt-0 space-y-3 border-t border-[var(--border)]/50 mt-0 pt-3">
-              <p className="text-xs text-[var(--muted)]">Discord-style dot shown next to your name. Not synced with Discord.</p>
               <label className="block text-xs font-medium text-[var(--muted)]">
-                Presence
+                Font
                 <select
-                  name="displayStatus"
-                  defaultValue={profile.displayStatus ?? ""}
+                  name="customFont"
+                  defaultValue={(profile as { customFont?: string }).customFont ?? ""}
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 >
-                  <option value="">None</option>
-                  <option value="online">Online (green)</option>
-                  <option value="idle">Idle (yellow)</option>
-                  <option value="busy">Busy / DND (red)</option>
-                  <option value="offline">Offline (gray)</option>
+                  <option value="">Default (JetBrains Mono)</option>
+                  <option value="jetbrains-mono">JetBrains Mono</option>
+                  <option value="fira-code">Fira Code</option>
+                  <option value="space-mono">Space Mono</option>
                 </select>
               </label>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-[var(--muted)]">
+                  Custom background <span className="text-[var(--muted)]/70">(image or YouTube video behind profile)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      name="backgroundType"
+                      value="none"
+                      defaultChecked={((profile as { backgroundType?: string }).backgroundType ?? "none") === "none"}
+                      className="rounded border-[var(--border)]"
+                    />
+                    None
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      name="backgroundType"
+                      value="image"
+                      defaultChecked={(profile as { backgroundType?: string }).backgroundType === "image"}
+                      className="rounded border-[var(--border)]"
+                    />
+                    Image
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      name="backgroundType"
+                      value="youtube"
+                      defaultChecked={(profile as { backgroundType?: string }).backgroundType === "youtube"}
+                      className="rounded border-[var(--border)]"
+                    />
+                    YouTube video
+                  </label>
+                </div>
+                <div className="mt-2 space-y-2" id="background-url-section">
+                  <input
+                    type="url"
+                    name="backgroundUrl"
+                    value={backgroundUrlValue}
+                    onChange={(e) => setBackgroundUrlValue(e.target.value)}
+                    placeholder="https://… or paste upload URL"
+                    className="block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={backgroundFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      className="sr-only"
+                      aria-hidden
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setBackgroundUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          const res = await fetch("/api/upload", { method: "POST", body: form });
+                          const data = await res.json();
+                          if (!res.ok) return;
+                          const base = typeof window !== "undefined" ? window.location.origin : "";
+                          setBackgroundUrlValue(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                        } finally {
+                          setBackgroundUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => backgroundFileInputRef.current?.click()}
+                      disabled={backgroundUploading}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                    >
+                      <UploadSimple size={16} weight="regular" />
+                      {backgroundUploading ? "Uploading…" : "Upload image"}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-[var(--muted)]">
+                  Image: upload or paste a direct URL. YouTube: paste video URL (e.g. youtube.com/watch?v=…). Video shows behind profile with a &quot;Click to view profile&quot; overlay for autoplay.
+                </p>
               </div>
-            </details>
+            </div>
 
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 p-3 space-y-2">
-              <p className="text-xs font-medium text-[var(--muted)]">Templates</p>
-              <p className="text-xs text-[var(--muted)]">
-                Apply a preset to replace your tagline, description, banner, links, and related content. Your slug, name, and avatar are kept.
+            <div className={activeEditorSection === "statusIndicator" ? "block space-y-3" : "hidden"}>
+              <p className="text-xs text-[var(--muted)] rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
+                Status and presence come from Discord when you’re in our server. Join the Discord and your live status (online/idle/busy) plus Rich Presence (e.g. “Playing X”) will appear on your profile.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {PROFILE_TEMPLATES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setTemplateModal(t)}
-                    className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
-                  >
-                    {t.name}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-xs font-medium text-[var(--muted)]">
+                Quote <span className="text-[var(--muted)]/70">(Markdown ok)</span>
+                <input
+                  type="text"
+                  name="quote"
+                  defaultValue={profile.quote ?? ""}
+                  placeholder="Optional"
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </label>
+              <label className="block text-xs font-medium text-[var(--muted)]">
+                Tags <span className="text-[var(--muted)]/70">(comma-separated)</span>
+                <input
+                  type="text"
+                  name="tags"
+                  defaultValue={profile.tags?.join(", ") ?? ""}
+                  placeholder="Vibe Coder, LOTR"
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </label>
             </div>
 
             {state?.success && (
@@ -1039,6 +1150,7 @@ export default function DashboardMyProfile({
             )}
             <SubmitButton />
           </form>
+          </div>
         </div>
       </section>
       )}
@@ -1062,246 +1174,6 @@ export default function DashboardMyProfile({
             title={`Preview of /${profile.slug}`}
             className="absolute inset-0 w-full h-full min-h-[60vh] rounded-b-xl border-0"
           />
-        </div>
-      </section>
-      )}
-
-      {tab === "gallery" && (
-      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
-        <div className="border-b border-[var(--border)] px-4 py-3 flex items-center gap-2 bg-[var(--bg)]/80">
-          <span className="ml-2 text-xs text-[var(--muted)] font-mono inline-flex items-center gap-2">
-            <ImagesSquare size={14} weight="regular" /> Gallery
-          </span>
-        </div>
-        <div className="p-4 space-y-4">
-          <p className="text-xs text-[var(--muted)]">Images with optional title and description, shown on your profile.</p>
-          {gallery.length > 0 && (
-            <ul className="space-y-3 list-none p-0 m-0">
-              {gallery.map((item) => (
-                <li key={item.id} className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-2 flex gap-3">
-                  <a
-                    href={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 w-16 h-16 rounded overflow-hidden border border-[var(--border)] bg-[var(--surface)]"
-                  >
-                    {item.imageUrl.includes("cdn.discordapp.com") ? (
-                      <Image src={item.imageUrl} alt={item.title ?? ""} width={64} height={64} className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl} alt={item.title ?? ""} className="w-full h-full object-cover" width={64} height={64} />
-                    )}
-                  </a>
-                  <div className="min-w-0 flex-1">
-                    {editingItemId === item.id ? (
-                      <>
-                        <input
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          placeholder="Title"
-                          maxLength={200}
-                          className="block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1 text-sm mb-1 focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                        />
-                        <input
-                          type="text"
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          placeholder="Description"
-                          maxLength={1000}
-                          className="block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                        />
-                        <div className="flex gap-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const res = await updateGalleryItemAction(item.id, { title: editTitle || undefined, description: editDescription || undefined });
-                              if (res.error) setGalleryAddError(res.error);
-                              else {
-                                setEditingItemId(null);
-                                setGallery((prev) => prev.map((p) => (p.id === item.id ? { ...p, title: editTitle || undefined, description: editDescription || undefined } : p)));
-                              }
-                            }}
-                            className="text-xs px-2 py-1 rounded border border-[var(--accent)]/50 bg-[var(--accent)]/10 text-[var(--accent)]"
-                          >
-                            Save
-                          </button>
-                          <button type="button" onClick={() => { setEditingItemId(null); setEditTitle(""); setEditDescription(""); }} className="text-xs px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)]">
-                            Cancel
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {item.title && <p className="text-sm font-medium text-[var(--foreground)] truncate">{item.title}</p>}
-                        {item.description && <p className="text-xs text-[var(--muted)] line-clamp-2">{item.description}</p>}
-                        <div className="flex gap-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => { setEditingItemId(item.id); setEditTitle(item.title ?? ""); setEditDescription(item.description ?? ""); }}
-                            className="text-xs text-[var(--accent)] hover:underline"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!confirm("Remove this image from your gallery?")) return;
-                              const res = await deleteGalleryItemAction(item.id);
-                              if (res.error) setGalleryAddError(res.error);
-                              else setGallery((prev) => prev.filter((p) => p.id !== item.id));
-                            }}
-                            className="text-xs text-[var(--muted)] hover:text-[var(--warning)] inline-flex items-center gap-1"
-                            aria-label="Delete"
-                          >
-                            <Trash size={12} /> Remove
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-3 space-y-2">
-            <p className="text-xs font-medium text-[var(--muted)]">Add image</p>
-            {galleryAddError && <p className="text-xs text-[var(--warning)]">{galleryAddError}</p>}
-            <label className="block text-xs font-medium text-[var(--muted)]">
-              Upload (JPEG, PNG, GIF, WebP, SVG, max 5 MiB)
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                className="mt-1 block w-full text-sm text-[var(--muted)] file:mr-2 file:rounded file:border-0 file:bg-[var(--accent)]/20 file:px-3 file:py-1.5 file:text-xs file:text-[var(--accent)]"
-                disabled={galleryUploading}
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setGalleryAddError(null);
-                  setGalleryUploading(true);
-                  try {
-                    const form = new FormData();
-                    form.append("file", file);
-                    const res = await fetch("/api/upload", { method: "POST", body: form });
-                    const data = await res.json();
-                    if (!res.ok) {
-                      setGalleryAddError(data.error ?? "Upload failed");
-                      return;
-                    }
-                    const result = await addGalleryItemAction(profile.id, { imageUrl: data.url, title: galleryAddTitle || undefined, description: galleryAddDescription || undefined });
-                    if (result.error) setGalleryAddError(result.error);
-                    else {
-                      setGallery((prev) => [...prev, { id: result.id!, imageUrl: data.url, title: galleryAddTitle || undefined, description: galleryAddDescription || undefined, sortOrder: prev.length }]);
-                      setGalleryAddTitle("");
-                      setGalleryAddDescription("");
-                    }
-                  } finally {
-                    setGalleryUploading(false);
-                    e.target.value = "";
-                  }
-                }}
-              />
-            </label>
-            <p className="text-xs text-[var(--muted)]">Or paste image URL</p>
-            <div className="flex flex-wrap gap-2 items-end">
-              <label className="flex-1 min-w-[120px] text-xs font-medium text-[var(--muted)]">
-                URL
-                <input
-                  type="url"
-                  value={galleryAddUrl}
-                  onChange={(e) => setGalleryAddUrl(e.target.value)}
-                  placeholder="https://… or /api/files/…"
-                  className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-              <label className="min-w-[100px] text-xs font-medium text-[var(--muted)]">
-                Title
-                <input
-                  type="text"
-                  value={galleryAddTitle}
-                  onChange={(e) => setGalleryAddTitle(e.target.value)}
-                  placeholder="Optional"
-                  maxLength={200}
-                  className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-              <label className="min-w-[100px] text-xs font-medium text-[var(--muted)]">
-                Description
-                <input
-                  type="text"
-                  value={galleryAddDescription}
-                  onChange={(e) => setGalleryAddDescription(e.target.value)}
-                  placeholder="Optional"
-                  maxLength={1000}
-                  className="mt-1 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-              <button
-                type="button"
-                disabled={!galleryAddUrl.trim() || galleryUploading}
-                onClick={async () => {
-                  setGalleryAddError(null);
-                  const result = await addGalleryItemAction(profile.id, {
-                    imageUrl: galleryAddUrl.trim(),
-                    title: galleryAddTitle.trim() || undefined,
-                    description: galleryAddDescription.trim() || undefined,
-                  });
-                  if (result.error) setGalleryAddError(result.error);
-                  else {
-                    setGallery((prev) => [...prev, { id: result.id!, imageUrl: galleryAddUrl.trim(), title: galleryAddTitle || undefined, description: galleryAddDescription || undefined, sortOrder: prev.length }]);
-                    setGalleryAddUrl("");
-                    setGalleryAddTitle("");
-                    setGalleryAddDescription("");
-                  }
-                }}
-                className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-      )}
-
-      {tab === "logs" && (
-      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
-        <div className="border-b border-[var(--border)] px-4 py-3 flex items-center gap-2 bg-[var(--bg)]/80">
-          <span className="ml-2 text-xs text-[var(--muted)] font-mono inline-flex items-center gap-2">
-            <List size={14} weight="regular" /> Recent visitors
-          </span>
-        </div>
-        <div className="overflow-x-auto">
-          {recentViews.length === 0 ? (
-            <p className="p-4 text-sm text-[var(--muted)]">No views yet.</p>
-          ) : (
-            <table className="w-full text-sm font-mono">
-              <thead>
-                <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-                  <th className="px-4 py-3 font-medium">IP</th>
-                  <th className="px-4 py-3 font-medium">When</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">User-Agent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentViews.map((v) => (
-                  <tr
-                    key={v.id}
-                    className="border-b border-[var(--border)]/70 last:border-b-0"
-                  >
-                    <td className="px-4 py-2 font-medium text-[var(--foreground)]">
-                      {v.visitorIp}
-                    </td>
-                    <td className="px-4 py-2 text-[var(--muted)]">
-                      {formatDate(v.viewedAt)}
-                    </td>
-                    <td className="hidden max-w-[240px] truncate px-4 py-2 text-[var(--muted)] sm:table-cell">
-                      {v.userAgent ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
         </div>
       </section>
       )}

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import Image from "next/image";
 import { DiscordLogo, SignOut } from "@phosphor-icons/react";
 import type { SessionUser } from "@/lib/auth/session";
 
@@ -27,12 +29,13 @@ export default function DashboardAuth({ user, error, message }: DashboardAuthPro
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-sm transition-shadow duration-200 hover:shadow-md">
         <div className="flex items-center gap-3">
           {user.picture && (
-            <img
+            <Image
               src={user.picture}
               alt=""
               className="h-10 w-10 rounded-full border-2 border-[var(--border)] ring-2 ring-[var(--accent)]/20 transition-transform duration-200 hover:scale-105"
               width={40}
               height={40}
+              unoptimized
             />
           )}
           <div>
@@ -85,13 +88,13 @@ export default function DashboardAuth({ user, error, message }: DashboardAuthPro
         <p className="text-sm text-[var(--muted)]">
           Sign in with your Discord account to manage the dashboard.
         </p>
-        <a
+        <Link
           href="/api/auth/discord"
           className="inline-flex items-center gap-2.5 rounded-lg border border-[var(--border)] bg-[#5865F2]/10 px-4 py-2.5 text-sm font-medium text-[var(--foreground)] transition-all duration-200 hover:bg-[#5865F2]/20 hover:border-[#5865F2]/50 focus:outline-none focus:ring-2 focus:ring-[#5865F2] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
         >
           <DiscordLogo size={iconSize} weight="fill" className="shrink-0 text-[#5865F2]" />
           Log in with Discord
-        </a>
+        </Link>
       </div>
     </div>
   );

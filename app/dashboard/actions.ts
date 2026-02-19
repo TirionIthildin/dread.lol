@@ -12,26 +12,17 @@ import {
   updateGalleryItem,
   deleteGalleryItem,
   setGalleryOrder,
+  addShortLink,
+  deleteShortLink,
+  createBadge,
+  updateBadge,
+  deleteBadge,
+  setUserCustomBadges,
 } from "@/lib/member-profiles";
 import { normalizeSlug } from "@/lib/slug";
 import { getProfileTemplate } from "@/lib/profile-templates";
 
 export type ProfileFormState = { error?: string; success?: boolean; savedAt?: string } | null;
-
-/** Parse birthday from form (month + day only). Returns "MM-DD" or undefined to clear. */
-function parseBirthdayForm(formData: FormData): string | undefined {
-  const monthRaw = (formData.get("birthdayMonth") as string)?.trim();
-  const dayRaw = (formData.get("birthdayDay") as string)?.trim();
-  if (!monthRaw || !dayRaw) return undefined;
-  const month = parseInt(monthRaw, 10);
-  const day = parseInt(dayRaw, 10);
-  if (Number.isNaN(month) || Number.isNaN(day)) return undefined;
-  if (month < 1 || month > 12) return undefined;
-  if (day < 1 || day > 31) return undefined;
-  const daysInMonth = new Date(2000, month, 0).getDate();
-  if (day > daysInMonth) return undefined;
-  return `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
 
 function parseLinksValue(linksRaw: string | null | undefined): string | null {
   if (!linksRaw?.trim()) return null;
@@ -85,7 +76,6 @@ export async function updateProfileAction(
       tagline: ((formData.get("tagline") as string)?.trim() || undefined)?.slice(0, 120),
       description: ((formData.get("description") as string) ?? undefined)?.slice(0, 2000) ?? undefined,
       avatarUrl: (formData.get("avatarUrl") as string)?.trim() || undefined,
-      status: (formData.get("status") as string)?.trim() || undefined,
       quote: (formData.get("quote") as string)?.trim() || undefined,
       tags: formData.get("tags")
         ? (formData.get("tags") as string)
@@ -109,7 +99,6 @@ export async function updateProfileAction(
       terminalPrompt: (formData.get("terminalPrompt") as string)?.trim() || undefined,
       nameGreeting: (formData.get("nameGreeting") as string)?.trim() || undefined,
       cardStyle: (formData.get("cardStyle") as string)?.trim() || undefined,
-      displayStatus: (formData.get("displayStatus") as string)?.trim() || undefined,
       pronouns: ((formData.get("pronouns") as string)?.trim() || undefined)?.slice(0, 40),
       location: ((formData.get("location") as string)?.trim() || undefined)?.slice(0, 80),
       timezone: ((formData.get("timezone") as string)?.trim() || undefined)?.slice(0, 64),
@@ -118,6 +107,14 @@ export async function updateProfileAction(
       noindex: formData.get("noindex") === "on",
       metaDescription: ((formData.get("metaDescription") as string)?.trim() || undefined)?.slice(0, 200),
       showPageViews: formData.get("showPageViews") === "on",
+      showDiscordBadges: formData.get("showDiscordBadges") === "on",
+      customFont: (formData.get("customFont") as string)?.trim() || undefined,
+      backgroundType: (formData.get("backgroundType") as string)?.trim() || undefined,
+      backgroundUrl: (() => {
+        const t = (formData.get("backgroundType") as string)?.trim();
+        if (t !== "image" && t !== "youtube") return undefined;
+        return (formData.get("backgroundUrl") as string)?.trim() || undefined;
+      })(),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";
@@ -159,7 +156,6 @@ export async function applyTemplateAction(
   if (d.easterEggLinkPopupUrl !== undefined) update.easterEggLinkPopupUrl = d.easterEggLinkPopupUrl;
   if (d.tags !== undefined) update.tags = d.tags;
   if (d.links !== undefined) update.links = typeof d.links === "string" ? d.links : (d.links ? JSON.stringify(d.links) : null);
-  if (d.status !== undefined) update.status = d.status;
   if (d.quote !== undefined) update.quote = d.quote;
   try {
     await updateMemberProfile(profileId, session.sub, update);
@@ -254,6 +250,43 @@ export async function setGalleryOrderAction(profileId: number, orderedIds: numbe
   }
 }
 
+/** Add a short link (e.g. /username/twitch -> https://twitch.tv/...). */
+export async function addShortLinkAction(
+  profileId: number,
+  data: { slug: string; url: string }
+): Promise<{ error?: string; id?: number; slug?: string; url?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  try {
+    const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url: data.url.trim() });
+    revalidatePath("/dashboard");
+    const slug = await getProfileSlugByUserId(session.sub);
+    if (slug) revalidatePath(`/${slug}`);
+    return { id: link.id, slug: link.slug, url: link.url };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to add link" };
+  }
+}
+
+/** Delete a short link. */
+export async function deleteShortLinkAction(linkId: number): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  try {
+    await deleteShortLink(linkId, session.sub);
+    revalidatePath("/dashboard");
+    const slug = await getProfileSlugByUserId(session.sub);
+    if (slug) revalidatePath(`/${slug}`);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to delete" };
+  }
+}
+
 /** Ensure current user is admin; returns error string or null if allowed. */
 export async function requireAdmin(): Promise<string | null> {
   const session = await getSession();
@@ -286,6 +319,68 @@ export async function setUserBadgesAction(
   if (!ok) return { error: "User not found" };
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard");
+  const slug = await getProfileSlugByUserId(id);
+  if (slug) revalidatePath(`/${slug}`);
+  return {};
+}
+
+export async function createBadgeAction(data: {
+  key: string;
+  label: string;
+  description?: string;
+  color?: string;
+  sortOrder?: number;
+  badgeType?: string;
+  imageUrl?: string;
+  iconName?: string;
+}): Promise<{ error?: string; id?: number }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const key = data.key?.trim();
+  const label = data.label?.trim();
+  if (!key || !label) return { error: "Key and label required" };
+  const result = await createBadge({ ...data, key, label });
+  if (!result) return { error: "Failed to create badge" };
+  revalidatePath("/dashboard/admin");
+  return { id: result.id };
+}
+
+export async function updateBadgeAction(
+  id: number,
+  data: {
+    key?: string;
+    label?: string;
+    description?: string;
+    color?: string;
+    sortOrder?: number;
+    badgeType?: string;
+    imageUrl?: string;
+    iconName?: string;
+  }
+): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  await updateBadge(id, data);
+  revalidatePath("/dashboard/admin");
+  return {};
+}
+
+export async function deleteBadgeAction(id: number): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const ok = await deleteBadge(id);
+  if (!ok) return { error: "Badge not found" };
+  revalidatePath("/dashboard/admin");
+  return {};
+}
+
+export async function setUserCustomBadgesAction(userId: string, badgeIds: number[]): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const id = userId?.trim();
+  if (!id) return { error: "Missing user" };
+  await setUserCustomBadges(id, badgeIds);
+  revalidatePath("/dashboard/admin");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
   return {};

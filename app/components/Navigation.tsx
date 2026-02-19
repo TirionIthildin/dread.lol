@@ -5,12 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import Logo from "@/app/components/Logo";
 import { SITE_NAME } from "@/lib/site";
-import { PROFILES } from "@/lib/profiles";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  ...PROFILES.map((p) => ({ href: `/${p.slug}`, label: p.name })),
-];
+const NAV_LINKS = [{ href: "/", label: "Home" }];
 
 export default function Navigation() {
   const pathname = usePathname();

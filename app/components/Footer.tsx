@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
-import { PROFILES } from "@/lib/profiles";
 
-const FOOTER_LINKS: Array<{ href: string; label: string }> = [
-  { href: "/", label: "cd /" },
-  ...PROFILES.map((p) => ({ href: `/${p.slug}`, label: `open ${p.slug}` })),
-];
+const FOOTER_LINKS: Array<{ href: string; label: string }> = [{ href: "/", label: "cd /" }];
 
 interface FooterProps {
   pathname?: string;

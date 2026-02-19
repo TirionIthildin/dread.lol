@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 type Props = { defaultValue: string };
 
 export default function PendingSearchForm({ defaultValue }: Props) {
@@ -20,12 +22,12 @@ export default function PendingSearchForm({ defaultValue }: Props) {
         Search
       </button>
       {defaultValue && (
-        <a
+        <Link
           href="/dashboard/admin/pending"
           className="shrink-0 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] transition-colors"
         >
           Clear
-        </a>
+        </Link>
       )}
     </form>
   );

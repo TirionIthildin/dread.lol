@@ -1,10 +1,10 @@
 /**
  * Member profiles (DB-backed): one profile per user, view tracking, basic edit.
- * Static profiles remain in lib/profiles.ts and are not listed in the dashboard.
  */
 import { eq, and, desc, or, ilike, sql } from "drizzle-orm";
-import { db, users, profiles, profileViews, vouches, galleryItems } from "@/lib/db";
+import { db, users, profiles, profileViews, vouches, galleryItems, profileShortLinks, badges, userBadges } from "@/lib/db";
 import type { Profile } from "@/lib/profiles";
+import { decodeDiscordPublicFlags } from "@/lib/discord-badges";
 import type { ProfileRow, ProfileViewRow } from "@/lib/db/schema";
 import type { SessionUser } from "@/lib/auth/session";
 
@@ -36,17 +36,22 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
   const id = session.sub;
   const [existing] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (existing) {
-    if (
+    const hasProfileChanges =
       existing.displayName !== session.name ||
       existing.username !== session.preferred_username ||
-      existing.avatarUrl !== session.picture
-    ) {
+      existing.avatarUrl !== session.picture;
+    const hasFlagsChange =
+      session.public_flags != null && existing.discordPublicFlags !== session.public_flags;
+    if (hasProfileChanges || hasFlagsChange) {
       await db
         .update(users)
         .set({
-          displayName: session.name ?? null,
-          username: session.preferred_username ?? null,
-          avatarUrl: session.picture ?? null,
+          ...(hasProfileChanges && {
+            displayName: session.name ?? null,
+            username: session.preferred_username ?? null,
+            avatarUrl: session.picture ?? null,
+          }),
+          ...(hasFlagsChange && { discordPublicFlags: session.public_flags }),
           updatedAt: new Date(),
         })
         .where(eq(users.id, id));
@@ -65,6 +70,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
     avatarUrl: session.picture ?? undefined,
     approved: false,
     isAdmin: false,
+    discordPublicFlags: session.public_flags ?? undefined,
   });
   return { id, approved: false, isAdmin: getAdminDiscordIds().includes(session.sub) };
 }
@@ -149,21 +155,197 @@ export async function getUserBadges(userId: string): Promise<{ verified: boolean
   return { verified: row.verified, staff: row.staff };
 }
 
-/** Get Discord public_flags (badge bitfield) for a user. Returns null if column not migrated. */
-export async function getUserDiscordFlags(_userId: string): Promise<number | null> {
-  return null;
+/** Get Discord public_flags (badge bitfield) for a user. Reads from Redis (bot cache) first, then DB. */
+export async function getUserDiscordFlags(userId: string): Promise<number | null> {
+  const { getDiscordFlagsFromRedis } = await import("@/lib/discord-flags");
+  const fromRedis = await getDiscordFlagsFromRedis(userId);
+  if (fromRedis !== null) {
+    await db
+      .update(users)
+      .set({ discordPublicFlags: fromRedis, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .then(() => {});
+    return fromRedis;
+  }
+  const [row] = await db
+    .select({ discordPublicFlags: users.discordPublicFlags })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row?.discordPublicFlags ?? null;
 }
 
 /** Set verified/staff badges. Caller must be admin. */
 export async function setUserBadges(
   userId: string,
-  badges: { verified?: boolean; staff?: boolean }
+  badgeFlags: { verified?: boolean; staff?: boolean }
 ): Promise<boolean> {
   const updates: Partial<{ verified: boolean; staff: boolean; updatedAt: Date }> = { updatedAt: new Date() };
-  if (typeof badges.verified === "boolean") updates.verified = badges.verified;
-  if (typeof badges.staff === "boolean") updates.staff = badges.staff;
+  if (typeof badgeFlags.verified === "boolean") updates.verified = badgeFlags.verified;
+  if (typeof badgeFlags.staff === "boolean") updates.staff = badgeFlags.staff;
   if (Object.keys(updates).length <= 1) return true;
   const [row] = await db.update(users).set(updates).where(eq(users.id, userId)).returning({ id: users.id });
+  return Boolean(row);
+}
+
+export interface CustomBadge {
+  id: number;
+  key: string;
+  label: string;
+  description?: string | null;
+  color?: string | null;
+  sortOrder: number;
+  badgeType?: string | null;
+  imageUrl?: string | null;
+  iconName?: string | null;
+}
+
+/** Get custom badges assigned to a user (for profile display). */
+export async function getCustomBadgesForUser(userId: string): Promise<CustomBadge[]> {
+  const rows = await db
+    .select({
+      id: badges.id,
+      key: badges.key,
+      label: badges.label,
+      description: badges.description,
+      color: badges.color,
+      sortOrder: badges.sortOrder,
+      badgeType: badges.badgeType,
+      imageUrl: badges.imageUrl,
+      iconName: badges.iconName,
+    })
+    .from(userBadges)
+    .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+    .where(eq(userBadges.userId, userId))
+    .orderBy(badges.sortOrder, badges.id);
+  return rows.map((r) => ({
+    id: r.id,
+    key: r.key,
+    label: r.label,
+    description: r.description ?? undefined,
+    color: r.color ?? undefined,
+    sortOrder: r.sortOrder,
+    badgeType: r.badgeType ?? undefined,
+    imageUrl: r.imageUrl ?? undefined,
+    iconName: r.iconName ?? undefined,
+  }));
+}
+
+/** Get all custom badge definitions (for admin). */
+export async function getAllCustomBadges(): Promise<CustomBadge[]> {
+  const rows = await db
+    .select({
+      id: badges.id,
+      key: badges.key,
+      label: badges.label,
+      description: badges.description,
+      color: badges.color,
+      sortOrder: badges.sortOrder,
+      badgeType: badges.badgeType,
+      imageUrl: badges.imageUrl,
+      iconName: badges.iconName,
+    })
+    .from(badges)
+    .orderBy(badges.sortOrder, badges.id);
+  return rows.map((r) => ({
+    id: r.id,
+    key: r.key,
+    label: r.label,
+    description: r.description ?? undefined,
+    color: r.color ?? undefined,
+    sortOrder: r.sortOrder,
+    badgeType: r.badgeType ?? undefined,
+    imageUrl: r.imageUrl ?? undefined,
+    iconName: r.iconName ?? undefined,
+  }));
+}
+
+/** Get custom badge IDs assigned to a user (for admin user modal). */
+export async function getUserCustomBadgeIds(userId: string): Promise<number[]> {
+  const rows = await db
+    .select({ badgeId: userBadges.badgeId })
+    .from(userBadges)
+    .where(eq(userBadges.userId, userId));
+  return rows.map((r) => r.badgeId);
+}
+
+/** Set custom badges for a user (replaces existing). Caller must be admin. */
+export async function setUserCustomBadges(userId: string, badgeIds: number[]): Promise<void> {
+  await db.delete(userBadges).where(eq(userBadges.userId, userId));
+  if (badgeIds.length > 0) {
+    await db.insert(userBadges).values(
+      badgeIds.map((badgeId) => ({ userId, badgeId }))
+    );
+  }
+}
+
+/** Create a custom badge. Caller must be admin. */
+export async function createBadge(data: {
+  key: string;
+  label: string;
+  description?: string;
+  color?: string;
+  sortOrder?: number;
+  badgeType?: string;
+  imageUrl?: string;
+  iconName?: string;
+}): Promise<{ id: number } | null> {
+  const [row] = await db
+    .insert(badges)
+    .values({
+      key: data.key.trim(),
+      label: data.label.trim(),
+      description: data.description?.trim() || null,
+      color: data.color?.trim() || null,
+      sortOrder: data.sortOrder ?? 0,
+      badgeType: data.badgeType?.trim() || "label",
+      imageUrl: data.imageUrl?.trim() || null,
+      iconName: data.iconName?.trim() || null,
+    })
+    .returning({ id: badges.id });
+  return row ? { id: row.id } : null;
+}
+
+/** Update a custom badge. Caller must be admin. */
+export async function updateBadge(
+  id: number,
+  data: {
+    key?: string;
+    label?: string;
+    description?: string;
+    color?: string;
+    sortOrder?: number;
+    badgeType?: string;
+    imageUrl?: string;
+    iconName?: string;
+  }
+): Promise<boolean> {
+  const updates: Partial<{
+    key: string;
+    label: string;
+    description: string | null;
+    color: string | null;
+    sortOrder: number;
+    badgeType: string | null;
+    imageUrl: string | null;
+    iconName: string | null;
+  }> = {};
+  if (data.key !== undefined) updates.key = data.key.trim();
+  if (data.label !== undefined) updates.label = data.label.trim();
+  if (data.description !== undefined) updates.description = data.description?.trim() || null;
+  if (data.color !== undefined) updates.color = data.color?.trim() || null;
+  if (data.sortOrder !== undefined) updates.sortOrder = data.sortOrder;
+  if (data.badgeType !== undefined) updates.badgeType = data.badgeType?.trim() || "label";
+  if (data.imageUrl !== undefined) updates.imageUrl = data.imageUrl?.trim() || null;
+  if (data.iconName !== undefined) updates.iconName = data.iconName?.trim() || null;
+  if (Object.keys(updates).length === 0) return true;
+  const [row] = await db.update(badges).set(updates).where(eq(badges.id, id)).returning({ id: badges.id });
+  return Boolean(row);
+}
+
+/** Delete a custom badge. Caller must be admin. */
+export async function deleteBadge(id: number): Promise<boolean> {
+  const [row] = await db.delete(badges).where(eq(badges.id, id)).returning({ id: badges.id });
   return Boolean(row);
 }
 
@@ -388,7 +570,6 @@ export async function updateMemberProfile(
     tagline?: string;
     description?: string;
     avatarUrl?: string;
-    status?: string;
     quote?: string;
     tags?: string[] | null;
     discord?: string;
@@ -412,7 +593,6 @@ export async function updateMemberProfile(
     terminalPrompt?: string;
     nameGreeting?: string;
     cardStyle?: string;
-    displayStatus?: string;
     pronouns?: string;
     location?: string;
     timezone?: string;
@@ -421,6 +601,11 @@ export async function updateMemberProfile(
     noindex?: boolean;
     metaDescription?: string;
     showPageViews?: boolean;
+    showDiscordBadges?: boolean;
+    customFont?: string;
+    backgroundType?: string;
+    backgroundUrl?: string;
+    birthday?: string;
   }
 ): Promise<ProfileRow> {
   const [row] = await db
@@ -472,8 +657,9 @@ function formatUpdatedAt(d: Date): string {
 /** Convert DB profile row to the Profile shape used by ProfileContent. */
 export function memberProfileToProfile(
   row: ProfileRow,
-  badges?: { verified: boolean; staff: boolean },
-  _discordPublicFlags?: number | null
+  badgeFlags?: { verified: boolean; staff: boolean },
+  discordPublicFlags?: number | null,
+  customBadgesList?: CustomBadge[]
 ): Profile {
   const links = parseLinks(row.links);
   const easterEggLink =
@@ -490,7 +676,6 @@ export function memberProfileToProfile(
     tagline: row.tagline ?? undefined,
     description: row.description,
     avatar: row.avatarUrl ?? undefined,
-    status: row.status ?? undefined,
     quote: row.quote ?? undefined,
     tags: row.tags ?? undefined,
     discord: row.discord ?? undefined,
@@ -512,18 +697,38 @@ export function memberProfileToProfile(
     terminalPrompt: row.terminalPrompt ?? undefined,
     nameGreeting: row.nameGreeting ?? undefined,
     cardStyle: row.cardStyle ?? undefined,
-    displayStatus: row.displayStatus ?? undefined,
     pronouns: row.pronouns ?? undefined,
     location: row.location ?? undefined,
     timezone: row.timezone ?? undefined,
     avatarShape: row.avatarShape ?? undefined,
     layoutDensity: row.layoutDensity ?? undefined,
+    customFont: row.customFont ?? undefined,
+    backgroundType: row.backgroundType ?? undefined,
+    backgroundUrl: row.backgroundUrl ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,
-    ...(badges && {
-      verified: badges.verified || undefined,
-      staff: badges.staff || undefined,
+    ...(badgeFlags && {
+      verified: badgeFlags.verified || undefined,
+      staff: badgeFlags.staff || undefined,
     }),
+    ...(customBadgesList &&
+      customBadgesList.length > 0 && {
+        customBadges: customBadgesList.map((b) => ({
+          id: b.id,
+          key: b.key,
+          label: b.label,
+          description: b.description ?? undefined,
+          color: b.color ?? undefined,
+          sortOrder: b.sortOrder,
+          badgeType: b.badgeType ?? undefined,
+          imageUrl: b.imageUrl ?? undefined,
+          iconName: b.iconName ?? undefined,
+        })),
+      }),
+    ...(row.showDiscordBadges &&
+      discordPublicFlags != null && {
+        discordBadges: decodeDiscordPublicFlags(discordPublicFlags),
+      }),
   };
 }
 
@@ -579,7 +784,8 @@ async function ensureProfileOwnership(profileId: number, userId: string): Promis
   if (!row) throw new Error("Profile not found or access denied");
 }
 
-const GALLERY_NOT_MIGRATED = "Gallery is not available. Run the database migration (see drizzle/apply-missing.sql).";
+const GALLERY_NOT_MIGRATED =
+  "Gallery is not available. Run: npm run db:apply-missing (or psql \"$DATABASE_URL\" -f drizzle/apply-missing.sql)";
 
 /** Add a gallery item. Caller must own the profile. */
 export async function addGalleryItem(
@@ -676,4 +882,98 @@ export async function setGalleryOrder(profileId: number, userId: string, ordered
     if (isRelationNotFound(err)) throw new Error(GALLERY_NOT_MIGRATED);
     throw err;
   }
+}
+
+/** Normalize short-link slug: lowercase, alphanumeric, hyphen, underscore. Max 64 chars. */
+const SHORT_LINK_SLUG_MAX = 64;
+function normalizeShortLinkSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, SHORT_LINK_SLUG_MAX) || "";
+}
+
+/** Get redirect URL for profile slug + link slug. Returns null if not found or table missing. */
+export async function getShortLinkRedirect(
+  profileSlug: string,
+  linkSlug: string
+): Promise<{ url: string } | null> {
+  const slug = normalizeShortLinkSlug(linkSlug);
+  if (!slug) return null;
+  try {
+    const [row] = await db
+      .select({ url: profileShortLinks.url })
+      .from(profileShortLinks)
+      .innerJoin(profiles, eq(profiles.id, profileShortLinks.profileId))
+      .where(and(eq(profiles.slug, profileSlug), eq(profileShortLinks.slug, slug)))
+      .limit(1);
+    return row ?? null;
+  } catch (err) {
+    if (isRelationNotFound(err)) return null;
+    throw err;
+  }
+}
+
+export interface ProfileShortLink {
+  id: number;
+  slug: string;
+  url: string;
+}
+
+/** Get all short links for a profile. Returns [] if table missing. */
+export async function getShortLinksForProfile(profileId: number): Promise<ProfileShortLink[]> {
+  try {
+    const rows = await db
+      .select({ id: profileShortLinks.id, slug: profileShortLinks.slug, url: profileShortLinks.url })
+      .from(profileShortLinks)
+      .where(eq(profileShortLinks.profileId, profileId))
+      .orderBy(profileShortLinks.slug);
+    return rows.map((r) => ({ id: r.id, slug: r.slug, url: r.url }));
+  } catch (err) {
+    if (isRelationNotFound(err)) return [];
+    throw err;
+  }
+}
+
+/** Add a short link. Caller must own the profile. Slug is normalized. */
+export async function addShortLink(
+  profileId: number,
+  userId: string,
+  data: { slug: string; url: string }
+): Promise<ProfileShortLink> {
+  await ensureProfileOwnership(profileId, userId);
+  const slug = normalizeShortLinkSlug(data.slug);
+  if (!slug) throw new Error("Slug is required (letters, numbers, hyphen, underscore)");
+  const url = data.url?.trim();
+  if (!url) throw new Error("URL is required");
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    throw new Error("URL must start with http:// or https://");
+  }
+  try {
+    const [row] = await db
+      .insert(profileShortLinks)
+      .values({
+        profileId,
+        slug,
+        url: url.slice(0, 2048),
+      })
+      .returning({ id: profileShortLinks.id, slug: profileShortLinks.slug, url: profileShortLinks.url });
+    if (!row) throw new Error("Insert failed");
+    return { id: row.id, slug: row.slug, url: row.url };
+  } catch (err) {
+    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "23505") {
+      throw new Error("A link with this slug already exists");
+    }
+    throw err;
+  }
+}
+
+/** Delete a short link. Caller must own the profile. */
+export async function deleteShortLink(linkId: number, userId: string): Promise<void> {
+  const [link] = await db.select().from(profileShortLinks).where(eq(profileShortLinks.id, linkId)).limit(1);
+  if (!link) throw new Error("Short link not found");
+  await ensureProfileOwnership(link.profileId, userId);
+  await db.delete(profileShortLinks).where(eq(profileShortLinks.id, linkId));
 }

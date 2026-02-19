@@ -2,25 +2,7 @@ import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
-import DashboardNavAdmin from "@/app/dashboard/DashboardNavAdmin";
-
-function DashboardIcon() {
-  return (
-    <svg
-      className="size-5 shrink-0 text-[var(--accent)]"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M3 3v18h18" />
-      <path d="M18 9l-5 5-4-4-3 3" />
-    </svg>
-  );
-}
+import DashboardSidebar from "@/app/dashboard/DashboardSidebar";
 
 export default async function DashboardLayout({
   children,
@@ -32,7 +14,7 @@ export default async function DashboardLayout({
   const isAdmin = user?.isAdmin ?? false;
 
   return (
-    <div className="min-h-screen flex flex-col grid-bg scanlines">
+    <div className="min-h-screen flex flex-col md:flex-row grid-bg scanlines">
       <a
         href="#main-content"
         className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-lg focus:bg-[var(--accent)] focus:px-3 focus:py-2 focus:text-[var(--bg)] focus:font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:[clip:auto] focus:[margin:0]"
@@ -62,28 +44,24 @@ export default async function DashboardLayout({
         />
       </div>
 
-      <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl font-mono shadow-[0_1px_0_var(--border)]">
-        <div className="content-container flex h-14 md:h-16 items-center justify-between gap-4">
+      <aside className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-60 md:max-h-screen">
+        <div className="flex h-14 md:h-auto shrink-0 items-center px-4 md:px-3 md:pt-4 md:pb-1 border-b md:border-b-0 border-[var(--border)]">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--muted)] transition-all duration-200 hover:text-[var(--terminal)] hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--muted)] transition-all duration-200 hover:text-[var(--terminal)] hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
           >
             <span className="text-[var(--terminal)]">$</span> cd ..
             <span className="text-[var(--muted)]"> / {SITE_NAME}</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <DashboardNavAdmin isAdmin={isAdmin} />
-            <span className="inline-flex items-center gap-2 rounded-lg bg-[var(--bg)]/60 px-3 py-1.5 text-xs font-medium text-[var(--muted)] transition-colors duration-200">
-              <DashboardIcon />
-              Dashboard
-            </span>
-          </div>
         </div>
-      </header>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <DashboardSidebar isAdmin={isAdmin} session={session} />
+        </div>
+      </aside>
 
       <main
         id="main-content"
-        className="flex-1 flex flex-col content-container py-6 md:py-8"
+        className="flex-1 min-w-0 flex flex-col content-container py-6 md:py-8"
         tabIndex={-1}
       >
         {children}

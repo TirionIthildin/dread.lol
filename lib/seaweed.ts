@@ -4,6 +4,8 @@
  */
 
 const MASTER_URL = process.env.SEAWEED_MASTER_URL ?? "";
+/** When the app runs outside Docker, the master may return volume URLs (e.g. seaweed-volume:8080) that don't resolve. Set this to the reachable volume URL (e.g. http://localhost:8080). */
+const VOLUME_PUBLIC_URL = process.env.SEAWEED_VOLUME_PUBLIC_URL?.replace(/\/$/, "");
 
 export function isSeaweedConfigured(): boolean {
   return Boolean(MASTER_URL?.startsWith("http"));
@@ -28,7 +30,8 @@ export async function uploadFile(
     throw new Error("SEAWEED_MASTER_URL is not set");
   }
   const form = new FormData();
-  const blob = file instanceof Buffer ? new Blob([file]) : file;
+  const blob =
+    (file instanceof Buffer ? new Blob([new Uint8Array(file)]) : file) as Blob;
   form.append("file", blob, fileName ?? "upload");
   const res = await fetch(`${MASTER_URL.replace(/\/$/, "")}/submit`, {
     method: "POST",
@@ -69,6 +72,9 @@ export async function lookupVolumeUrl(fid: string): Promise<string> {
     throw new Error(`SeaweedFS lookup failed: ${res.status}`);
   }
   const data = (await res.json()) as { locations?: { url: string }[] };
+  if (VOLUME_PUBLIC_URL) {
+    return VOLUME_PUBLIC_URL;
+  }
   const url = data?.locations?.[0]?.url;
   if (!url) {
     throw new Error("SeaweedFS lookup returned no volume URL");

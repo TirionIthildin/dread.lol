@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { approveUserAction, setUserBadgesAction } from "@/app/dashboard/actions";
+import { approveUserAction, setUserBadgesAction, setUserCustomBadgesAction } from "@/app/dashboard/actions";
+import type { CustomBadge } from "@/app/dashboard/AdminBadgesPanel";
 
 export type AdminUser = {
   id: string;
@@ -22,9 +24,12 @@ type Props = {
 };
 
 export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
-  const [approved, setApproved] = useState(user.approved);
+  const [, setApproved] = useState(user.approved);
   const [verified, setVerified] = useState(user.verified);
   const [staff, setStaff] = useState(user.staff);
+  const [customBadges, setCustomBadges] = useState<CustomBadge[]>([]);
+  const [userBadgeIds, setUserBadgeIds] = useState<number[]>([]);
+  const [badgesLoading, setBadgesLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +38,25 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     setVerified(user.verified);
     setStaff(user.staff);
   }, [user.id, user.approved, user.verified, user.staff]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBadgesLoading(true);
+    fetch(`/api/dashboard/admin/badges?userId=${encodeURIComponent(user.id)}`)
+      .then((res) => (res.ok ? res.json() : { badges: [], userBadgeIds: [] }))
+      .then((data) => {
+        if (!cancelled) {
+          setCustomBadges(data.badges ?? []);
+          setUserBadgeIds(data.userBadgeIds ?? []);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBadgesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
 
   function handleApproveToggle() {
     setError(null);
@@ -60,6 +84,18 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
       } else {
         onUpdate({ ...user, [badge]: value });
       }
+    });
+  }
+
+  function handleCustomBadgeToggle(badgeId: number, checked: boolean) {
+    const next = checked
+      ? [...userBadgeIds, badgeId]
+      : userBadgeIds.filter((id) => id !== badgeId);
+    setUserBadgeIds(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await setUserCustomBadgesAction(user.id, next);
+      if (result.error) setError(result.error);
     });
   }
 
@@ -107,12 +143,13 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
         <div className="p-4 space-y-4 min-h-[220px]">
           <div className="flex items-center gap-3">
             {user.avatarUrl ? (
-              <img
+              <Image
                 src={user.avatarUrl}
                 alt=""
                 className="h-12 w-12 rounded-full border border-[var(--border)] shrink-0"
                 width={48}
                 height={48}
+                unoptimized
               />
             ) : (
               <div className="h-12 w-12 rounded-full border border-[var(--border)] bg-[var(--bg)] shrink-0 flex items-center justify-center text-[var(--muted)]">
@@ -174,6 +211,33 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
                 <span className="text-[var(--foreground)]">Staff</span>
               </label>
             </div>
+            {customBadges.length > 0 && (
+              <div className="pt-2 border-t border-[var(--border)]/50">
+                <p className="text-xs font-medium text-[var(--muted)] mb-2">Custom badges</p>
+                <div className="flex flex-wrap gap-3">
+                  {customBadges.map((b) => (
+                    <label
+                      key={b.id}
+                      className="inline-flex items-center gap-2 cursor-pointer text-sm disabled:opacity-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={userBadgeIds.includes(b.id)}
+                        disabled={isPending}
+                        onChange={(e) => handleCustomBadgeToggle(b.id, e.target.checked)}
+                        className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                      />
+                      <span className="text-[var(--foreground)]">{b.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!badgesLoading && customBadges.length === 0 && (
+              <p className="text-xs text-[var(--muted)] pt-1">
+                Create custom badges in the Badges section to assign them here.
+              </p>
+            )}
           </div>
         </div>
       </div>

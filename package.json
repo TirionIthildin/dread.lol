@@ -3,20 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently --kill-others-on-fail --names next,bot -c blue,magenta \"next dev\" \"node --env-file=.env scripts/discord-presence-bot.mjs\"",
+    "dev:next": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:apply-missing": "node scripts/apply-missing-migration.mjs",
+    "db:studio": "drizzle-kit studio",
+    "discord-presence-bot": "node --env-file=.env scripts/discord-presence-bot.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
     "drizzle-orm": "^0.36.0",
     "react-markdown": "^10.0.0",
     "remark-gfm": "^4.0.0",
+    "discord.js": "^14.16.0",
     "ioredis": "^5.4.1",
     "next": "^15.0.0",
     "postgres": "^3.4.5",
@@ -24,6 +28,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "concurrently": "^9.1.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

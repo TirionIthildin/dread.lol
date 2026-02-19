@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProfileContent from "@/app/components/ProfileContent";
+import ProfileBackground from "@/app/components/ProfileBackground";
 import {
   getMemberProfileBySlug,
   recordProfileView,
   memberProfileToProfile,
   getUserBadges,
+  getCustomBadgesForUser,
   getUserDiscordFlags,
   getVouchesForProfile,
   hasUserVouched,
-  getGalleryForProfile,
 } from "@/lib/member-profiles";
+import { getDiscordPresence } from "@/lib/discord-presence";
 import { getSession } from "@/lib/auth/session";
 import { getClientIp, getUserAgent } from "@/lib/request";
 import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
@@ -77,29 +79,31 @@ export default async function ProfilePage({ params }: Props) {
   const { slug } = await params;
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
-  const [ip, userAgent, badges, discordFlags, vouchesData, session, gallery] = await Promise.all([
+  const [ip, userAgent, badgeFlags, customBadges, discordFlags, vouchesData, session, discordPresence] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getUserBadges(memberRow.userId),
+    getCustomBadgesForUser(memberRow.userId),
     getUserDiscordFlags(memberRow.userId),
     getVouchesForProfile(memberRow.id),
     getSession(),
-    getGalleryForProfile(memberRow.id),
+    getDiscordPresence(memberRow.userId),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent);
   const currentUserHasVouched = session
     ? await hasUserVouched(memberRow.id, session.sub)
     : false;
   const canVouch = session != null && session.sub !== memberRow.userId;
-  const profile = memberProfileToProfile(memberRow, badges, discordFlags);
-  if (gallery.length > 0) {
-    profile.gallery = gallery.map(({ id, imageUrl, title, description, sortOrder }) => ({
-      id,
-      imageUrl,
-      ...(title != null && { title }),
-      ...(description != null && { description }),
-      sortOrder,
-    }));
+  const profile = memberProfileToProfile(memberRow, badgeFlags, discordFlags, customBadges);
+  if (discordPresence) {
+    profile.discordPresence = {
+      status: discordPresence.status,
+      activities: discordPresence.activities.map((a) => ({
+        name: a.name,
+        state: a.state ?? undefined,
+        details: a.details ?? undefined,
+      })),
+    };
   }
   const vouches = {
     slug,
@@ -109,9 +113,9 @@ export default async function ProfilePage({ params }: Props) {
     canVouch,
   };
   return (
-    <>
+    <ProfileBackground profile={profile}>
       <ProfileJsonLd profile={profile} />
       <ProfileContent profile={profile} vouches={vouches} />
-    </>
+    </ProfileBackground>
   );
 }

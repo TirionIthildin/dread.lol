@@ -1,12 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono, Fira_Code, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_OG_IMAGE } from "@/lib/site";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-mono",
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+const firaCode = Fira_Code({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-fira-code",
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-space-mono",
   display: "swap",
 });
 
@@ -61,7 +75,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`dark ${jetbrainsMono.variable} ${firaCode.variable} ${spaceMono.variable}`}>
       <head>
         <link rel="preconnect" href="https://cdn.discordapp.com" />
         <link rel="dns-prefetch" href="https://cdn.discordapp.com" />
