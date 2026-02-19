@@ -29,6 +29,7 @@ export const COLLECTIONS = {
   userBadges: "user_badges",
   userGuilds: "user_guilds",
   profileReports: "profile_reports",
+  pastes: "pastes",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

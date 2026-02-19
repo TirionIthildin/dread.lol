@@ -69,7 +69,7 @@ function runCommand(cmd: string): { output: ReactNode; navigate?: string; redire
   if (c === "help" || c === "?") return { output: HELP_OUTPUT };
   if (c === "cat intro.txt" || c === "cat intro") return { output: INTRO_OUTPUT };
   if (c === "login") return { output: "Redirecting to sign in...", redirect: "/api/auth/discord" };
-  if (c === "leaderboard" || c === "top") return { output: "Opening leaderboard...", navigate: "/leaderboard" };
+  if (c === "leaderboard" || c === "top") return { output: "Opening leaderboard...", navigate: "/dashboard/leaderboard" };
   if (c === "trending") return { output: "Opening trending...", navigate: "/trending" };
   if (c === "whoami") return { output: "guest" };
   if (c === "ls" || c === "ls -la" || c === "ls -l") {

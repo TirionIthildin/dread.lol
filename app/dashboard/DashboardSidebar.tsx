@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { DiscordLogo, ImagesSquare, SignOut } from "@phosphor-icons/react";
+import { ClipboardText, DiscordLogo, ImagesSquare, SignOut, Trophy } from "@phosphor-icons/react";
 import DashboardNavAdmin from "@/app/dashboard/DashboardNavAdmin";
 import type { SessionUser } from "@/lib/auth/session";
 
@@ -30,6 +30,16 @@ const navItems = [
     href: "/dashboard/gallery",
     label: "Gallery",
     icon: <ImagesSquare size={20} weight="regular" className="shrink-0" aria-hidden />,
+  },
+  {
+    href: "/dashboard/paste",
+    label: "Paste",
+    icon: <ClipboardText size={20} weight="regular" className="shrink-0" aria-hidden />,
+  },
+  {
+    href: "/dashboard/leaderboard",
+    label: "Leaderboard",
+    icon: <Trophy size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
   {
     href: "/dashboard/views",
