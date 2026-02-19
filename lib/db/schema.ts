@@ -70,6 +70,7 @@ export interface ProfileDoc {
   animationPreset?: string | null;
   backgroundType?: string | null;
   backgroundUrl?: string | null;
+  backgroundAudioUrl?: string | null;
   showDiscordBadges?: boolean;
   showDiscordPresence?: boolean;
   showAudioPlayer?: boolean;

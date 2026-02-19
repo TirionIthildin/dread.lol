@@ -75,10 +75,12 @@ export interface Profile {
   cursorImageUrl?: string;
   /** Animation preset: none, fade-in, slide-up, scale-in, glow, shimmer. */
   animationPreset?: string;
-  /** Background type: none, image, video, audio, youtube. */
+  /** Background type: none, image, video (visual only; audio is separate). */
   backgroundType?: string;
-  /** Background URL (image URL or YouTube URL). */
+  /** Background URL (image or video). */
   backgroundUrl?: string;
+  /** Ambient background audio URL (separate from visual background). */
+  backgroundAudioUrl?: string;
   /** When true, ask search engines not to index this profile. */
   noindex?: boolean;
   /** Override meta/OG description for social sharing. */

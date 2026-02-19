@@ -839,8 +839,17 @@ export function memberProfileToProfile(
     cursorStyle: row.cursorStyle ?? undefined,
     cursorImageUrl: row.cursorImageUrl ?? undefined,
     animationPreset: row.animationPreset ?? undefined,
-    backgroundType: row.backgroundType ?? undefined,
-    backgroundUrl: row.backgroundUrl ?? undefined,
+    backgroundType: (() => {
+      const t = row.backgroundType ?? undefined;
+      if (t === "audio") return undefined;
+      return t;
+    })(),
+    backgroundUrl: (() => {
+      const t = row.backgroundType ?? undefined;
+      if (t === "audio") return undefined;
+      return row.backgroundUrl ?? undefined;
+    })(),
+    backgroundAudioUrl: row.backgroundAudioUrl ?? (row.backgroundType === "audio" ? row.backgroundUrl ?? undefined : undefined),
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,
     showPageViews: row.showPageViews ?? true,

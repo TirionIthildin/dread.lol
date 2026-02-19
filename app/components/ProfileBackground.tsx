@@ -21,27 +21,45 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   const [unlocked, setUnlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const backgroundType = ["image", "video", "audio"].includes(profile.backgroundType ?? "")
+  const backgroundType = ["image", "video"].includes(profile.backgroundType ?? "")
     ? profile.backgroundType
     : null;
   const backgroundUrl = profile.backgroundUrl?.trim();
+  const backgroundAudioUrl = profile.backgroundAudioUrl?.trim();
+
+  const needsUnlock = (backgroundType === "video") || !!backgroundAudioUrl;
 
   const handleUnlock = useCallback(() => {
     if (backgroundType === "video" && videoRef.current) {
       videoRef.current.muted = false;
       videoRef.current.play().catch(() => {});
     }
-    if (backgroundType === "audio" && audioRef.current) {
+    if (backgroundAudioUrl && audioRef.current) {
       audioRef.current.play().catch(() => {});
     }
     setUnlocked(true);
-  }, [backgroundType]);
+  }, [backgroundType, backgroundAudioUrl]);
 
-  if (!backgroundType || !backgroundUrl) {
-    return <>{children}</>;
-  }
+  const content = (
+    <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center">
+      {children}
+    </div>
+  );
 
-  if (backgroundType === "image") {
+  const unlockOverlay = needsUnlock && !unlocked && (
+    <button
+      type="button"
+      onClick={handleUnlock}
+      className="fixed inset-0 z-[5] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
+      aria-label="Click to view profile and play media"
+    >
+      <span className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 px-6 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--surface)]">
+        Click here to view profile
+      </span>
+    </button>
+  );
+
+  if (backgroundType === "image" && backgroundUrl) {
     return (
       <>
         <div
@@ -53,40 +71,23 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
             backgroundPosition: "center",
           }}
         />
-        <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center">
-          {children}
-        </div>
-      </>
-    );
-  }
-
-  if (backgroundType === "audio") {
-    const resolvedUrl = resolveMediaUrl(backgroundUrl);
-    if (!resolvedUrl) return <>{children}</>;
-
-    return (
-      <>
-        <audio ref={audioRef} src={resolvedUrl} loop preload="metadata" className="sr-only" aria-hidden />
-        {!unlocked && (
-          <button
-            type="button"
-            onClick={handleUnlock}
-            className="fixed inset-0 z-[5] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
-            aria-label="Click to view profile and play background audio"
-          >
-            <span className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 px-6 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--surface)]">
-              Click here to view profile
-            </span>
-          </button>
+        {backgroundAudioUrl && (
+          <audio
+            ref={audioRef}
+            src={resolveMediaUrl(backgroundAudioUrl)}
+            loop
+            preload="metadata"
+            className="sr-only"
+            aria-hidden
+          />
         )}
-        <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center">
-          {children}
-        </div>
+        {unlockOverlay}
+        {content}
       </>
     );
   }
 
-  if (backgroundType === "video") {
+  if (backgroundType === "video" && backgroundUrl) {
     const resolvedUrl = resolveMediaUrl(backgroundUrl);
     if (!resolvedUrl) return <>{children}</>;
 
@@ -109,21 +110,31 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
             }}
           />
         </div>
-        {!unlocked && (
-          <button
-            type="button"
-            onClick={handleUnlock}
-            className="fixed inset-0 z-[5] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
-            aria-label="Click to view profile and play background video"
-          >
-            <span className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 px-6 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--surface)]">
-              Click here to view profile
-            </span>
-          </button>
+        {backgroundAudioUrl && (
+          <audio
+            ref={audioRef}
+            src={resolveMediaUrl(backgroundAudioUrl)}
+            loop
+            preload="metadata"
+            className="sr-only"
+            aria-hidden
+          />
         )}
-        <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center">
-          {children}
-        </div>
+        {unlockOverlay}
+        {content}
+      </>
+    );
+  }
+
+  if (backgroundAudioUrl) {
+    const resolvedUrl = resolveMediaUrl(backgroundAudioUrl);
+    if (!resolvedUrl) return <>{children}</>;
+
+    return (
+      <>
+        <audio ref={audioRef} src={resolvedUrl} loop preload="metadata" className="sr-only" aria-hidden />
+        {unlockOverlay}
+        {content}
       </>
     );
   }

@@ -94,17 +94,20 @@ export async function updateProfileAction(
   const banner = validateUrlOrEmpty(formData.get("banner") as string);
   const ogImageUrl = validateUrlOrEmpty(formData.get("ogImageUrl") as string);
   const bgType = (formData.get("backgroundType") as string)?.trim();
-  const usesBackgroundUrl = ["image", "video", "audio"].includes(bgType ?? "");
-  const rawBackgroundUrl = usesBackgroundUrl
+  const usesVisualBackground = ["image", "video"].includes(bgType ?? "");
+  const rawBackgroundUrl = usesVisualBackground
     ? (formData.get("backgroundUrl") as string)?.trim()
     : undefined;
   const backgroundUrl = validateBackgroundUrl(rawBackgroundUrl);
+  const rawBackgroundAudioUrl = (formData.get("backgroundAudioUrl") as string)?.trim();
+  const backgroundAudioUrl = validateBackgroundUrl(rawBackgroundAudioUrl);
 
   if ((formData.get("avatarUrl") as string)?.trim() && !avatarUrl) return { error: "Avatar URL must use https or http" };
   if ((formData.get("banner") as string)?.trim() && !banner) return { error: "Banner URL must use https or http" };
   if ((formData.get("ogImageUrl") as string)?.trim() && !ogImageUrl) return { error: "OG image URL must use https or http" };
   if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
-  if (usesBackgroundUrl && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
+  if (usesVisualBackground && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
+  if (rawBackgroundAudioUrl && !backgroundAudioUrl) return { error: "Background audio URL must use https or http or a valid path" };
 
   try {
     await updateMemberProfile(profileId, session.sub, {
@@ -181,8 +184,9 @@ export async function updateProfileAction(
         ? (validateBackgroundUrl((formData.get("cursorImageUrl") as string)?.trim()) ?? null)
         : null,
       animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
-      backgroundType: usesBackgroundUrl ? bgType : null,
-      backgroundUrl: usesBackgroundUrl ? backgroundUrl : null,
+      backgroundType: usesVisualBackground ? bgType : null,
+      backgroundUrl: usesVisualBackground ? backgroundUrl : null,
+      backgroundAudioUrl: backgroundAudioUrl || null,
       showAudioPlayer: formData.get("showAudioPlayer") === "on",
       audioTracks: parseAudioTracksValue((formData.get("audioTracks") as string) ?? undefined),
     });

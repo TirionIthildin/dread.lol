@@ -130,9 +130,6 @@ function parseTerminalCommandsForEditor(raw: string | null): { command: string; 
 const BACKGROUND_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/x-gif", "image/webp"];
 // .mp4, .m4v, .webm, .mov, .mkv
 const BACKGROUND_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/webm", "video/quicktime", "video/x-matroska"];
-// .mp3, .aac
-const BACKGROUND_AUDIO_TYPES = ["audio/mpeg", "audio/mp3", "audio/aac", "audio/x-aac"];
-
 interface DashboardMyProfileProps {
   profile: ProfileRow;
   shortLinks?: ProfileShortLink[];
@@ -333,15 +330,24 @@ export default function DashboardMyProfile({
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
-    return ["image", "video", "audio"].includes(t) ? t : "none";
+    return ["image", "video"].includes(t) ? t : "none";
   });
   const [backgroundUrlValue, setBackgroundUrlValue] = useState(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
-    return ["image", "video", "audio"].includes(t) ? ((profile as { backgroundUrl?: string }).backgroundUrl ?? "") : "";
+    return ["image", "video"].includes(t) ? ((profile as { backgroundUrl?: string }).backgroundUrl ?? "") : "";
   });
   const [backgroundUploading, setBackgroundUploading] = useState(false);
   const [backgroundUploadError, setBackgroundUploadError] = useState<string | null>(null);
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
+  const [backgroundAudioUrlValue, setBackgroundAudioUrlValue] = useState(() => {
+    const audio = (profile as { backgroundAudioUrl?: string }).backgroundAudioUrl?.trim();
+    if (audio) return audio;
+    const t = (profile as { backgroundType?: string }).backgroundType ?? "";
+    return t === "audio" ? ((profile as { backgroundUrl?: string }).backgroundUrl ?? "") : "";
+  });
+  const [backgroundAudioUploading, setBackgroundAudioUploading] = useState(false);
+  const [backgroundAudioUploadError, setBackgroundAudioUploadError] = useState<string | null>(null);
+  const backgroundAudioFileRef = useRef<HTMLInputElement>(null);
   const [customFontValue, setCustomFontValue] = useState(() => {
     const p = profile as { customFont?: string; customFontUrl?: string };
     return p.customFontUrl ? "custom" : (p.customFont ?? "");
@@ -1345,109 +1351,181 @@ export default function DashboardMyProfile({
                 </select>
                 <p className="mt-0.5 text-[10px] text-[var(--muted)]">Entrance animations play on load. Ongoing/hover effects add ambient motion.</p>
               </label>
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-[var(--muted)]">
-                  Custom background <span className="text-[var(--muted)]/70">(image, video, or audio behind profile)</span>
-                </label>
-                <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
-                <input type="hidden" name="backgroundUrl" value={backgroundTypeValue === "none" ? "" : backgroundUrlValue} />
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      checked={backgroundTypeValue === "none"}
-                      onChange={() => {
-                        setBackgroundTypeValue("none");
-                        setBackgroundUrlValue("");
-                        setBackgroundUploadError(null);
-                      }}
-                      className="rounded border-[var(--border)]"
-                    />
-                    None
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-[var(--muted)]">
+                    Custom background <span className="text-[var(--muted)]/70">(image or video behind profile)</span>
                   </label>
-                  <input
-                    ref={backgroundFileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/x-m4v,video/webm,video/quicktime,video/x-matroska,audio/mpeg,audio/mp3,audio/aac"
-                    className="sr-only"
-                    aria-hidden
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const type = file.type?.toLowerCase().split(";")[0]?.trim();
-                      const isVideo = type && BACKGROUND_VIDEO_TYPES.includes(type);
-                      const isImage = type && BACKGROUND_IMAGE_TYPES.includes(type);
-                      const isAudio = type && BACKGROUND_AUDIO_TYPES.includes(type);
-                      if (!isImage && !isVideo && !isAudio) {
-                        setBackgroundUploadError("Use PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, MKV, MP3, or AAC");
-                        e.target.value = "";
-                        return;
-                      }
-                      if (isVideo && file.size > 100 * 1024 * 1024) {
-                        setBackgroundUploadError("Video must be 100 MB or smaller");
-                        e.target.value = "";
-                        return;
-                      }
-                      if (isImage && file.size > 100 * 1024 * 1024) {
-                        setBackgroundUploadError("Image must be 100 MB or smaller");
-                        e.target.value = "";
-                        return;
-                      }
-                      if (isAudio && file.size > 10 * 1024 * 1024) {
-                        setBackgroundUploadError("Audio must be 10 MB or smaller");
-                        e.target.value = "";
-                        return;
-                      }
-                      setBackgroundUploadError(null);
-                      setBackgroundUploading(true);
-                      try {
-                        const form = new FormData();
-                        form.append("file", file);
-                        if (isVideo) form.append("purpose", "background-video");
-                        else if (isImage) form.append("purpose", "background-image");
-                        else if (isAudio) form.append("purpose", "background-audio");
-                        const prevUrl = backgroundUrlValue.trim();
-                        if (prevUrl && prevUrl.includes("/api/files/")) {
-                          const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
-                          if (match) form.append("replaceFid", match[1]);
+                  <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
+                  <input type="hidden" name="backgroundUrl" value={backgroundTypeValue === "none" ? "" : backgroundUrlValue} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="radio"
+                        checked={backgroundTypeValue === "none"}
+                        onChange={() => {
+                          setBackgroundTypeValue("none");
+                          setBackgroundUrlValue("");
+                          setBackgroundUploadError(null);
+                        }}
+                        className="rounded border-[var(--border)]"
+                      />
+                      None
+                    </label>
+                    <input
+                      ref={backgroundFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/x-m4v,video/webm,video/quicktime,video/x-matroska"
+                      className="sr-only"
+                      aria-hidden
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const type = file.type?.toLowerCase().split(";")[0]?.trim();
+                        const isVideo = type && BACKGROUND_VIDEO_TYPES.includes(type);
+                        const isImage = type && BACKGROUND_IMAGE_TYPES.includes(type);
+                        if (!isImage && !isVideo) {
+                          setBackgroundUploadError("Use PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, or MKV");
+                          e.target.value = "";
+                          return;
                         }
-                        const res = await fetch("/api/upload", { method: "POST", body: form });
-                        const data = await res.json();
-                        if (!res.ok) {
-                          setBackgroundUploadError(data.error ?? "Upload failed");
-                        } else {
-                          const base = typeof window !== "undefined" ? window.location.origin : "";
-                          const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
-                          setBackgroundTypeValue(isVideo ? "video" : isAudio ? "audio" : "image");
-                          setBackgroundUrlValue(url);
+                        if (isVideo && file.size > 100 * 1024 * 1024) {
+                          setBackgroundUploadError("Video must be 100 MB or smaller");
+                          e.target.value = "";
+                          return;
                         }
-                      } finally {
-                        setBackgroundUploading(false);
-                        e.target.value = "";
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => backgroundFileInputRef.current?.click()}
-                    disabled={backgroundUploading}
-                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
-                  >
-                    <UploadSimple size={16} weight="regular" />
-                    {backgroundUploading ? "Uploading…" : "Upload a file"}
-                  </button>
-                </div>
-                {backgroundTypeValue !== "none" && backgroundUrlValue && (
+                        if (isImage && file.size > 100 * 1024 * 1024) {
+                          setBackgroundUploadError("Image must be 100 MB or smaller");
+                          e.target.value = "";
+                          return;
+                        }
+                        setBackgroundUploadError(null);
+                        setBackgroundUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          if (isVideo) form.append("purpose", "background-video");
+                          else form.append("purpose", "background-image");
+                          const prevUrl = backgroundUrlValue.trim();
+                          if (prevUrl && prevUrl.includes("/api/files/")) {
+                            const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
+                            if (match) form.append("replaceFid", match[1]);
+                          }
+                          const res = await fetch("/api/upload", { method: "POST", body: form });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            setBackgroundUploadError(data.error ?? "Upload failed");
+                          } else {
+                            const base = typeof window !== "undefined" ? window.location.origin : "";
+                            const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+                            setBackgroundTypeValue(isVideo ? "video" : "image");
+                            setBackgroundUrlValue(url);
+                          }
+                        } finally {
+                          setBackgroundUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => backgroundFileInputRef.current?.click()}
+                      disabled={backgroundUploading}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                    >
+                      <UploadSimple size={16} weight="regular" />
+                      {backgroundUploading ? "Uploading…" : "Upload image/video"}
+                    </button>
+                  </div>
+                  {backgroundTypeValue !== "none" && backgroundUrlValue && (
+                    <p className="text-[10px] text-[var(--muted)]">
+                      {backgroundTypeValue === "image" ? "Image" : "Video"} set. Upload again to replace (old file removed), or None to remove.
+                    </p>
+                  )}
+                  {backgroundUploadError && (
+                    <p className="text-[10px] text-[var(--warning)]">{backgroundUploadError}</p>
+                  )}
                   <p className="text-[10px] text-[var(--muted)]">
-                    {backgroundTypeValue === "image" ? "Image" : backgroundTypeValue === "video" ? "Video" : "Audio"} set. Upload again to replace (old file removed), or None to remove.
+                    PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, MKV (max 100 MB). Uses a &quot;Click to view profile&quot; overlay.
                   </p>
-                )}
-                {backgroundUploadError && (
-                  <p className="text-[10px] text-[var(--warning)]">{backgroundUploadError}</p>
-                )}
-                <p className="text-[10px] text-[var(--muted)]">
-                  Images/video: PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, MKV (max 100 MB). Audio: MP3, AAC (max 10 MB). Media uses a &quot;Click to view profile&quot; overlay.
-                </p>
+                </div>
+                <div className="space-y-2 pt-3 border-t border-[var(--border)]/50">
+                  <label className="block text-xs font-medium text-[var(--muted)]">
+                    Background audio <span className="text-[var(--muted)]/70">(ambient, separate from image/video)</span>
+                  </label>
+                  <input type="hidden" name="backgroundAudioUrl" value={backgroundAudioUrlValue} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={backgroundAudioFileRef}
+                      type="file"
+                      accept=".mp3,.aac,audio/mpeg,audio/mp3,audio/aac"
+                      className="sr-only"
+                      aria-hidden
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 10 * 1024 * 1024) {
+                          setBackgroundAudioUploadError("Audio must be 10 MB or smaller");
+                          e.target.value = "";
+                          return;
+                        }
+                        setBackgroundAudioUploadError(null);
+                        setBackgroundAudioUploading(true);
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          form.append("purpose", "background-audio");
+                          const prevUrl = backgroundAudioUrlValue.trim();
+                          if (prevUrl && prevUrl.includes("/api/files/")) {
+                            const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
+                            if (match) form.append("replaceFid", match[1]);
+                          }
+                          const res = await fetch("/api/upload", { method: "POST", body: form });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            setBackgroundAudioUploadError(data.error ?? "Upload failed");
+                          } else {
+                            const base = typeof window !== "undefined" ? window.location.origin : "";
+                            const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+                            setBackgroundAudioUrlValue(url);
+                          }
+                        } finally {
+                          setBackgroundAudioUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => backgroundAudioFileRef.current?.click()}
+                      disabled={backgroundAudioUploading}
+                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                    >
+                      <UploadSimple size={16} weight="regular" />
+                      {backgroundAudioUploading ? "Uploading…" : "Upload audio"}
+                    </button>
+                    {backgroundAudioUrlValue && (
+                      <button
+                        type="button"
+                        onClick={() => setBackgroundAudioUrlValue("")}
+                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--warning)]/50 hover:text-[var(--warning)]"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {backgroundAudioUrlValue && (
+                    <p className="text-[10px] text-[var(--muted)]">
+                      Background audio set. Plays when visitor unlocks the profile. Works with image, video, or no visual background.
+                    </p>
+                  )}
+                  {backgroundAudioUploadError && (
+                    <p className="text-[10px] text-[var(--warning)]">{backgroundAudioUploadError}</p>
+                  )}
+                  <p className="text-[10px] text-[var(--muted)]">
+                    MP3 or AAC, max 10 MB. Ambient loop. Separate from the visual background.
+                  </p>
+                </div>
               </div>
             </div>
 
