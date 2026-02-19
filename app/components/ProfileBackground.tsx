@@ -50,7 +50,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     <button
       type="button"
       onClick={handleUnlock}
-      className="fixed inset-0 z-[5] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
       aria-label="Click to view profile and play media"
     >
       <span className="rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 px-6 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--surface)]">
