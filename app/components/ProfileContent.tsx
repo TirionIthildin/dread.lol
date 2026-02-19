@@ -42,7 +42,23 @@ const BANNER_STYLES = ["accent", "fire", "cyan", "green", "purple", "orange", "r
 const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
-const CURSOR_STYLES = ["default", "crosshair", "pointer", "text", "grab", "minimal", "beam"] as const;
+const CURSOR_STYLES = [
+  "default",
+  "crosshair",
+  "pointer",
+  "text",
+  "grab",
+  "minimal",
+  "beam",
+  "spot",
+  "ring",
+  "neon",
+  "bolt",
+  "cross",
+  "hex",
+  "glow",
+  "trail",
+] as const;
 const ANIMATION_PRESETS = [
   "none",
   "fade-in",

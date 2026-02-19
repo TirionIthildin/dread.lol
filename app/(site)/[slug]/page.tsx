@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProfileContent from "@/app/components/ProfileContent";
+import ProfileCursorEffect from "@/app/components/ProfileCursorEffect";
 import ProfileBackground from "@/app/components/ProfileBackground";
 import {
   getMemberProfileBySlug,
@@ -117,10 +118,23 @@ export default async function ProfilePage({ params }: Props) {
     currentUserHasVouched,
     canVouch,
   };
-  return (
-    <ProfileBackground profile={profile}>
+  const needsCursorEffect = profile.cursorStyle === "glow" || profile.cursorStyle === "trail";
+  const content = (
+    <>
       <ProfileJsonLd profile={profile} />
       <ProfileContent profile={profile} vouches={vouches} />
+    </>
+  );
+
+  return (
+    <ProfileBackground profile={profile}>
+      {needsCursorEffect ? (
+        <ProfileCursorEffect cursorStyle={profile.cursorStyle} accentColor={profile.accentColor}>
+          {content}
+        </ProfileCursorEffect>
+      ) : (
+        content
+      )}
     </ProfileBackground>
   );
 }

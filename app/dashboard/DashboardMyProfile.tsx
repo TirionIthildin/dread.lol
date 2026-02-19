@@ -1244,12 +1244,26 @@ export default function DashboardMyProfile({
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 >
                   <option value="default">Default</option>
-                  <option value="crosshair">Crosshair</option>
-                  <option value="pointer">Pointer</option>
-                  <option value="text">Text</option>
-                  <option value="grab">Grab</option>
-                  <option value="minimal">Minimal (dot)</option>
-                  <option value="beam">Beam (terminal)</option>
+                  <optgroup label="Basic">
+                    <option value="crosshair">Crosshair</option>
+                    <option value="pointer">Pointer</option>
+                    <option value="text">Text</option>
+                    <option value="grab">Grab</option>
+                  </optgroup>
+                  <optgroup label="Themed shapes">
+                    <option value="minimal">Minimal (dot)</option>
+                    <option value="beam">Beam (terminal)</option>
+                    <option value="spot">Spot (spotlight)</option>
+                    <option value="ring">Ring</option>
+                    <option value="neon">Neon dot</option>
+                    <option value="bolt">Bolt (lightning)</option>
+                    <option value="cross">Cross</option>
+                    <option value="hex">Hexagon</option>
+                  </optgroup>
+                  <optgroup label="Effects">
+                    <option value="glow">Glow follower</option>
+                    <option value="trail">Trail</option>
+                  </optgroup>
                   <option value="custom">Custom (upload)</option>
                 </select>
                 {cursorStyleValue === "custom" && (
