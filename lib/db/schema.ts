@@ -71,6 +71,7 @@ export interface ProfileDoc {
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   showDiscordBadges?: boolean;
+  showDiscordPresence?: boolean;
   showAudioPlayer?: boolean;
   audioTracks?: string | null;
   createdAt: Date;

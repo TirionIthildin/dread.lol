@@ -99,7 +99,8 @@ export default async function ProfilePage({ params }: Props) {
   const canVouch = session != null && session.sub !== memberRow.userId;
   const profile = memberProfileToProfile(memberRow, badgeFlags, discordFlags, customBadges);
   if (showPageViews) profile.viewCount = viewCount;
-  if (discordPresence) {
+  const showDiscordPresence = memberRow.showDiscordPresence !== false;
+  if (showDiscordPresence && discordPresence) {
     profile.discordPresence = {
       status: discordPresence.status,
       activities: discordPresence.activities.map((a) => ({

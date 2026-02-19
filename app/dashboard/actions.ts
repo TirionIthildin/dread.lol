@@ -161,6 +161,7 @@ export async function updateProfileAction(
       metaDescription: ((formData.get("metaDescription") as string)?.trim() || undefined)?.slice(0, 200),
       showPageViews: formData.get("showPageViews") === "on",
       showDiscordBadges: formData.get("showDiscordBadges") === "on",
+      showDiscordPresence: formData.get("showDiscordPresence") === "on",
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();
         const url = validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim());

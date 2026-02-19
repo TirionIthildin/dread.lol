@@ -5,8 +5,29 @@ import {
   Cube,
   Link as LinkIcon,
   GithubLogo,
-  TwitterLogo,
+  XLogo,
   YoutubeLogo,
+  InstagramLogo,
+  TiktokLogo,
+  TwitchLogo,
+  SpotifyLogo,
+  LinkedinLogo,
+  RedditLogo,
+  SteamLogo,
+  PaypalLogo,
+  TelegramLogo,
+  PatreonLogo,
+  MediumLogo,
+  MastodonLogo,
+  BehanceLogo,
+  FigmaLogo,
+  NotionLogo,
+  CodepenLogo,
+  DevToLogo,
+  SoundcloudLogo,
+  PinterestLogo,
+  ThreadsLogo,
+  WhatsappLogo,
 } from "@phosphor-icons/react";
 import CopyButton from "@/app/components/CopyButton";
 
@@ -18,8 +39,29 @@ const linkButtonClass =
 function LinkIconForLabel({ label }: { label: string }) {
   const lower = label.toLowerCase();
   if (lower.includes("github")) return <GithubLogo {...iconProps} />;
-  if (lower.includes("twitter") || lower.includes("x.com")) return <TwitterLogo {...iconProps} />;
+  if (lower.includes("twitter") || lower.includes("x.com") || lower.includes("x logo")) return <XLogo {...iconProps} />;
   if (lower.includes("youtube")) return <YoutubeLogo {...iconProps} />;
+  if (lower.includes("instagram")) return <InstagramLogo {...iconProps} />;
+  if (lower.includes("tiktok")) return <TiktokLogo {...iconProps} />;
+  if (lower.includes("twitch")) return <TwitchLogo {...iconProps} />;
+  if (lower.includes("spotify")) return <SpotifyLogo {...iconProps} />;
+  if (lower.includes("linkedin")) return <LinkedinLogo {...iconProps} />;
+  if (lower.includes("reddit")) return <RedditLogo {...iconProps} />;
+  if (lower.includes("steam")) return <SteamLogo {...iconProps} />;
+  if (lower.includes("paypal")) return <PaypalLogo {...iconProps} />;
+  if (lower.includes("telegram")) return <TelegramLogo {...iconProps} />;
+  if (lower.includes("patreon")) return <PatreonLogo {...iconProps} />;
+  if (lower.includes("medium")) return <MediumLogo {...iconProps} />;
+  if (lower.includes("mastodon")) return <MastodonLogo {...iconProps} />;
+  if (lower.includes("behance")) return <BehanceLogo {...iconProps} />;
+  if (lower.includes("figma")) return <FigmaLogo {...iconProps} />;
+  if (lower.includes("notion")) return <NotionLogo {...iconProps} />;
+  if (lower.includes("codepen")) return <CodepenLogo {...iconProps} />;
+  if (lower.includes("dev.to")) return <DevToLogo {...iconProps} />;
+  if (lower.includes("soundcloud")) return <SoundcloudLogo {...iconProps} />;
+  if (lower.includes("pinterest")) return <PinterestLogo {...iconProps} />;
+  if (lower.includes("threads")) return <ThreadsLogo {...iconProps} />;
+  if (lower.includes("whatsapp")) return <WhatsappLogo {...iconProps} />;
   return <LinkIcon {...iconProps} />;
 }
 
