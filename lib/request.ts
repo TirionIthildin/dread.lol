@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { getBaseDomain as getSiteBaseDomain } from "@/lib/site";
 
 /** Get client IP from request headers (proxies set x-forwarded-for or x-real-ip). */
 export async function getClientIp(): Promise<string> {
@@ -23,15 +24,7 @@ function parseForwardedHost(forwarded: string): string | null {
 
 /** Get base domain for subdomain detection (e.g. "dread.lol"). */
 function getBaseDomain(): string {
-  const explicit = process.env.NEXT_PUBLIC_SITE_DOMAIN?.trim();
-  if (explicit) return explicit.replace(/^www\./i, "");
-  try {
-    const url = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_HOME_URL || "https://dread.lol";
-    const host = new URL(url).hostname;
-    return host.replace(/^www\./i, "");
-  } catch {
-    return "dread.lol";
-  }
+  return getSiteBaseDomain();
 }
 
 /**

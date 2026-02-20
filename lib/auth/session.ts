@@ -4,6 +4,7 @@
  */
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
+import { getCookieDomain } from "@/lib/site";
 import { getValkey } from "@/lib/valkey";
 
 const SESSION_COOKIE = "dread_session";
@@ -93,6 +94,7 @@ export async function consumeOAuthState(state: string): Promise<string | null> {
 }
 
 export function getSessionCookieConfig(signedValue: string) {
+  const domain = getCookieDomain();
   return {
     name: SESSION_COOKIE,
     value: signedValue,
@@ -101,5 +103,6 @@ export function getSessionCookieConfig(signedValue: string) {
     sameSite: "lax" as const,
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
+    ...(domain && { domain }),
   };
 }

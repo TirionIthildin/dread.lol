@@ -73,6 +73,7 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - 'NEXT_PUBLIC_SITE_URL=https://dread.lol'
+      - 'NEXT_PUBLIC_SITE_DOMAIN=${NEXT_PUBLIC_SITE_DOMAIN:-dread.lol}'
       - 'DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:-dread}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin'
       - 'VALKEY_URL=redis://valkey:6379'
       - 'SEAWEED_MASTER_URL=http://seaweed-master:9333'

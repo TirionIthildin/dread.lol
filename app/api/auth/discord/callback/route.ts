@@ -66,13 +66,8 @@ export async function GET(request: NextRequest) {
     });
     const config = getSessionCookieConfig(sessionValue);
     const res = NextResponse.redirect(new URL(DASHBOARD_PATH, baseUrl));
-    res.cookies.set(config.name, config.value, {
-      httpOnly: config.httpOnly,
-      secure: config.secure,
-      sameSite: config.sameSite,
-      path: config.path,
-      maxAge: config.maxAge,
-    });
+    const { name, value, ...opts } = config;
+    res.cookies.set(name, value, opts);
     return res;
   } catch (err) {
     console.error("Discord OAuth callback error:", err);
