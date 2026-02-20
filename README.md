@@ -46,7 +46,7 @@ Profiles work at `username.dread.lol` when using a Cloudflare Worker to forward 
 
 **Worker** forwards to `https://dread.lol` with:
 - `Host: dread.lol` (so your origin accepts the request)
-- `X-Forwarded-Host: <original host>` (e.g. `alice.dread.lol`)
+- `X-Original-Host: <original host>` (e.g. `alice.dread.lol`) — use a custom header so Coolify/Traefik doesn't overwrite it
 
 The app reads `X-Forwarded-Host` (or `Host`) and extracts the username: `alice.dread.lol` → `alice`.
 

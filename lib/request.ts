@@ -36,16 +36,18 @@ function getBaseDomain(): string {
 
 /**
  * Extract profile slug from request host (for subdomain routing, e.g. username.dread.lol).
- * Tries x-forwarded-host, host, x-real-host, and Forwarded header.
- * Returns the subdomain when host matches *.baseDomain, or null.
+ * Cloudflare Worker sets X-Original-Host (Coolify/Traefik overwrites X-Forwarded-Host).
+ * Fallbacks: x-forwarded-host, host, x-real-host, forwarded.
  */
 export function getProfileSlugFromHost(requestHeaders: Headers): string | null {
+  const originalHost = requestHeaders.get("x-original-host"); // Worker sets this; proxy won't overwrite
   const forwardedHost = requestHeaders.get("x-forwarded-host");
   const hostHeader = requestHeaders.get("host");
   const realHost = requestHeaders.get("x-real-host");
   const forwarded = requestHeaders.get("forwarded");
 
   const rawHost =
+    originalHost ||
     forwardedHost ||
     hostHeader ||
     realHost ||

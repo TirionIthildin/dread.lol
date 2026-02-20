@@ -16,6 +16,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     host: request.headers.get("host"),
+    "x-original-host": request.headers.get("x-original-host"),
     "x-forwarded-host": request.headers.get("x-forwarded-host"),
     "x-real-host": request.headers.get("x-real-host"),
     forwarded: request.headers.get("forwarded"),
