@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Themed embed images",
+    description: "Twitter, Discord, and other platforms now show a custom preview with your profile picture, grid background, and description.",
+  },
+  {
+    date: "2026-02",
     title: "More profile fields",
     description: "Add website, skills, languages, availability, current focus, and when you're usually online.",
   },

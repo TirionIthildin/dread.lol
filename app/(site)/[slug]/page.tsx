@@ -23,7 +23,7 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import ProfileAdminToolbar from "@/app/components/ProfileAdminToolbar";
 import { getClientIp, getUserAgent } from "@/lib/request";
-import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -40,8 +40,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     profile.description ||
     `${profile.name} on ${SITE_NAME}`;
   const canonicalUrl = `${SITE_URL}/${slug}`;
-  const ogImage = profile.ogImageUrl ?? profile.avatar ?? SITE_OG_IMAGE;
   const noindex = Boolean(profile.noindex);
+  // OG image from /api/og/[slug] (themed embed or redirect to custom ogImageUrl)
   return {
     title,
     description,
@@ -53,13 +53,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: SITE_NAME,
       title,
       description,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+      images: [{ url: `/api/og/${slug}`, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [ogImage],
+      images: [`/api/og/${slug}`],
     },
   };
 }
