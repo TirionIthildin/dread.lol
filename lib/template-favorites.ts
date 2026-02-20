@@ -132,7 +132,7 @@ export async function getFavoritedTemplateIds(userId: string, templateIds: strin
     .collection(COLLECTIONS.templateFavorites)
     .find({ userId, templateId: { $in: oids } }, { projection: { templateId: 1 } })
     .toArray();
-  return new Set(docs.map((d) => (d as { templateId: ObjectId }).templateId.toString()));
+  return new Set(docs.map((d) => (d as unknown as { templateId: ObjectId }).templateId.toString()));
 }
 
 /** Get template IDs favorited by a user. */
@@ -145,5 +145,5 @@ export async function getFavoriteTemplateIds(userId: string): Promise<string[]> 
     .find({ userId }, { projection: { templateId: 1 } })
     .sort({ createdAt: -1 })
     .toArray();
-  return docs.map((d) => (d as { templateId: ObjectId }).templateId.toString());
+  return docs.map((d) => (d as unknown as { templateId: ObjectId }).templateId.toString());
 }
