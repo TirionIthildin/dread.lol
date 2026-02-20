@@ -30,13 +30,13 @@ export default async function TrendingPage() {
             Trending this week
           </h1>
           <p className="text-xs text-[var(--muted)] mt-0.5">
-            Based on vouches, views, and reactions
+            Based on vouches and views
           </p>
         </div>
         <div className="divide-y divide-[var(--border)]/50">
           {trending.length === 0 ? (
             <p className="px-4 py-8 text-sm text-[var(--muted)] text-center">
-              No activity yet this week. Vouch someone, react to a profile, or browse around!
+              No activity yet this week. Vouch someone or browse around!
             </p>
           ) : (
             trending.map((entry, i) => (

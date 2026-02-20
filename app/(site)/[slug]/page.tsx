@@ -14,8 +14,6 @@ import {
   getVouchesForProfile,
   hasUserVouched,
   getMutualVouchers,
-  getProfileReactions,
-  getCurrentUserReaction,
   getSimilarProfiles,
   getMutualGuilds,
 } from "@/lib/member-profiles";
@@ -106,9 +104,7 @@ export default async function ProfilePage({ params }: Props) {
     getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
   ]);
-  const [reactions, userReaction, similarProfiles, mutualGuilds] = await Promise.all([
-    getProfileReactions(memberRow.id),
-    session ? getCurrentUserReaction(memberRow.id, session.sub) : Promise.resolve(null),
+  const [similarProfiles, mutualGuilds] = await Promise.all([
     getSimilarProfiles(memberRow.id, memberRow.tags ?? [], 6),
     session && session.sub !== memberRow.userId
       ? getMutualGuilds(session.sub, memberRow.userId)
@@ -148,7 +144,6 @@ export default async function ProfilePage({ params }: Props) {
     currentUserHasVouched,
     canVouch,
   };
-  const canReact = session != null && session.sub !== memberRow.userId;
   const needsCursorEffect = profile.cursorStyle === "glow" || profile.cursorStyle === "trail";
   const isAdmin = (currentUser as { isAdmin?: boolean } | null)?.isAdmin ?? false;
   const showAdminToolbar = isAdmin && session?.sub !== memberRow.userId;
@@ -161,7 +156,6 @@ export default async function ProfilePage({ params }: Props) {
       <ProfileContent
         profile={profile}
         vouches={vouches}
-        reactions={{ slug, reactions, userReaction, canReact }}
         similarProfiles={similarProfiles}
         mutualGuilds={mutualGuilds}
         canReport={session?.sub !== memberRow.userId}

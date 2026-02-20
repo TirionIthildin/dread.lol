@@ -15,19 +15,59 @@ export async function getUserAgent(): Promise<string | null> {
   return h.get("user-agent");
 }
 
+/** Parse host from RFC 7239 Forwarded header, e.g. "host=username.dread.lol" */
+function parseForwardedHost(forwarded: string): string | null {
+  const hostMatch = forwarded.match(/host=["']?([^"';,\s]+)["']?/i);
+  return hostMatch ? hostMatch[1] : null;
+}
+
+/** Get base domain for subdomain detection (e.g. "dread.lol"). */
+function getBaseDomain(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_DOMAIN?.trim();
+  if (explicit) return explicit.replace(/^www\./i, "");
+  try {
+    const url = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_HOME_URL || "https://dread.lol";
+    const host = new URL(url).hostname;
+    return host.replace(/^www\./i, "");
+  } catch {
+    return "dread.lol";
+  }
+}
+
 /**
  * Extract profile slug from request host (for subdomain routing, e.g. username.dread.lol).
- * Cloudflare/Traefik pass the original host via x-forwarded-host; fallback to host.
- * Returns the first label (subdomain) when host has multiple parts, or null if no subdomain.
+ * Tries x-forwarded-host, host, x-real-host, and Forwarded header.
+ * Returns the subdomain when host matches *.baseDomain, or null.
  */
 export function getProfileSlugFromHost(requestHeaders: Headers): string | null {
-  const host =
-    requestHeaders.get("x-forwarded-host") ||
-    requestHeaders.get("host") ||
+  const forwardedHost = requestHeaders.get("x-forwarded-host");
+  const hostHeader = requestHeaders.get("host");
+  const realHost = requestHeaders.get("x-real-host");
+  const forwarded = requestHeaders.get("forwarded");
+
+  const rawHost =
+    forwardedHost ||
+    hostHeader ||
+    realHost ||
+    (forwarded ? parseForwardedHost(forwarded) : null) ||
     "";
-  const parts = host.split(".");
-  // Need subdomain: e.g. username.dread.lol -> 3+ parts, dread.lol -> 2 parts
-  if (parts.length < 3) return null;
-  const username = parts[0];
-  return username && username.length > 0 ? username : null;
+  // Handle comma-separated values (e.g. "alice.dread.lol, dread.lol")—use first (original)
+  const hostname = (rawHost.split(",")[0] ?? "").split(":")[0]?.trim().toLowerCase() || "";
+  if (!hostname) return null;
+
+  const base = getBaseDomain().toLowerCase();
+  const baseWithDot = `.${base}`;
+
+  if (hostname.endsWith(baseWithDot) && hostname !== base) {
+    const subdomain = hostname.slice(0, -baseWithDot.length);
+    if (subdomain && subdomain.length > 0) return subdomain;
+  }
+
+  // Fallback: simple subdomain detection (e.g. for alternate configs)
+  const parts = hostname.split(".");
+  if (parts.length >= 3) {
+    const first = parts[0];
+    if (first && first.length > 0) return first;
+  }
+  return null;
 }

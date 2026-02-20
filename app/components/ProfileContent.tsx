@@ -13,7 +13,6 @@ import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
-import ProfileReactions from "@/app/components/ProfileReactions";
 import ProfileReportButton from "@/app/components/ProfileReportButton";
 import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
@@ -124,13 +123,6 @@ export interface ProfileVouchesData {
   canVouch: boolean;
 }
 
-export interface ProfileReactionsData {
-  slug: string;
-  reactions: { emoji: string; count: number }[];
-  userReaction: string | null;
-  canReact: boolean;
-}
-
 interface SimilarProfile {
   slug: string;
   name: string;
@@ -139,7 +131,6 @@ interface SimilarProfile {
 interface ProfileContentProps {
   profile: Profile;
   vouches?: ProfileVouchesData;
-  reactions?: ProfileReactionsData;
   similarProfiles?: SimilarProfile[];
   mutualGuilds?: string[];
   /** Show report button (when viewing others). False only when viewing own profile. */
@@ -148,7 +139,7 @@ interface ProfileContentProps {
   canSubmitReport?: boolean;
 }
 
-export default function ProfileContent({ profile, vouches, reactions, similarProfiles, mutualGuilds, canReport, canSubmitReport }: ProfileContentProps) {
+export default function ProfileContent({ profile, vouches, similarProfiles, mutualGuilds, canReport, canSubmitReport }: ProfileContentProps) {
   const themeClass = getThemeClass(profile.accentColor);
   const prompt = (profile.terminalPrompt?.trim() || "$").slice(0, 8);
   const cardClass =
@@ -403,14 +394,6 @@ export default function ProfileContent({ profile, vouches, reactions, similarPro
           </div>
           {profile.showAudioPlayer && profile.audioTracks && profile.audioTracks.length > 0 && (
             <ProfileAudioPlayer tracks={profile.audioTracks} visualizerStyle={profile.audioVisualizerStyle} visualizerAnimation={profile.audioVisualizerAnimation} />
-          )}
-          {reactions && (
-            <ProfileReactions
-              slug={reactions.slug}
-              reactions={reactions.reactions}
-              userReaction={reactions.userReaction}
-              canReact={reactions.canReact}
-            />
           )}
           {similarProfiles && similarProfiles.length > 0 && (
             <div className="mt-4 pt-3 border-t border-[var(--border)]/50">

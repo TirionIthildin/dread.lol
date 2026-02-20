@@ -38,7 +38,6 @@ export default async function MarketplaceTemplatePreviewPage({ params }: Props) 
       <ProfileContent
         profile={profile}
         vouches={{ slug: "preview", count: 0, vouchedBy: [], mutualVouchers: [], currentUserHasVouched: false, canVouch: false }}
-        reactions={{ slug: "preview", reactions: [], userReaction: null, canReact: false }}
         similarProfiles={[]}
         mutualGuilds={[]}
         canReport={false}

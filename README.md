@@ -40,6 +40,18 @@ Member profiles and Discord login need MongoDB, Valkey (Redis), and env config.
 
 4. Visit `/dashboard`, log in with Discord, and edit your profile. Your page is at `/{your-slug}`.
 
+## Wildcard subdomains (Cloudflare Worker)
+
+Profiles work at `username.dread.lol` when using a Cloudflare Worker to forward `*.dread.lol` to your origin.
+
+**Worker** forwards to `https://dread.lol` with:
+- `Host: dread.lol` (so your origin accepts the request)
+- `X-Forwarded-Host: <original host>` (e.g. `alice.dread.lol`)
+
+The app reads `X-Forwarded-Host` (or `Host`) and extracts the username: `alice.dread.lol` → `alice`.
+
+**Debug:** `https://username.dread.lol/api/debug/headers` shows incoming headers and extracted slug.
+
 ## Scripts
 
 - `npm run dev` — start dev server

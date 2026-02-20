@@ -50,7 +50,6 @@ try {
   await db.collection("profile_views").createIndex({ profileId: 1, viewedAt: -1 });
 
   await db.collection("vouches").createIndex({ profileId: 1, userId: 1 }, { unique: true });
-  await db.collection("profile_reactions").createIndex({ profileId: 1, userId: 1 }, { unique: true });
   await db.collection("vouches").createIndex({ profileId: 1, createdAt: -1 });
 
   await db.collection("gallery_items").createIndex({ profileId: 1, sortOrder: 1 });
