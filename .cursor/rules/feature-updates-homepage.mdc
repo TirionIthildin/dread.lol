@@ -1,0 +1,28 @@
+---
+description: Add big feature updates to the homepage recent updates list
+alwaysApply: true
+---
+
+# Feature Updates on Homepage
+
+When you complete a significant feature or ship a major update, add it to the recent updates shown on the homepage.
+
+## How
+
+Edit `lib/updates.ts` and add a new entry to the `FEATURE_UPDATES` array:
+
+```typescript
+{
+  date: "YYYY-MM",  // e.g. "2026-02"
+  title: "Feature name",
+  description: "One-line description of what users get.",
+},
+```
+
+Add new entries at the **top** of the array so the most recent updates appear first.
+
+## When
+
+- New user-facing features (e.g. marketplace, gallery, new page)
+- Major improvements to existing features
+- Not: minor bug fixes, refactors, or internal changes

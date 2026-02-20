@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FeatureUpdates from "@/app/components/FeatureUpdates";
 import HomePageContent from "@/app/components/HomePageContent";
 import LeaderboardWidget from "@/app/components/LeaderboardWidget";
 import SignInWidget from "@/app/components/SignInWidget";
@@ -30,19 +31,20 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="w-full max-w-6xl max-h-[calc(100vh-1.5rem)] overflow-auto flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10 px-4">
-      <div className="order-2 md:order-1 w-full md:w-auto shrink-0">
+    <div className="w-full min-w-0 max-w-6xl max-h-[calc(100vh-1.5rem)] overflow-auto flex flex-col lg:flex-row items-center justify-center gap-6 px-4">
+      <div className="order-2 lg:order-1 w-full lg:w-auto lg:min-w-0 lg:max-w-[240px] shrink-0 flex flex-col gap-6">
         <TerminalWindow title="user@dread:~ — sign in" className="animate-fade-in">
           <SignInWidget />
         </TerminalWindow>
-      </div>
-      <div className="order-1 md:order-2 flex-1 md:min-w-[28rem] min-w-0 flex flex-col items-center w-full md:max-w-2xl">
-        <HomePageContent />
-      </div>
-      <div className="order-3 w-full md:w-auto shrink-0">
         <TerminalWindow title="user@dread:~ — leaderboard" className="animate-fade-in">
           <LeaderboardWidget />
         </TerminalWindow>
+      </div>
+      <div className="order-1 lg:order-2 flex-1 min-w-0 flex flex-col items-center w-full lg:max-w-[28rem]">
+        <HomePageContent />
+      </div>
+      <div className="order-3 w-full lg:w-auto lg:min-w-0 lg:max-w-[320px] shrink-0">
+        <FeatureUpdates />
       </div>
     </div>
   );
