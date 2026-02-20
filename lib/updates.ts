@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "More profile fields",
+    description: "Add website, skills, languages, availability, current focus, and when you're usually online.",
+  },
+  {
+    date: "2026-02",
     title: "Profile Marketplace",
     description: "Browse and apply community templates to style your profile.",
   },

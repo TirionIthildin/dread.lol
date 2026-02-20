@@ -149,6 +149,7 @@ export async function updateProfileAction(
       pronouns: ((formData.get("pronouns") as string)?.trim() || undefined)?.slice(0, 40),
       location: ((formData.get("location") as string)?.trim() || undefined)?.slice(0, 80),
       timezone: ((formData.get("timezone") as string)?.trim() || undefined)?.slice(0, 64),
+      timezoneRange: ((formData.get("timezoneRange") as string)?.trim() || null)?.slice(0, 120) ?? null,
       birthday: (() => {
         const mm = (formData.get("birthdayMonth") as string)?.trim();
         const dd = (formData.get("birthdayDay") as string)?.trim();
@@ -158,6 +159,20 @@ export async function updateProfileAction(
         if (m < 1 || m > 12 || d < 1 || d > 31) return null;
         return `${mm}-${dd}`;
       })(),
+      websiteUrl: (() => {
+        const v = (formData.get("websiteUrl") as string)?.trim();
+        if (!v) return null;
+        return validateUrlOrEmpty(v) ?? null;
+      })(),
+      skills: (() => {
+        const raw = (formData.get("skills") as string)?.trim();
+        if (!raw) return null;
+        const arr = raw.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 20);
+        return arr.length > 0 ? arr : null;
+      })(),
+      languages: ((formData.get("languages") as string)?.trim() || null)?.slice(0, 80) ?? null,
+      availability: ((formData.get("availability") as string)?.trim() || null)?.slice(0, 60) ?? null,
+      currentFocus: ((formData.get("currentFocus") as string)?.trim() || null)?.slice(0, 120) ?? null,
       avatarShape: (formData.get("avatarShape") as string)?.trim() || undefined,
       layoutDensity: (formData.get("layoutDensity") as string)?.trim() || undefined,
       noindex: formData.get("noindex") === "on",

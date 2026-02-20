@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake, Eye } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 
 const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
@@ -317,7 +317,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                   easterEggLink={profile.easterEggLink}
                 />
               )}
-              {((profile.location?.trim() || profile.timezone?.trim() || profile.birthday?.trim()) && (
+              {((profile.location?.trim() || profile.timezone?.trim() || profile.timezoneRange?.trim() || profile.birthday?.trim() || profile.languages?.trim() || profile.availability?.trim()) && (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                   {profile.location?.trim() && (
                     <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5">
@@ -343,6 +343,12 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                       return null;
                     }
                   })()}
+                  {profile.timezoneRange?.trim() && (
+                    <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5" title="Typical availability">
+                      <Clock {...profileMetaIconProps} aria-hidden />
+                      {profile.timezoneRange.trim()}
+                    </p>
+                  )}
                   {profile.birthday?.trim() && (() => {
                     const countdown = getBirthdayCountdown(profile.birthday);
                     if (!countdown) return null;
@@ -353,8 +359,26 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                       </p>
                     );
                   })()}
+                  {profile.languages?.trim() && (
+                    <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5">
+                      <Translate {...profileMetaIconProps} aria-hidden />
+                      {profile.languages.trim()}
+                    </p>
+                  )}
+                  {profile.availability?.trim() && (
+                    <p className="text-xs text-[var(--accent)] inline-flex items-center gap-1.5">
+                      <Briefcase {...profileMetaIconProps} aria-hidden />
+                      {profile.availability.trim()}
+                    </p>
+                  )}
                 </div>
               )) || null}
+              {profile.currentFocus?.trim() && (
+                <p className="text-xs text-[var(--muted)] mt-1 inline-flex items-center gap-1.5">
+                  <Target {...profileMetaIconProps} aria-hidden />
+                  {profile.currentFocus.trim()}
+                </p>
+              )}
               {profile.discordPresence && (
                 <div className="mt-2.5">
                   <DiscordPresenceDisplay
@@ -383,8 +407,21 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
           {profile.tags && profile.tags.length > 0 && (
             <ProfileTags tags={profile.tags} />
           )}
+          {profile.skills && profile.skills.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {profile.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="inline-flex items-center rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-3 py-1.5 text-xs text-[var(--accent)] transition-all duration-200 hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
           {profile.quote && <ProfileQuote quote={profile.quote} />}
           <ProfileLinks
+            websiteUrl={profile.websiteUrl}
             discord={profile.discord}
             roblox={profile.roblox}
             links={profile.links}

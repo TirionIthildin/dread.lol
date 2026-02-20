@@ -59,8 +59,20 @@ export interface Profile {
   location?: string;
   /** IANA timezone (e.g. America/New_York) for local time display. */
   timezone?: string;
+  /** Human-readable availability window (e.g. "Usually 6pm–12am EST"). */
+  timezoneRange?: string;
   /** Birthday as MM-DD (month and day only). Shown as countdown to next birthday. */
   birthday?: string;
+  /** Primary portfolio/website URL, surfaced separately from generic links. */
+  websiteUrl?: string;
+  /** Structured skills/roles (e.g. Frontend, Design, 3D). */
+  skills?: string[];
+  /** Languages spoken (e.g. "EN, ES, FR"). */
+  languages?: string;
+  /** Availability/looking-for (e.g. Open to work, Open to collab, Just vibing). */
+  availability?: string;
+  /** Manual status (e.g. "Working on X") in addition to Discord presence. */
+  currentFocus?: string;
   /** Avatar shape: circle (default), rounded, square, soft, hexagon. */
   avatarShape?: string;
   /** Layout density: default, compact, spacious. */

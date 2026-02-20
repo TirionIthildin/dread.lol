@@ -643,6 +643,17 @@ export default function DashboardMyProfile({
               </select>
             </label>
             <label className="block text-xs font-medium text-[var(--muted)]">
+              When you&apos;re usually online <span className="text-[var(--muted)]/70">(e.g. Usually 6pm–12am EST)</span>
+              <input
+                type="text"
+                name="timezoneRange"
+                defaultValue={(profile as { timezoneRange?: string }).timezoneRange ?? ""}
+                placeholder="Optional"
+                maxLength={120}
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
               Birthday <span className="text-[var(--muted)]/70">(month & day only — shown as countdown on profile)</span>
               <div className="mt-1 flex gap-2">
                 <select
@@ -694,6 +705,53 @@ export default function DashboardMyProfile({
                 name="tags"
                 defaultValue={profile.tags?.join(", ") ?? ""}
                 placeholder="Vibe Coder, LOTR"
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Skills / roles <span className="text-[var(--muted)]/70">(comma-separated, e.g. Frontend, Design, 3D)</span>
+              <input
+                type="text"
+                name="skills"
+                defaultValue={(profile as { skills?: string[] }).skills?.join(", ") ?? ""}
+                placeholder="Frontend, Design, 3D"
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Languages <span className="text-[var(--muted)]/70">(e.g. EN, ES, FR)</span>
+              <input
+                type="text"
+                name="languages"
+                defaultValue={(profile as { languages?: string }).languages ?? ""}
+                placeholder="Optional"
+                maxLength={80}
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Availability
+              <select
+                name="availability"
+                defaultValue={(profile as { availability?: string }).availability ?? ""}
+                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              >
+                <option value="">None</option>
+                <option value="Open to work">Open to work</option>
+                <option value="Open to collab">Open to collab</option>
+                <option value="Just vibing">Just vibing</option>
+                <option value="Busy">Busy</option>
+                <option value="Away">Away</option>
+              </select>
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Current focus <span className="text-[var(--muted)]/70">(manual status, e.g. &quot;Working on X&quot;, &quot;Taking a break&quot;)</span>
+              <input
+                type="text"
+                name="currentFocus"
+                defaultValue={(profile as { currentFocus?: string }).currentFocus ?? ""}
+                placeholder="Optional"
+                maxLength={120}
                 className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
               />
             </label>
@@ -830,7 +888,17 @@ export default function DashboardMyProfile({
             </div>
 
             <div className={activeEditorSection === "links" ? "block space-y-3" : "hidden"}>
-              <p className="text-xs font-medium text-[var(--muted)] mb-1">Choose an icon and enter URL or username</p>
+              <label className="block text-xs font-medium text-[var(--muted)]">
+                Primary website / portfolio <span className="text-[var(--muted)]/70">(your main link — shown prominently)</span>
+                <input
+                  type="url"
+                  name="websiteUrl"
+                  defaultValue={(profile as { websiteUrl?: string }).websiteUrl ?? ""}
+                  placeholder="https://…"
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                />
+              </label>
+              <p className="text-xs font-medium text-[var(--muted)] pt-2">Additional links — choose an icon and enter URL or username</p>
               <div className="space-y-3">
                 {linkEntries.map((entry, index) => (
                   <div key={index} className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/60 p-2">

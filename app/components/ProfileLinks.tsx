@@ -66,18 +66,31 @@ function LinkIconForLabel({ label }: { label: string }) {
 }
 
 interface ProfileLinksProps {
+  websiteUrl?: string;
   discord?: string;
   roblox?: string;
   links?: { label: string; href: string }[];
 }
 
-export default function ProfileLinks({ discord, roblox, links }: ProfileLinksProps) {
-  const hasAny = discord || roblox || (links && links.length > 0);
+export default function ProfileLinks({ websiteUrl, discord, roblox, links }: ProfileLinksProps) {
+  const hasAny = websiteUrl || discord || roblox || (links && links.length > 0);
   if (!hasAny) return null;
   return (
     <div className="mt-4 pt-3 border-t border-[var(--border)]/50">
       <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--muted)]/80">Links</p>
       <div className="flex flex-wrap items-center gap-2">
+        {websiteUrl && (
+          <a
+            href={websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2.5 text-[var(--accent)] transition-all duration-200 hover:border-[var(--accent)] hover:bg-[var(--accent)]/20 hover:shadow-[0_0_14px_rgba(6,182,212,0.12)] active:scale-[0.98] active:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+            aria-label="Open portfolio (opens in new tab)"
+          >
+            <LinkIcon {...iconProps} />
+            <span className="text-xs font-medium">Portfolio</span>
+          </a>
+        )}
         {discord && (
           <CopyButton
             copyValue={discord}

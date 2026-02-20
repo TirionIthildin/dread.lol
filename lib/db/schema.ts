@@ -59,8 +59,20 @@ export interface ProfileDoc {
   pronouns?: string | null;
   location?: string | null;
   timezone?: string | null;
+  /** Human-readable availability window, e.g. "Usually 6pm–12am EST". */
+  timezoneRange?: string | null;
   birthday?: string | null;
   avatarShape?: string | null;
+  /** Primary portfolio/website URL, surfaced separately from generic links. */
+  websiteUrl?: string | null;
+  /** Structured skills/roles, e.g. ["Frontend", "Design", "3D"]. */
+  skills?: string[] | null;
+  /** Languages spoken, e.g. "EN, ES, FR". */
+  languages?: string | null;
+  /** Availability/looking-for, e.g. "Open to work", "Open to collab", "Just vibing". */
+  availability?: string | null;
+  /** Manual status, e.g. "Working on X", "Taking a break" (in addition to Discord presence). */
+  currentFocus?: string | null;
   layoutDensity?: string | null;
   noindex?: boolean;
   metaDescription?: string | null;

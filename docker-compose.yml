@@ -44,7 +44,9 @@ services:
     image: chrislusf/seaweedfs:latest
     container_name: dread-seaweed-master
     restart: unless-stopped
-    command: ["master", "-ip=seaweed-master", "-ip.bind=0.0.0.0", "-defaultReplication=000"]
+    command: ["master", "-ip=seaweed-master", "-ip.bind=0.0.0.0", "-defaultReplication=000", "-mdir=/data"]
+    volumes:
+      - seaweed_master_data:/data
     ports:
       - "9333:9333"
     healthcheck:
@@ -57,7 +59,9 @@ services:
     image: chrislusf/seaweedfs:latest
     container_name: dread-seaweed-volume
     restart: unless-stopped
-    command: ["volume", "-ip=seaweed-volume", "-master=seaweed-master:9333", "-ip.bind=0.0.0.0", "-port=8080"]
+    command: ["volume", "-ip=seaweed-volume", "-master=seaweed-master:9333", "-ip.bind=0.0.0.0", "-port=8080", "-dir=/data"]
+    volumes:
+      - seaweed_volume_data:/data
     depends_on:
       seaweed-master: { condition: service_healthy }
     ports:
@@ -66,3 +70,5 @@ services:
 volumes:
   mongodb_data:
   valkey_data:
+  seaweed_master_data:
+  seaweed_volume_data:

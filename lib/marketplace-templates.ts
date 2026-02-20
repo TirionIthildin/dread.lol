@@ -35,7 +35,13 @@ export interface TemplateData {
   pronouns?: string | null;
   location?: string | null;
   timezone?: string | null;
+  timezoneRange?: string | null;
   birthday?: string | null;
+  websiteUrl?: string | null;
+  skills?: string[] | null;
+  languages?: string | null;
+  availability?: string | null;
+  currentFocus?: string | null;
   avatarShape?: string | null;
   layoutDensity?: string | null;
   customFont?: string | null;
@@ -108,7 +114,13 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     pronouns: profile.pronouns ?? null,
     location: profile.location ?? null,
     timezone: profile.timezone ?? null,
+    timezoneRange: profile.timezoneRange ?? null,
     birthday: profile.birthday ?? null,
+    websiteUrl: profile.websiteUrl ?? null,
+    skills: profile.skills ?? null,
+    languages: profile.languages ?? null,
+    availability: profile.availability ?? null,
+    currentFocus: profile.currentFocus ?? null,
     avatarShape: profile.avatarShape ?? null,
     layoutDensity: profile.layoutDensity ?? null,
     customFont: profile.customFont ?? null,
@@ -509,7 +521,13 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.pronouns !== undefined) update.pronouns = data.pronouns;
   if (data.location !== undefined) update.location = data.location;
   if (data.timezone !== undefined) update.timezone = data.timezone;
+  if (data.timezoneRange !== undefined) update.timezoneRange = data.timezoneRange;
   if (data.birthday !== undefined) update.birthday = data.birthday;
+  if (data.websiteUrl !== undefined) update.websiteUrl = data.websiteUrl;
+  if (data.skills !== undefined) update.skills = data.skills;
+  if (data.languages !== undefined) update.languages = data.languages;
+  if (data.availability !== undefined) update.availability = data.availability;
+  if (data.currentFocus !== undefined) update.currentFocus = data.currentFocus;
   if (data.avatarShape !== undefined) update.avatarShape = data.avatarShape;
   if (data.layoutDensity !== undefined) update.layoutDensity = data.layoutDensity;
   if (data.customFont !== undefined) update.customFont = data.customFont;
@@ -607,7 +625,13 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     pronouns: d.pronouns ?? undefined,
     location: d.location ?? undefined,
     timezone: d.timezone ?? undefined,
+    timezoneRange: d.timezoneRange ?? undefined,
     birthday: d.birthday ?? undefined,
+    websiteUrl: d.websiteUrl ?? undefined,
+    skills: d.skills ?? undefined,
+    languages: d.languages ?? undefined,
+    availability: d.availability ?? undefined,
+    currentFocus: d.currentFocus ?? undefined,
     avatarShape: d.avatarShape ?? undefined,
     layoutDensity: d.layoutDensity ?? undefined,
     customFont: d.customFont ?? undefined,

@@ -38,6 +38,9 @@ services:
       - '-ip=seaweed-master'
       - '-ip.bind=0.0.0.0'
       - '-defaultReplication=000'
+      - '-mdir=/data'
+    volumes:
+      - 'seaweed_master_data:/data'
     healthcheck:
       test:
         - CMD-SHELL
@@ -54,6 +57,9 @@ services:
       - '-master=seaweed-master:9333'
       - '-ip.bind=0.0.0.0'
       - '-port=8080'
+      - '-dir=/data'
+    volumes:
+      - 'seaweed_volume_data:/data'
     depends_on:
       seaweed-master:
         condition: service_healthy
@@ -108,3 +114,5 @@ services:
 volumes:
   mongodb_data: null
   valkey_data: null
+  seaweed_master_data: null
+  seaweed_volume_data: null

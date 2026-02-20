@@ -1,9 +1,11 @@
 import { headers } from "next/headers";
 import { getBaseDomain as getSiteBaseDomain } from "@/lib/site";
 
-/** Get client IP from request headers (proxies set x-forwarded-for or x-real-ip). */
+/** Get client IP from request headers. Prefers cf-connecting-ip (Cloudflare), then x-forwarded-for, then x-real-ip. */
 export async function getClientIp(): Promise<string> {
   const h = await headers();
+  const cf = h.get("cf-connecting-ip");
+  if (cf) return cf.trim();
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]?.trim() ?? "0.0.0.0";
   const real = h.get("x-real-ip");
