@@ -21,7 +21,7 @@
   --foreground: var(--text);
   --border-strong: var(--border-bright);
   --surface-hover: #111318;
-  --accent-muted: rgba(6, 182, 212, 0.15);
+  --accent-muted: color-mix(in srgb, var(--accent) 15%, transparent);
   --radius-sm: 4px;
   --radius-lg: 10px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
@@ -90,7 +90,7 @@
   }
 
   ::selection {
-    background: rgba(6, 182, 212, 0.25);
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
     color: var(--text);
   }
 
@@ -240,6 +240,12 @@
   .terminal-cmd {
     color: var(--accent);
   }
+  .text-shadow-accent {
+    text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  .shadow-accent-soft {
+    box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
   .terminal-cursor {
     display: inline-block;
     width: 0.6em;
@@ -309,7 +315,7 @@
   /* Profile ASCII banner gradient options */
   .banner-style-accent {
     color: var(--accent);
-    text-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+    text-shadow: 0 0 20px color-mix(in srgb, var(--accent) 15%, transparent);
   }
   .banner-style-fire {
     background: linear-gradient(90deg, #fef08a, #fde047, #fbbf24, #f97316, #ea580c, #dc2626, #f97316, #fbbf24, #fef08a);
@@ -359,9 +365,122 @@
     background-clip: text;
     color: transparent;
   }
+  .banner-style-amber {
+    background: linear-gradient(90deg, #fef3c7, #fde68a, #fcd34d, #f59e0b, #d97706, #f59e0b, #fde68a);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-blue {
+    background: linear-gradient(90deg, #bfdbfe, #93c5fd, #60a5fa, #3b82f6, #2563eb, #60a5fa, #93c5fd);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-indigo {
+    background: linear-gradient(90deg, #e0e7ff, #c7d2fe, #a5b4fc, #6366f1, #4f46e5, #818cf8, #c7d2fe);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-teal {
+    background: linear-gradient(90deg, #99f6e4, #5eead4, #2dd4bf, #14b8a6, #0d9488, #2dd4bf, #5eead4);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .banner-style-sky {
+    background: linear-gradient(90deg, #bae6fd, #7dd3fc, #38bdf8, #0ea5e9, #0284c7, #38bdf8, #7dd3fc);
+    background-size: 200% 100%;
+    animation: fire-gradient 5s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 
   .donut-glow {
-    box-shadow: 0 0 30px rgba(6, 182, 212, 0.15), inset 0 0 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 15%, transparent), inset 0 0 60px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Profile built-in backgrounds (grid, gradient, dither) */
+  .profile-bg-grid {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgba(26, 31, 38, 0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26, 31, 38, 0.4) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .profile-bg-gradient {
+    background: radial-gradient(circle at 20% 50%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--terminal) 25%, transparent) 0%, transparent 50%),
+      radial-gradient(circle at 40% 20%, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 50%),
+      var(--bg);
+    animation: profile-gradient-shift 20s ease-in-out infinite;
+  }
+  @keyframes profile-gradient-shift {
+    0%, 100% {
+      background: radial-gradient(circle at 20% 50%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--terminal) 25%, transparent) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 50%),
+        var(--bg);
+    }
+    33% {
+      background: radial-gradient(circle at 25% 45%, color-mix(in srgb, var(--accent) 35%, transparent) 0%, transparent 50%),
+        radial-gradient(circle at 75% 85%, color-mix(in srgb, var(--terminal) 30%, transparent) 0%, transparent 50%),
+        radial-gradient(circle at 45% 25%, color-mix(in srgb, var(--accent) 25%, transparent) 0%, transparent 50%),
+        var(--bg);
+    }
+    66% {
+      background: radial-gradient(circle at 15% 55%, color-mix(in srgb, var(--accent) 35%, transparent) 0%, transparent 50%),
+        radial-gradient(circle at 85% 75%, color-mix(in srgb, var(--terminal) 30%, transparent) 0%, transparent 50%),
+        radial-gradient(circle at 35% 15%, color-mix(in srgb, var(--accent) 25%, transparent) 0%, transparent 50%),
+        var(--bg);
+    }
+  }
+  .profile-bg-dither {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgba(26, 31, 38, 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26, 31, 38, 0.5) 1px, transparent 1px);
+    background-size: 24px 24px;
+    animation: profile-ocean-flow 15s ease-in-out infinite;
+    will-change: background-position;
+  }
+  @keyframes profile-ocean-flow {
+    0% { background-position: 0px 0px; }
+    20% { background-position: 18px -25px; }
+    40% { background-position: -15px 22px; }
+    60% { background-position: 25px 12px; }
+    80% { background-position: -20px -18px; }
+    100% { background-position: 0px 0px; }
+  }
+  .profile-bg-dither::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 60%);
+    animation: profile-ocean-overlay 10s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes profile-ocean-overlay {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.02); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .profile-bg-gradient,
+    .profile-bg-dither,
+    .profile-bg-dither::after {
+      animation: none !important;
+    }
   }
 
   /* Profile fun customization: accent theme (member profiles) */
@@ -370,6 +489,11 @@
   .profile-theme-purple { --accent: #a855f7; --terminal: #c084fc; }
   .profile-theme-orange { --accent: #f97316; --terminal: #fb923c; }
   .profile-theme-rose { --accent: #f43f5e; --terminal: #fb7185; }
+  .profile-theme-amber { --accent: #f59e0b; --terminal: #fbbf24; }
+  .profile-theme-blue { --accent: #3b82f6; --terminal: #60a5fa; }
+  .profile-theme-indigo { --accent: #6366f1; --terminal: #818cf8; }
+  .profile-theme-teal { --accent: #14b8a6; --terminal: #2dd4bf; }
+  .profile-theme-sky { --accent: #0ea5e9; --terminal: #38bdf8; }
 
   .profile-card-sharp {
     border-radius: 4px;
@@ -380,6 +504,20 @@
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   }
+  .profile-card-neon {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  .profile-card-minimal {
+    border-width: 1px;
+    border-color: var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  .profile-card-elevated {
+    box-shadow: 0 16px 48px -16px rgba(0, 0, 0, 0.5),
+      0 0 0 1px var(--border);
+  }
 
   .profile-density-compact .profile-content-inner {
     padding: 0.5rem 0.75rem;
@@ -388,6 +526,9 @@
   }
   .profile-density-compact .profile-content-inner .profile-name-block h1 { font-size: 1rem; }
   .profile-density-compact .profile-content-inner .profile-avatar { width: 2.5rem; height: 2.5rem; }
+  .profile-avatar-hexagon {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
 
   .profile-density-spacious .profile-content-inner {
     padding: 1rem 1.5rem;
@@ -622,6 +763,26 @@
     .animate-dashboard-panel {
       animation: fadeIn 0.2s ease-out both;
     }
+  }
+}
+
+/* Sidebar nav item stagger */
+@keyframes sidebar-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.sidebar-item {
+  animation: sidebar-item-in 0.3s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-item {
+    animation: none;
   }
 }
 

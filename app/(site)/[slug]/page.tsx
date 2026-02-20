@@ -22,6 +22,8 @@ import {
 import { getDiscordPresence } from "@/lib/discord-presence";
 import { getDiscordLastSeen } from "@/lib/discord-lastseen";
 import { getSession } from "@/lib/auth/session";
+import { getOrCreateUser } from "@/lib/member-profiles";
+import ProfileAdminToolbar from "@/app/components/ProfileAdminToolbar";
 import { getClientIp, getUserAgent } from "@/lib/request";
 import { SITE_NAME, SITE_URL, SITE_OG_IMAGE } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
@@ -88,7 +90,7 @@ export default async function ProfilePage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
   const showPageViews = memberRow.showPageViews ?? true;
-  const [ip, userAgent, badgeFlags, customBadges, discordBadgeData, vouchesData, session, discordPresence, discordLastSeen, viewCount] = await Promise.all([
+  const [ip, userAgent, badgeFlags, customBadges, discordBadgeData, vouchesData, session, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getUserBadges(memberRow.userId),
@@ -96,6 +98,10 @@ export default async function ProfilePage({ params }: Props) {
     getUserDiscordBadgeData(memberRow.userId),
     getVouchesForProfile(memberRow.id),
     getSession(),
+    (async () => {
+      const s = await getSession();
+      return s ? getOrCreateUser(s) : null;
+    })(),
     getDiscordPresence(memberRow.userId),
     getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
@@ -144,9 +150,14 @@ export default async function ProfilePage({ params }: Props) {
   };
   const canReact = session != null && session.sub !== memberRow.userId;
   const needsCursorEffect = profile.cursorStyle === "glow" || profile.cursorStyle === "trail";
+  const isAdmin = (currentUser as { isAdmin?: boolean } | null)?.isAdmin ?? false;
+  const showAdminToolbar = isAdmin && session?.sub !== memberRow.userId;
   const content = (
     <>
       <ProfileJsonLd profile={profile} />
+      {showAdminToolbar && (
+        <ProfileAdminToolbar isAdmin={isAdmin} profileOwnerUserId={memberRow.userId} />
+      )}
       <ProfileContent
         profile={profile}
         vouches={vouches}

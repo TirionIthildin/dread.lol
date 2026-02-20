@@ -1,0 +1,657 @@
+/**
+ * Community-submitted profile templates. Stored in MongoDB profile_templates.
+ */
+import { ObjectId } from "mongodb";
+import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
+import type { ProfileRow } from "@/lib/db/schema";
+import { validateBackgroundUrl } from "@/lib/validate-url";
+
+/** Template data: profile fields to apply. Media URLs may be /api/files/xxx or external. */
+export interface TemplateData {
+  tagline?: string | null;
+  description?: string | null;
+  banner?: string | null;
+  discord?: string | null;
+  roblox?: string | null;
+  links?: string | null;
+  quote?: string | null;
+  tags?: string[] | null;
+  bannerSmall?: boolean;
+  bannerAnimatedFire?: boolean;
+  bannerStyle?: string | null;
+  useTerminalLayout?: boolean;
+  terminalTitle?: string | null;
+  terminalCommands?: string | null;
+  easterEgg?: boolean;
+  easterEggTaglineWord?: string | null;
+  easterEggLinkTrigger?: string | null;
+  easterEggLinkUrl?: string | null;
+  easterEggLinkPopupUrl?: string | null;
+  accentColor?: string | null;
+  terminalPrompt?: string | null;
+  nameGreeting?: string | null;
+  cardStyle?: string | null;
+  cardOpacity?: number | null;
+  pronouns?: string | null;
+  location?: string | null;
+  timezone?: string | null;
+  birthday?: string | null;
+  avatarShape?: string | null;
+  layoutDensity?: string | null;
+  customFont?: string | null;
+  customFontUrl?: string | null;
+  cursorStyle?: string | null;
+  cursorImageUrl?: string | null;
+  animationPreset?: string | null;
+  backgroundType?: string | null;
+  backgroundUrl?: string | null;
+  backgroundAudioUrl?: string | null;
+  ogImageUrl?: string | null;
+  /** Gallery items: imageUrl, title?, description? */
+  gallery?: { imageUrl: string; title?: string; description?: string }[] | null;
+  /** Audio tracks: url, title? */
+  audioTracks?: { url: string; title?: string }[] | null;
+  showAudioPlayer?: boolean;
+}
+
+export interface TemplateDoc {
+  _id: ObjectId;
+  creatorId: string;
+  name: string;
+  description?: string | null;
+  previewUrl?: string | null;
+  data: TemplateData;
+  applyCount: number;
+  status: "draft" | "published" | "unpublished";
+  featured?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type TemplateRow = Omit<TemplateDoc, "_id"> & { id: string };
+
+function toTemplateRow(doc: TemplateDoc): TemplateRow {
+  const { _id, ...rest } = doc;
+  return { ...rest, id: _id.toString() };
+}
+
+/** Extract profile fields for template from ProfileRow. Omits slug, name, avatar (user identity). */
+export function profileToTemplateData(profile: ProfileRow): TemplateData {
+  const links = profile.links ?? null;
+  const terminalCommands = profile.terminalCommands ?? null;
+  const tags = profile.tags ?? null;
+  return {
+    tagline: profile.tagline ?? null,
+    description: profile.description ?? null,
+    banner: profile.banner ?? null,
+    discord: profile.discord ?? null,
+    roblox: profile.roblox ?? null,
+    links,
+    quote: profile.quote ?? null,
+    tags,
+    bannerSmall: profile.bannerSmall ?? false,
+    bannerAnimatedFire: profile.bannerAnimatedFire ?? false,
+    bannerStyle: profile.bannerStyle ?? null,
+    useTerminalLayout: profile.useTerminalLayout ?? false,
+    terminalTitle: profile.terminalTitle ?? null,
+    terminalCommands,
+    easterEgg: profile.easterEgg ?? false,
+    easterEggTaglineWord: profile.easterEggTaglineWord ?? null,
+    easterEggLinkTrigger: profile.easterEggLinkTrigger ?? null,
+    easterEggLinkUrl: profile.easterEggLinkUrl ?? null,
+    easterEggLinkPopupUrl: profile.easterEggLinkPopupUrl ?? null,
+    accentColor: profile.accentColor ?? null,
+    terminalPrompt: profile.terminalPrompt ?? null,
+    nameGreeting: profile.nameGreeting ?? null,
+    cardStyle: profile.cardStyle ?? null,
+    cardOpacity: profile.cardOpacity ?? null,
+    pronouns: profile.pronouns ?? null,
+    location: profile.location ?? null,
+    timezone: profile.timezone ?? null,
+    birthday: profile.birthday ?? null,
+    avatarShape: profile.avatarShape ?? null,
+    layoutDensity: profile.layoutDensity ?? null,
+    customFont: profile.customFont ?? null,
+    customFontUrl: profile.customFontUrl ?? null,
+    cursorStyle: profile.cursorStyle ?? null,
+    cursorImageUrl: profile.cursorImageUrl ?? null,
+    animationPreset: profile.animationPreset ?? null,
+    backgroundType: profile.backgroundType ?? null,
+    backgroundUrl: profile.backgroundUrl ?? null,
+    backgroundAudioUrl: profile.backgroundAudioUrl ?? null,
+    ogImageUrl: profile.ogImageUrl ?? null,
+    showAudioPlayer: profile.showAudioPlayer ?? false,
+    gallery: null, // Populate from gallery_items when creating from profile
+    audioTracks: profile.audioTracks ? parseAudioTracks(profile.audioTracks) : null,
+  };
+}
+
+function parseAudioTracks(raw: string | null | undefined): { url: string; title?: string }[] | null {
+  if (!raw?.trim()) return null;
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return null;
+    return arr
+      .filter(
+        (x): x is { url: string; title?: string } =>
+          x && typeof x === "object" && typeof (x as { url?: unknown }).url === "string"
+      )
+      .map((x) => ({
+        url: (x as { url: string }).url.trim(),
+        title: (x as { title?: string }).title?.trim(),
+      }))
+      .filter((x) => x.url.length > 0);
+  } catch {
+    return null;
+  }
+}
+
+/** Build template data from profile + optional gallery override. */
+export async function buildTemplateDataFromProfile(
+  profileId: string,
+  profile: ProfileRow,
+  galleryOverride?: { imageUrl: string; title?: string; description?: string }[]
+): Promise<TemplateData> {
+  const base = profileToTemplateData(profile);
+  if (galleryOverride) {
+    base.gallery = galleryOverride;
+    return base;
+  }
+  const { getGalleryForProfile } = await import("@/lib/member-profiles");
+  const gallery = await getGalleryForProfile(profileId);
+  if (gallery.length > 0) {
+    base.gallery = gallery.map((g) => ({
+      imageUrl: g.imageUrl,
+      title: g.title ?? undefined,
+      description: g.description ?? undefined,
+    }));
+  }
+  return base;
+}
+
+/** List published templates with optional sort and search. */
+export async function listPublishedTemplates(options?: {
+  limit?: number;
+  skip?: number;
+  sort?: "applied" | "recent";
+  q?: string;
+}): Promise<{
+  items: (TemplateRow & { creatorSlug?: string | null })[];
+  featured: (TemplateRow & { creatorSlug?: string | null })[];
+  total: number;
+}> {
+  const limit = Math.min(50, Math.max(1, options?.limit ?? 20));
+  const skip = Math.max(0, options?.skip ?? 0);
+  const sort = options?.sort === "recent" ? "recent" : "applied";
+  const q = typeof options?.q === "string" ? options.q.trim().toLowerCase().slice(0, 200) : undefined;
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const coll = db.collection<TemplateDoc>(COLLECTIONS.profileTemplates);
+
+  const filter: Record<string, unknown> = { status: "published" as const };
+  if (q && q.length > 0) {
+    filter.$or = [
+      { name: { $regex: escapeRegex(q), $options: "i" } },
+      { description: { $regex: escapeRegex(q), $options: "i" } },
+    ];
+  }
+
+  const sortObj = sort === "recent" ? { createdAt: -1, applyCount: -1 } : { applyCount: -1, createdAt: -1 };
+
+  // Fetch featured separately for the "Featured" section
+  const featuredFilter = { ...filter, featured: true };
+  const [featuredItems, allItems, total] = await Promise.all([
+    coll.find(featuredFilter).sort(sortObj).limit(6).toArray(),
+    coll.find(filter).sort(sortObj).skip(skip).limit(limit).toArray(),
+    coll.countDocuments(filter),
+  ]);
+
+  const items = allItems;
+  const rows = items.map(toTemplateRow);
+  const featuredRows = featuredItems.map(toTemplateRow);
+  const creatorIds = [...new Set([...items, ...featuredItems].map((i) => i.creatorId))];
+  const { getProfileSlugsByUserIds } = await import("@/lib/member-profiles");
+  const slugMap = await getProfileSlugsByUserIds(creatorIds);
+
+  const rowsWithCreator = rows.map((r) => ({
+    ...r,
+    creatorSlug: slugMap.get(r.creatorId) ?? null,
+  }));
+  const featuredWithCreator = featuredRows.map((r) => ({
+    ...r,
+    creatorSlug: slugMap.get(r.creatorId) ?? null,
+  }));
+
+  return { items: rowsWithCreator, featured: featuredWithCreator, total };
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Get a single template by ID. Includes creatorSlug if resolvable. */
+export async function getTemplateById(id: string): Promise<(TemplateRow & { creatorSlug?: string | null }) | null> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return null;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const doc = await client
+    .db(dbName)
+    .collection<TemplateDoc>(COLLECTIONS.profileTemplates)
+    .findOne({ _id: oid });
+  if (!doc) return null;
+  const row = toTemplateRow(doc);
+  const { getProfileSlugsByUserIds } = await import("@/lib/member-profiles");
+  const slugMap = await getProfileSlugsByUserIds([doc.creatorId]);
+  return { ...row, creatorSlug: slugMap.get(doc.creatorId) ?? null };
+}
+
+/** List all templates for admin (all statuses, all creators). */
+export async function listAllTemplatesForAdmin(): Promise<TemplateRow[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const docs = await client
+    .db(dbName)
+    .collection<TemplateDoc>(COLLECTIONS.profileTemplates)
+    .find()
+    .sort({ updatedAt: -1 })
+    .toArray();
+  return docs.map(toTemplateRow);
+}
+
+/** Get templates created by a user (all statuses). */
+export async function getTemplatesByCreator(creatorId: string): Promise<TemplateRow[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const docs = await client
+    .db(dbName)
+    .collection<TemplateDoc>(COLLECTIONS.profileTemplates)
+    .find({ creatorId })
+    .sort({ updatedAt: -1 })
+    .toArray();
+  return docs.map(toTemplateRow);
+}
+
+/** Create a new template (draft). */
+export async function createTemplate(
+  creatorId: string,
+  data: { name: string; description?: string; previewUrl?: string; data: TemplateData }
+): Promise<{ id: string } | { error: string }> {
+  const name = data.name?.trim().slice(0, 100);
+  if (!name) return { error: "Name is required" };
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const now = new Date();
+  const doc: Omit<TemplateDoc, "_id"> & { _id: ObjectId } = {
+    _id: new ObjectId(),
+    creatorId,
+    name,
+    description: data.description?.trim().slice(0, 500) ?? null,
+    previewUrl: validateBackgroundUrl(data.previewUrl?.trim()) ?? null,
+    data: data.data ?? {},
+    applyCount: 0,
+    status: "draft",
+    featured: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await client.db(dbName).collection(COLLECTIONS.profileTemplates).insertOne(doc);
+  return { id: doc._id.toString() };
+}
+
+/** Update a template. Creator only. */
+export async function updateTemplate(
+  id: string,
+  creatorId: string,
+  updates: { name?: string; description?: string; previewUrl?: string; data?: TemplateData }
+): Promise<boolean> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return false;
+  }
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (updates.name !== undefined) set.name = updates.name.trim().slice(0, 100);
+  if (updates.description !== undefined) set.description = updates.description?.trim().slice(0, 500) ?? null;
+  if (updates.previewUrl !== undefined) set.previewUrl = validateBackgroundUrl(updates.previewUrl?.trim()) ?? null;
+  if (updates.data !== undefined) set.data = updates.data;
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .updateOne({ _id: oid, creatorId }, { $set: set });
+  return result.matchedCount > 0;
+}
+
+/** Set template status to published. Creator only. */
+export async function publishTemplate(id: string, creatorId: string): Promise<boolean> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return false;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .updateOne({ _id: oid, creatorId }, { $set: { status: "published", updatedAt: new Date() } });
+  return result.matchedCount > 0;
+}
+
+/** Set template status to unpublished. Creator only. */
+export async function unpublishTemplate(id: string, creatorId: string): Promise<boolean> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return false;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .updateOne({ _id: oid, creatorId }, { $set: { status: "unpublished", updatedAt: new Date() } });
+  return result.matchedCount > 0;
+}
+
+/** Set template featured flag. Admin only. */
+export async function setTemplateFeatured(id: string, featured: boolean): Promise<boolean> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return false;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .updateOne({ _id: oid }, { $set: { featured, updatedAt: new Date() } });
+  return result.matchedCount > 0;
+}
+
+/** Unpublish template. Admin only (can unpublish any template). */
+export async function adminUnpublishTemplate(id: string): Promise<boolean> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return false;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .updateOne({ _id: oid }, { $set: { status: "unpublished", updatedAt: new Date() } });
+  return result.matchedCount > 0;
+}
+
+/** Delete a template. Creator only. */
+export async function deleteTemplate(id: string, creatorId: string): Promise<boolean> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return false;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .deleteOne({ _id: oid, creatorId });
+  return result.deletedCount > 0;
+}
+
+/** Increment applyCount and return updated template. */
+export async function incrementTemplateApplyCount(id: string): Promise<void> {
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileTemplates)
+    .updateOne({ _id: oid }, { $inc: { applyCount: 1 } });
+}
+
+/** Copy-on-apply: replace /api/files/ URLs in template data with new copies. */
+async function copyTemplateMediaUrls(data: TemplateData): Promise<TemplateData> {
+  const { copyFile } = await import("@/lib/seaweed");
+
+  const copyIfInternal = async (url: string | null | undefined): Promise<string | null | undefined> => {
+    if (!url?.trim()) return url;
+    if (url.startsWith("/api/files/")) {
+      const newPath = await copyFile(url);
+      return newPath ?? url;
+    }
+    return url;
+  };
+
+  const out: TemplateData = { ...data };
+
+  out.backgroundUrl = (await copyIfInternal(data.backgroundUrl)) ?? undefined;
+  out.backgroundAudioUrl = (await copyIfInternal(data.backgroundAudioUrl)) ?? undefined;
+  out.ogImageUrl = (await copyIfInternal(data.ogImageUrl)) ?? undefined;
+  out.cursorImageUrl = (await copyIfInternal(data.cursorImageUrl)) ?? undefined;
+  out.customFontUrl = (await copyIfInternal(data.customFontUrl)) ?? undefined;
+
+  if (data.gallery?.length) {
+    out.gallery = await Promise.all(
+      data.gallery.map(async (g) => ({
+        ...g,
+        imageUrl: (await copyIfInternal(g.imageUrl)) ?? g.imageUrl,
+      }))
+    );
+  }
+
+  if (data.audioTracks?.length) {
+    out.audioTracks = await Promise.all(
+      data.audioTracks.map(async (t) => ({
+        ...t,
+        url: (await copyIfInternal(t.url)) ?? t.url,
+      }))
+    );
+  }
+
+  return out;
+}
+
+/** Convert TemplateData to profile update record for updateMemberProfile. */
+function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown> {
+  const update: Record<string, unknown> = {};
+  if (data.tagline !== undefined) update.tagline = data.tagline;
+  if (data.description !== undefined) update.description = data.description;
+  if (data.banner !== undefined) update.banner = data.banner;
+  if (data.discord !== undefined) update.discord = data.discord;
+  if (data.roblox !== undefined) update.roblox = data.roblox;
+  if (data.links !== undefined) update.links = typeof data.links === "string" ? data.links : (data.links ? JSON.stringify(data.links) : null);
+  if (data.quote !== undefined) update.quote = data.quote;
+  if (data.tags !== undefined) update.tags = data.tags;
+  if (data.bannerSmall !== undefined) update.bannerSmall = data.bannerSmall;
+  if (data.bannerAnimatedFire !== undefined) update.bannerAnimatedFire = data.bannerAnimatedFire;
+  if (data.bannerStyle !== undefined) update.bannerStyle = data.bannerStyle;
+  if (data.useTerminalLayout !== undefined) update.useTerminalLayout = data.useTerminalLayout;
+  if (data.terminalTitle !== undefined) update.terminalTitle = data.terminalTitle;
+  if (data.terminalCommands !== undefined) update.terminalCommands = data.terminalCommands;
+  if (data.easterEgg !== undefined) update.easterEgg = data.easterEgg;
+  if (data.easterEggTaglineWord !== undefined) update.easterEggTaglineWord = data.easterEggTaglineWord;
+  if (data.easterEggLinkTrigger !== undefined) update.easterEggLinkTrigger = data.easterEggLinkTrigger;
+  if (data.easterEggLinkUrl !== undefined) update.easterEggLinkUrl = data.easterEggLinkUrl;
+  if (data.easterEggLinkPopupUrl !== undefined) update.easterEggLinkPopupUrl = data.easterEggLinkPopupUrl;
+  if (data.accentColor !== undefined) update.accentColor = data.accentColor;
+  if (data.terminalPrompt !== undefined) update.terminalPrompt = data.terminalPrompt;
+  if (data.nameGreeting !== undefined) update.nameGreeting = data.nameGreeting;
+  if (data.cardStyle !== undefined) update.cardStyle = data.cardStyle;
+  if (data.cardOpacity !== undefined) update.cardOpacity = data.cardOpacity;
+  if (data.pronouns !== undefined) update.pronouns = data.pronouns;
+  if (data.location !== undefined) update.location = data.location;
+  if (data.timezone !== undefined) update.timezone = data.timezone;
+  if (data.birthday !== undefined) update.birthday = data.birthday;
+  if (data.avatarShape !== undefined) update.avatarShape = data.avatarShape;
+  if (data.layoutDensity !== undefined) update.layoutDensity = data.layoutDensity;
+  if (data.customFont !== undefined) update.customFont = data.customFont;
+  if (data.customFontUrl !== undefined) update.customFontUrl = data.customFontUrl;
+  if (data.cursorStyle !== undefined) update.cursorStyle = data.cursorStyle;
+  if (data.cursorImageUrl !== undefined) update.cursorImageUrl = data.cursorImageUrl;
+  if (data.animationPreset !== undefined) update.animationPreset = data.animationPreset;
+  if (data.backgroundType !== undefined) update.backgroundType = data.backgroundType;
+  if (data.backgroundUrl !== undefined) update.backgroundUrl = data.backgroundUrl;
+  if (data.backgroundAudioUrl !== undefined) update.backgroundAudioUrl = data.backgroundAudioUrl;
+  if (data.ogImageUrl !== undefined) update.ogImageUrl = data.ogImageUrl;
+  if (data.showAudioPlayer !== undefined) update.showAudioPlayer = data.showAudioPlayer;
+  if (data.audioTracks !== undefined) {
+    update.audioTracks = data.audioTracks && data.audioTracks.length > 0 ? JSON.stringify(data.audioTracks) : null;
+  }
+  return update;
+}
+
+function parseTerminalCommandsForProfile(raw: string | null | undefined): { command: string; output: string }[] | undefined {
+  if (!raw?.trim()) return undefined;
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return undefined;
+    return arr.filter(
+      (x): x is { command: string; output: string } =>
+        x && typeof x === "object" && typeof (x as { command?: string }).command === "string" && typeof (x as { output?: string }).output === "string"
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+/** Build a Profile from template data for preview rendering. */
+export function templateToProfile(template: TemplateRow): import("@/lib/profiles").Profile {
+  const d = template.data;
+  const links = d.links
+    ? typeof d.links === "string"
+      ? (() => {
+          try {
+            const arr = JSON.parse(d.links) as unknown;
+            return Array.isArray(arr)
+              ? arr.filter(
+                  (x): x is { label: string; href: string } =>
+                    x && typeof x === "object" && typeof (x as { label?: string }).label === "string" && typeof (x as { href?: string }).href === "string"
+                )
+              : undefined;
+          } catch {
+            return undefined;
+          }
+        })()
+      : d.links
+    : undefined;
+  const easterEggLink =
+    d.easterEggLinkTrigger && d.easterEggLinkUrl
+      ? {
+          triggerWord: d.easterEggLinkTrigger,
+          url: d.easterEggLinkUrl,
+          popupUrl: d.easterEggLinkPopupUrl ?? undefined,
+        }
+      : undefined;
+  const gallery = d.gallery?.map((g, i) => ({
+    id: `preview-${i}`,
+    imageUrl: g.imageUrl,
+    title: g.title,
+    description: g.description,
+    sortOrder: i,
+  }));
+  return {
+    slug: "preview",
+    name: template.name,
+    tagline: d.tagline ?? undefined,
+    description: d.description ?? "",
+    banner: d.banner ?? undefined,
+    discord: d.discord ?? undefined,
+    roblox: d.roblox ?? undefined,
+    links,
+    quote: d.quote ?? undefined,
+    tags: d.tags ?? undefined,
+    bannerSmall: d.bannerSmall ?? false,
+    bannerAnimatedFire: d.bannerAnimatedFire ?? false,
+    bannerStyle: d.bannerStyle ?? undefined,
+    useTerminalLayout: d.useTerminalLayout ?? false,
+    terminalTitle: d.terminalTitle ?? undefined,
+    terminalCommands: parseTerminalCommandsForProfile(
+      typeof d.terminalCommands === "string" ? d.terminalCommands : undefined
+    ),
+    easterEgg: d.easterEgg ?? false,
+    easterEggTaglineWord: d.easterEggTaglineWord ?? undefined,
+    easterEggLink,
+    accentColor: d.accentColor ?? undefined,
+    terminalPrompt: d.terminalPrompt ?? undefined,
+    nameGreeting: d.nameGreeting ?? undefined,
+    cardStyle: d.cardStyle ?? undefined,
+    cardOpacity: d.cardOpacity ?? undefined,
+    pronouns: d.pronouns ?? undefined,
+    location: d.location ?? undefined,
+    timezone: d.timezone ?? undefined,
+    birthday: d.birthday ?? undefined,
+    avatarShape: d.avatarShape ?? undefined,
+    layoutDensity: d.layoutDensity ?? undefined,
+    customFont: d.customFont ?? undefined,
+    customFontUrl: d.customFontUrl ?? undefined,
+    cursorStyle: d.cursorStyle ?? undefined,
+    cursorImageUrl: d.cursorImageUrl ?? undefined,
+    animationPreset: d.animationPreset ?? undefined,
+    backgroundType: d.backgroundType ?? undefined,
+    backgroundUrl: d.backgroundUrl ?? undefined,
+    backgroundAudioUrl: d.backgroundAudioUrl ?? undefined,
+    ogImageUrl: d.ogImageUrl ?? undefined,
+    showAudioPlayer: d.showAudioPlayer ?? false,
+    audioTracks: d.audioTracks ?? undefined,
+    gallery,
+    noindex: true,
+  };
+}
+
+/** Apply a published template to the user's profile. Copies media on apply. */
+export async function applyTemplate(
+  templateId: string,
+  profileId: string,
+  userId: string
+): Promise<{ error?: string }> {
+  const template = await getTemplateById(templateId);
+  if (!template) return { error: "Template not found" };
+  if (template.status !== "published") return { error: "Template is not published" };
+
+  const dataWithCopiedMedia = await copyTemplateMediaUrls(template.data);
+  const update = templateDataToProfileUpdate(dataWithCopiedMedia);
+
+  const { updateMemberProfile, replaceGalleryItems } = await import("@/lib/member-profiles");
+  try {
+    await updateMemberProfile(profileId, userId, update);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to apply template" };
+  }
+
+  if (dataWithCopiedMedia.gallery?.length) {
+    try {
+      await replaceGalleryItems(profileId, userId, dataWithCopiedMedia.gallery);
+    } catch (e) {
+      console.error("Template apply: replace gallery failed", e);
+      // Profile update succeeded; gallery may be partial
+    }
+  }
+
+  await incrementTemplateApplyCount(templateId);
+  return {};
+}

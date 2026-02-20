@@ -57,12 +57,14 @@ const CURSOR_TYPES = new Set([
   "image/x-gif",
   "image/webp",
 ]);
-// Custom font: .ttf, .otf, .woff, 5MB
+// Custom font: .ttf, .otf, .woff, .woff2, 5MB
 const FONT_TYPES = new Set([
   "font/ttf",
   "font/otf",
   "font/woff",
+  "font/woff2",
   "application/font-woff",
+  "application/font-woff2",
   "application/x-font-ttf",
   "application/x-font-otf",
   "application/vnd.ms-fontobject", // sometimes .woff
@@ -105,7 +107,7 @@ export async function POST(req: Request) {
     maxBytes = IMAGE_MAX_BYTES; // 5 MiB
   } else if (purpose === "cursor" && (type && CURSOR_TYPES.has(type) || ext === "cur")) {
     maxBytes = IMAGE_MAX_BYTES; // 5 MiB
-  } else if (purpose === "font" && (type && FONT_TYPES.has(type) || ["ttf", "otf", "woff"].includes(ext ?? ""))) {
+  } else if (purpose === "font" && (type && FONT_TYPES.has(type) || ["ttf", "otf", "woff", "woff2"].includes(ext ?? ""))) {
     maxBytes = IMAGE_MAX_BYTES; // 5 MiB
   } else if (type && (isBackgroundImage ? BACKGROUND_IMAGE_TYPES : IMAGE_TYPES).has(type)) {
     maxBytes = isBackground ? IMAGE_BACKGROUND_MAX_BYTES : IMAGE_MAX_BYTES;
@@ -118,7 +120,7 @@ export async function POST(req: Request) {
         : 10 * 1024 * 1024;
   } else {
     return NextResponse.json(
-      { error: "Invalid file type. Avatar: PNG, JPG, GIF, WebP (5MB). Cursor: CUR, PNG, JPG, GIF, WebP (5MB). Font: TTF, OTF, WOFF (5MB)." },
+      { error: "Invalid file type. Avatar: PNG, JPG, GIF, WebP (5MB). Cursor: CUR, PNG, JPG, GIF, WebP (5MB). Font: TTF, OTF, WOFF, WOFF2 (5MB)." },
       { status: 400 }
     );
   }
@@ -135,11 +137,15 @@ export async function POST(req: Request) {
     if (isBackground && replaceFid && /^\d+,\d+$/.test(replaceFid)) {
       deleteFile(replaceFid).catch((err) => console.error("Delete old background failed:", err));
     }
-    return NextResponse.json({
+    const json: { url: string; fid: string; size: number; contentType?: string } = {
       url: result.path,
       fid: result.fid,
       size: result.size,
-    });
+    };
+    if (purpose === "font" && (type && FONT_TYPES.has(type) || ["ttf", "otf", "woff", "woff2"].includes(ext ?? ""))) {
+      json.contentType = type && FONT_TYPES.has(type) ? type : { ttf: "font/ttf", otf: "font/otf", woff: "font/woff", woff2: "font/woff2" }[ext ?? ""] ?? "font/woff";
+    }
+    return NextResponse.json(json);
   } catch (e) {
     console.error("Upload error:", e);
     return NextResponse.json(

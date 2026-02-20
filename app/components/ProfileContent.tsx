@@ -22,6 +22,12 @@ import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/discord-lastseen";
 import { SITE_URL } from "@/lib/site";
+import {
+  CUSTOM_BADGE_COLORS,
+  BANNER_STYLES,
+  GRADIENT_BANNER_STYLES,
+  getThemeClass,
+} from "@/lib/profile-themes";
 
 function resolveMediaUrl(url: string): string {
   if (!url?.trim()) return "";
@@ -31,20 +37,9 @@ function resolveMediaUrl(url: string): string {
   return u;
 }
 
-const ACCENT_THEMES = ["cyan", "green", "purple", "orange", "rose"] as const;
-/** Preset class names for custom badge colors (key = badge.color value from admin). */
-const CUSTOM_BADGE_COLORS: Record<string, string> = {
-  amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  green: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  purple: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
-  cyan: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
-  rose: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
-  orange: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
-};
-const CARD_STYLES = ["default", "sharp", "glass"] as const;
-const BANNER_STYLES = ["accent", "fire", "cyan", "green", "purple", "orange", "rose"] as const;
+const CARD_STYLES = ["default", "sharp", "glass", "neon", "minimal", "elevated"] as const;
 const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
-const AVATAR_SHAPES = ["circle", "rounded"] as const;
+const AVATAR_SHAPES = ["circle", "rounded", "square", "soft", "hexagon"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
 const CURSOR_STYLES = [
   "default",
@@ -82,8 +77,6 @@ const ANIMATION_PRESETS = [
   "shimmer",
 ] as const;
 
-/** Gradient styles use background-clip: text, which makes space chars invisible. Render spaces as 1ch spans. */
-const GRADIENT_BANNER_STYLES = ["fire", "cyan", "green", "purple", "orange", "rose"] as const;
 
 function BannerPre({
   banner,
@@ -173,10 +166,7 @@ interface ProfileContentProps {
 }
 
 export default function ProfileContent({ profile, vouches, reactions, similarProfiles, mutualGuilds, canReport, canSubmitReport }: ProfileContentProps) {
-  const themeClass =
-    profile.accentColor && ACCENT_THEMES.includes(profile.accentColor as (typeof ACCENT_THEMES)[number])
-      ? `profile-theme-${profile.accentColor}`
-      : "";
+  const themeClass = getThemeClass(profile.accentColor);
   const prompt = (profile.terminalPrompt?.trim() || "$").slice(0, 8);
   const cardClass =
     profile.cardStyle && CARD_STYLES.includes(profile.cardStyle as (typeof CARD_STYLES)[number]) && profile.cardStyle !== "default"
@@ -193,7 +183,16 @@ export default function ProfileContent({ profile, vouches, reactions, similarPro
     profile.avatarShape && AVATAR_SHAPES.includes(profile.avatarShape as (typeof AVATAR_SHAPES)[number])
       ? profile.avatarShape
       : "circle";
-  const avatarClass = avatarShape === "rounded" ? "rounded-lg" : "rounded-full";
+  const avatarClass =
+    avatarShape === "rounded"
+      ? "rounded-lg"
+      : avatarShape === "square"
+        ? "rounded-none"
+        : avatarShape === "soft"
+          ? "rounded-xl"
+          : avatarShape === "hexagon"
+            ? "profile-avatar-hexagon"
+            : "rounded-full";
   const density =
     profile.layoutDensity && LAYOUT_DENSITIES.includes(profile.layoutDensity as (typeof LAYOUT_DENSITIES)[number])
       ? profile.layoutDensity
@@ -431,7 +430,7 @@ export default function ProfileContent({ profile, vouches, reactions, similarPro
             <ProfileGalleryButton slug={profile.slug} />
           </div>
           {profile.showAudioPlayer && profile.audioTracks && profile.audioTracks.length > 0 && (
-            <ProfileAudioPlayer tracks={profile.audioTracks} />
+            <ProfileAudioPlayer tracks={profile.audioTracks} visualizerStyle={profile.audioVisualizerStyle} visualizerAnimation={profile.audioVisualizerAnimation} />
           )}
           {reactions && (
             <ProfileReactions

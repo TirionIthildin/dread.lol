@@ -78,6 +78,10 @@ export interface ProfileDoc {
   /** Discord presence display style: pills, minimal, stacked, inline. */
   discordPresenceStyle?: string | null;
   showAudioPlayer?: boolean;
+  /** Audio visualizer style: none, bars, waveform, circle, line, blocks */
+  audioVisualizerStyle?: string | null;
+  /** Audio visualizer animation: default, smooth, bounce, glow, pulse */
+  audioVisualizerAnimation?: string | null;
   audioTracks?: string | null;
   createdAt: Date;
   updatedAt: Date;

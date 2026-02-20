@@ -26,6 +26,10 @@ export default function HomePageContent() {
           Trending
         </Link>
         <span className="mx-1.5">·</span>
+        <Link href="/marketplace" className="hover:text-[var(--accent)] hover:underline">
+          Marketplace
+        </Link>
+        <span className="mx-1.5">·</span>
         <Link href="/privacy" className="hover:text-[var(--accent)] hover:underline">
           Privacy
         </Link>

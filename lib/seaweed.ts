@@ -96,6 +96,36 @@ export async function getFile(fid: string): Promise<Response> {
 }
 
 /**
+ * Extract fid from a path like /api/files/3,0123456789.
+ * Returns null if not a valid internal file path.
+ */
+export function fidFromPath(path: string | null | undefined): string | null {
+  const trimmed = path?.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^\/api\/files\/(\d+,[a-f0-9]+)$/i);
+  return match ? match[1] : null;
+}
+
+/**
+ * Copy a file from SeaweedFS (by path e.g. /api/files/3,xxx) and re-upload.
+ * Returns the new path for the copy. Used for template apply (copy-on-apply).
+ * If Seaweed is not configured or file not found, returns null.
+ */
+export async function copyFile(sourcePath: string | null | undefined): Promise<string | null> {
+  const fid = fidFromPath(sourcePath);
+  if (!fid || !isSeaweedConfigured()) return null;
+  try {
+    const res = await getFile(fid);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const result = await uploadFile(blob);
+    return result.path;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Delete a file from SeaweedFS by fid.
  * Uses soft delete; disk space reclaimed by background vacuum.
  */

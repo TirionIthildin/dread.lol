@@ -29,7 +29,7 @@ export default function NotFound() {
           <p className="text-[var(--terminal)]">
             <span className="text-[var(--muted)]">$</span> cat 404.txt
           </p>
-          <pre className="mt-2 text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono" style={{ textShadow: "0 0 12px rgba(6, 182, 212, 0.2)" }} aria-hidden>
+          <pre className="mt-2 text-[10px] sm:text-xs leading-tight text-[var(--accent)] whitespace-pre font-mono text-shadow-accent" aria-hidden>
 {` _  _    ___  ___  
 | \\| |  / _ \\| __| 
 | .\` | | (_) | _|  
@@ -42,7 +42,7 @@ export default function NotFound() {
           <p className="mt-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/70 px-4 py-2.5 text-sm text-[var(--accent)] transition-all duration-200 hover:border-[var(--accent)] hover:shadow-[0_0_14px_rgba(6,182,212,0.15)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/70 px-4 py-2.5 text-sm text-[var(--accent)] transition-all duration-200 hover:border-[var(--accent)] hover:shadow-accent-soft focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
             >
               <span className="text-[var(--muted)]">$</span> cd .. — back to {SITE_NAME}
             </Link>

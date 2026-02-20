@@ -475,6 +475,30 @@ export type AdminUserRow = {
   createdAt: Date;
 };
 
+export async function getAdminUserById(userId: string): Promise<AdminUserRow | null> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const doc = await client
+    .db(dbName)
+    .collection<UserDoc>(COLLECTIONS.users)
+    .findOne(
+      { _id: userId },
+      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, createdAt: 1 } }
+    );
+  return doc
+    ? {
+        id: doc._id,
+        username: doc.username ?? null,
+        displayName: doc.displayName ?? null,
+        avatarUrl: doc.avatarUrl ?? null,
+        approved: doc.approved ?? false,
+        verified: doc.verified ?? false,
+        staff: doc.staff ?? false,
+        createdAt: doc.createdAt,
+      }
+    : null;
+}
+
 export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
   const client = await getDb();
   const dbName = await getDbName();
@@ -597,6 +621,25 @@ export async function getProfileSlugByUserId(userId: string): Promise<string | n
     { projection: { slug: 1 } }
   );
   return doc?.slug ?? null;
+}
+
+/** Batch resolve userId → slug for many users. Returns Map<userId, slug>. */
+export async function getProfileSlugsByUserIds(userIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return new Map();
+  const client = await getDb();
+  const dbName = await getDbName();
+  const docs = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profiles)
+    .find({ userId: { $in: unique } }, { projection: { userId: 1, slug: 1 } })
+    .toArray();
+  const map = new Map<string, string>();
+  for (const d of docs) {
+    const row = d as { userId: string; slug: string };
+    if (row.userId && row.slug) map.set(row.userId, row.slug);
+  }
+  return map;
 }
 
 export async function getAllMemberProfileSlugs(): Promise<string[]> {
@@ -1209,6 +1252,16 @@ export function memberProfileToProfile(
     metaDescription: row.metaDescription ?? undefined,
     showPageViews: row.showPageViews ?? true,
     showAudioPlayer: row.showAudioPlayer ?? undefined,
+    audioVisualizerStyle: (() => {
+      const s = row.audioVisualizerStyle ?? undefined;
+      const map: Record<string, string> = { waveform: "wave", circle: "bars", line: "bars", blocks: "bars" };
+      const resolved = map[s ?? ""] ?? s;
+      return ["bars", "wave", "spectrum"].includes(resolved ?? "") ? resolved : undefined;
+    })(),
+    audioVisualizerAnimation: (() => {
+      const a = row.audioVisualizerAnimation ?? undefined;
+      return a && ["smooth", "bounce", "glow", "pulse"].includes(a) ? a : undefined;
+    })(),
     audioTracks: parseAudioTracks(row.audioTracks ?? null),
     ...(badgeFlags && {
       verified: badgeFlags.verified || undefined,
@@ -1380,6 +1433,40 @@ export async function deleteGalleryItem(itemId: string, userId: string): Promise
   if (!item) throw new Error("Gallery item not found");
   await ensureProfileOwnership(item.profileId.toString(), userId);
   await db.collection(COLLECTIONS.galleryItems).deleteOne({ _id: oid });
+}
+
+/** Replace all gallery items for a profile. Deletes existing and adds new ones. */
+export async function replaceGalleryItems(
+  profileId: string,
+  userId: string,
+  items: { imageUrl: string; title?: string | null; description?: string | null }[]
+): Promise<void> {
+  await ensureProfileOwnership(profileId, userId);
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
+  }
+
+  await db.collection(COLLECTIONS.galleryItems).deleteMany({ profileId: oid });
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const imageUrl = item.imageUrl?.trim().slice(0, 2048);
+    if (!imageUrl) continue;
+    await db.collection(COLLECTIONS.galleryItems).insertOne({
+      _id: new ObjectId(),
+      profileId: oid,
+      imageUrl,
+      title: item.title?.trim().slice(0, 200) ?? null,
+      description: item.description?.trim().slice(0, 1000) ?? null,
+      sortOrder: i,
+    });
+  }
 }
 
 export async function setGalleryOrder(profileId: string, userId: string, orderedIds: string[]): Promise<void> {

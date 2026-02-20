@@ -1,14 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-const ACCENT_COLORS: Record<string, string> = {
-  cyan: "#06b6d4",
-  green: "#22c55e",
-  purple: "#a855f7",
-  orange: "#f97316",
-  rose: "#f43f5e",
-};
+import { getAccentHex } from "@/lib/profile-themes";
 
 interface ProfileCursorEffectProps {
   children: React.ReactNode;
@@ -37,7 +30,7 @@ export default function ProfileCursorEffect({
     return () => mq.removeEventListener("change", fn);
   }, []);
 
-  const color = accentColor && ACCENT_COLORS[accentColor] ? ACCENT_COLORS[accentColor] : ACCENT_COLORS.cyan;
+  const color = getAccentHex(accentColor);
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {

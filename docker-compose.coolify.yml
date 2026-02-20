@@ -1,72 +1,70 @@
-# ============================================
-# Dread.lol - Coolify Deployment
-# ============================================
-# Use a pre-built image from your registry. Coolify handles proxy and TLS.
-#
-# Setup in Coolify:
-# 1. Create a new Docker Compose resource and use this file.
-# 2. Set DREAD_IMAGE to your image (e.g. ghcr.io/your-org/dread-lol:latest).
-# 3. Assign the domain to the dread service.
-# 4. Set NEXT_PUBLIC_SITE_URL to this site's public URL (e.g. https://dread.lol)
-#    so metadata, sitemap, and Open Graph images use absolute URLs.
-# 5. Set MONGO_PASSWORD (required). Optional: MONGO_USER (default: dread), MONGO_DB (default: dread).
-# 6. For Discord OAuth login: set DISCORD_OAUTH_CLIENT_ID, DISCORD_OAUTH_CLIENT_SECRET,
-#    AUTH_REDIRECT_URI (e.g. https://dread.lol/api/auth/discord/callback), and AUTH_SECRET.
-# 7. For live Discord status on profiles: set DISCORD_BOT_TOKEN and DISCORD_GUILD_ID.
-#    The bot runs inside the dread container. Without a token it exits gracefully (no restart loop).
-# ============================================
-
 services:
   mongodb:
-    image: mongo:8
+    image: 'mongo:8'
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-dread}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-dread}
-      MONGO_INITDB_DATABASE: ${MONGO_DB:-dread}
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_USER:-dread}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_PASSWORD:-dread}'
+      MONGO_INITDB_DATABASE: '${MONGO_DB:-dread}'
     volumes:
-      - mongodb_data:/data/db
+      - 'mongodb_data:/data/db'
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test:
+        - CMD
+        - mongosh
+        - '--eval'
+        - "db.adminCommand('ping')"
       interval: 5s
       timeout: 5s
       retries: 5
-
   valkey:
-    image: valkey/valkey:8
+    image: 'valkey/valkey:8'
     restart: unless-stopped
     volumes:
-      - valkey_data:/data
+      - 'valkey_data:/data'
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test:
+        - CMD
+        - valkey-cli
+        - ping
       interval: 5s
       timeout: 5s
       retries: 5
-
-  # SeaweedFS – internal only (no ports exposed); app reaches via SEAWEED_MASTER_URL
   seaweed-master:
-    image: chrislusf/seaweedfs:latest
+    image: 'chrislusf/seaweedfs:latest'
     restart: unless-stopped
-    command: ["master", "-ip=seaweed-master", "-ip.bind=0.0.0.0", "-defaultReplication=000"]
+    command:
+      - master
+      - '-ip=seaweed-master'
+      - '-ip.bind=0.0.0.0'
+      - '-defaultReplication=000'
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:9333/cluster/status || exit 1"]
+      test:
+        - CMD-SHELL
+        - 'wget -q -O- http://localhost:9333/cluster/status || exit 1'
       interval: 10s
       timeout: 5s
       retries: 5
-
   seaweed-volume:
-    image: chrislusf/seaweedfs:latest
+    image: 'chrislusf/seaweedfs:latest'
     restart: unless-stopped
-    command: ["volume", "-ip=seaweed-volume", "-master=seaweed-master:9333", "-ip.bind=0.0.0.0", "-port=8080"]
+    command:
+      - volume
+      - '-ip=seaweed-volume'
+      - '-master=seaweed-master:9333'
+      - '-ip.bind=0.0.0.0'
+      - '-port=8080'
     depends_on:
-      seaweed-master: { condition: service_healthy }
-
+      seaweed-master:
+        condition: service_healthy
   dread:
     image: registry.ithildin.co/poker/dread.lol
     restart: unless-stopped
     depends_on:
-      mongodb: { condition: service_healthy }
-      valkey: { condition: service_healthy }
+      mongodb:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
       seaweed-volume:
         condition: service_started
     environment:
@@ -74,36 +72,38 @@ services:
       - NEXT_TELEMETRY_DISABLED=1
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_SITE_URL=${SERVICE_FQDN_DREAD_3000}
-      - DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:-dread}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin
-      - VALKEY_URL=redis://valkey:6379
-      - SEAWEED_MASTER_URL=http://seaweed-master:9333
-      - DISCORD_OAUTH_CLIENT_ID=${DISCORD_OAUTH_CLIENT_ID:-}
-      - DISCORD_OAUTH_CLIENT_SECRET=${DISCORD_OAUTH_CLIENT_SECRET:-}
-      - AUTH_REDIRECT_URI=${AUTH_REDIRECT_URI:-}
-      - AUTH_SECRET=${AUTH_SECRET:-}
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
-      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
+      - 'NEXT_PUBLIC_SITE_URL=https://dread.lol'
+      - 'DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:-dread}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin'
+      - 'VALKEY_URL=redis://valkey:6379'
+      - 'SEAWEED_MASTER_URL=http://seaweed-master:9333'
+      - 'DISCORD_OAUTH_CLIENT_ID=${DISCORD_OAUTH_CLIENT_ID:-}'
+      - 'DISCORD_OAUTH_CLIENT_SECRET=${DISCORD_OAUTH_CLIENT_SECRET:-}'
+      - 'AUTH_REDIRECT_URI=${AUTH_REDIRECT_URI:-}'
+      - 'AUTH_SECRET=${AUTH_SECRET:-}'
+      - 'DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}'
+      - 'DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}'
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      test:
+        - CMD
+        - node
+        - '-e'
+        - "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 15s
     security_opt:
-      - no-new-privileges:true
+      - 'no-new-privileges:true'
     read_only: true
     tmpfs:
       - /tmp
       - /var/tmp
-      - /app/.next/cache
     cap_drop:
       - ALL
     cap_add:
       - CHOWN
       - SETGID
       - SETUID
-
 volumes:
-  mongodb_data:
-  valkey_data:
+  mongodb_data: null
+  valkey_data: null

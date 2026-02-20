@@ -44,7 +44,7 @@ export default async function DashboardLayout({
         />
       </div>
 
-      <aside className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-60 md:max-h-screen">
+      <aside className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-64 md:max-h-screen">
         <div className="flex h-14 md:h-auto shrink-0 items-center px-4 md:px-3 md:pt-4 md:pb-1 border-b md:border-b-0 border-[var(--border)]">
           <Link
             href="/"

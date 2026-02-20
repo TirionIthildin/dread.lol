@@ -23,7 +23,7 @@ export interface Profile {
   easterEggLink?: { triggerWord: string; url: string; popupUrl?: string };
   /** When true, render the banner with an animated fire gradient. */
   bannerAnimatedFire?: boolean;
-  /** Banner gradient/style: accent (default), fire, cyan, green, purple, orange, rose. */
+  /** Banner gradient/style: accent (default), fire, cyan, green, purple, orange, rose, amber, blue, indigo, teal, sky. */
   bannerStyle?: string;
   /** When true, render the profile as a command window with custom commands. */
   useTerminalLayout?: boolean;
@@ -43,13 +43,13 @@ export interface Profile {
   ogImageUrl?: string;
   /** When set, show "Last updated …" on the profile (member profiles only). */
   updatedAt?: string;
-  /** Accent/theme color preset (member profiles only): cyan, green, purple, orange, rose. */
+  /** Accent/theme color preset (member profiles only): cyan, green, purple, orange, rose, amber, blue, indigo, teal, sky. */
   accentColor?: string;
   /** Terminal prompt character(s) (e.g. $, >, λ, ❯). */
   terminalPrompt?: string;
   /** Short greeting before name (e.g. "hi i'm", "aka"). */
   nameGreeting?: string;
-  /** Card style: default, sharp, glass. */
+  /** Card style: default, sharp, glass, neon, minimal, elevated. */
   cardStyle?: string;
   /** Box opacity (50–100). Controls profile card transparency. */
   cardOpacity?: number;
@@ -61,7 +61,7 @@ export interface Profile {
   timezone?: string;
   /** Birthday as MM-DD (month and day only). Shown as countdown to next birthday. */
   birthday?: string;
-  /** Avatar shape: circle (default) or rounded. */
+  /** Avatar shape: circle (default), rounded, square, soft, hexagon. */
   avatarShape?: string;
   /** Layout density: default, compact, spacious. */
   layoutDensity?: string;
@@ -120,6 +120,10 @@ export interface Profile {
   discordLastSeen?: string;
   /** When true, show an audio player widget on the profile. */
   showAudioPlayer?: boolean;
+  /** Audio visualizer style: none, bars, waveform, circle, line, blocks. */
+  audioVisualizerStyle?: string;
+  /** Audio visualizer animation: default, smooth, bounce, glow, pulse. */
+  audioVisualizerAnimation?: string;
   /** Audio tracks for the player: url and optional title. */
   audioTracks?: { url: string; title?: string }[];
 }

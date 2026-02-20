@@ -15,6 +15,13 @@ import {
   DiscordLogo,
   MusicNotes,
   Trash,
+  VideoCamera,
+  X,
+  Play,
+  DotsSixVertical,
+  GridFour,
+  Sparkle,
+  SquaresFour,
 } from "@phosphor-icons/react";
 import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
@@ -24,14 +31,13 @@ import ConfirmDialog from "@/app/components/ConfirmDialog";
 import type { ProfileRow } from "@/lib/db/schema";
 import {
   updateProfileAction,
-  applyTemplateAction,
   addShortLinkAction,
   deleteShortLinkAction,
   type ProfileFormState,
 } from "@/app/dashboard/actions";
 import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
-import { PROFILE_TEMPLATES, type ProfileTemplate } from "@/lib/profile-templates";
 import type { ProfileShortLink } from "@/lib/member-profiles";
+import { ACCENT_COLOR_OPTIONS, BANNER_STYLE_OPTIONS } from "@/lib/profile-themes";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
 const TAGLINE_MAX = 120;
@@ -48,68 +54,6 @@ const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNo
   { id: "audio", label: "Audio Manager", icon: <MusicNotes {...dashIcon} aria-hidden /> },
 ];
 
-function TemplateConfirmModal({
-  template,
-  onClose,
-  onConfirm,
-  applying,
-}: {
-  template: ProfileTemplate;
-  onClose: () => void;
-  onConfirm: () => void | Promise<void>;
-  applying: boolean;
-}) {
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="template-modal-title"
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div
-        className="relative z-10 w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 id="template-modal-title" className="text-base font-semibold text-[var(--foreground)]">
-          Apply template “{template.name}”?
-        </h3>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          This will replace your tagline, description, banner, links, and other profile content. Your slug, name, and avatar stay the same. Any unsaved changes in the form will be lost.
-        </p>
-        {template.description && (
-          <p className="mt-1 text-xs text-[var(--muted)]">{template.description}</p>
-        )}
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={applying}
-            className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => onConfirm()}
-            disabled={applying}
-            className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
-          >
-            {applying ? "Applying…" : "Apply"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function parseTerminalCommandsForEditor(raw: string | null): { command: string; output: string }[] {
   if (!raw?.trim()) return [];
@@ -321,15 +265,14 @@ export default function DashboardMyProfile({
   const [shortLinkDeleting, setShortLinkDeleting] = useState(false);
   const [avatarUrlValue, setAvatarUrlValue] = useState(profile.avatarUrl ?? "");
   const [slugCheck, setSlugCheck] = useState<"idle" | "checking" | "available" | "taken">("idle");
-  const [templateModal, setTemplateModal] = useState<ProfileTemplate | null>(null);
-  const [templateApplying, setTemplateApplying] = useState(false);
   const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>("basics");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const BG_OPTIONS = ["none", "grid", "gradient", "dither", "image", "video"] as const;
   const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
-    return ["image", "video"].includes(t) ? t : "none";
+    return ["image", "video", "grid", "gradient", "dither"].includes(t) ? t : "none";
   });
   const [backgroundUrlValue, setBackgroundUrlValue] = useState(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
@@ -347,6 +290,81 @@ export default function DashboardMyProfile({
   const [backgroundAudioUploading, setBackgroundAudioUploading] = useState(false);
   const [backgroundAudioUploadError, setBackgroundAudioUploadError] = useState<string | null>(null);
   const backgroundAudioFileRef = useRef<HTMLInputElement>(null);
+  const [backgroundDragOver, setBackgroundDragOver] = useState(false);
+  const [audioDragOver, setAudioDragOver] = useState(false);
+
+  const handleBackgroundFileUpload = useCallback(async (file: File) => {
+    const type = file.type?.toLowerCase().split(";")[0]?.trim();
+    const isVideo = type && BACKGROUND_VIDEO_TYPES.includes(type);
+    const isImage = type && BACKGROUND_IMAGE_TYPES.includes(type);
+    if (!isImage && !isVideo) {
+      setBackgroundUploadError("Use PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, or MKV");
+      return;
+    }
+    if (isVideo && file.size > 100 * 1024 * 1024) {
+      setBackgroundUploadError("Video must be 100 MB or smaller");
+      return;
+    }
+    if (isImage && file.size > 100 * 1024 * 1024) {
+      setBackgroundUploadError("Image must be 100 MB or smaller");
+      return;
+    }
+    setBackgroundUploadError(null);
+    setBackgroundUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (isVideo) form.append("purpose", "background-video");
+      else form.append("purpose", "background-image");
+      const prevUrl = backgroundUrlValue.trim();
+      if (prevUrl && prevUrl.includes("/api/files/")) {
+        const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
+        if (match) form.append("replaceFid", match[1]);
+      }
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setBackgroundUploadError(data.error ?? "Upload failed");
+      } else {
+        const base = typeof window !== "undefined" ? window.location.origin : "";
+        const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+        setBackgroundTypeValue(isVideo ? "video" : "image");
+        setBackgroundUrlValue(url);
+      }
+    } finally {
+      setBackgroundUploading(false);
+    }
+  }, [backgroundUrlValue]);
+
+  const handleBackgroundAudioUpload = useCallback(async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setBackgroundAudioUploadError("Audio must be 10 MB or smaller");
+      return;
+    }
+    setBackgroundAudioUploadError(null);
+    setBackgroundAudioUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("purpose", "background-audio");
+      const prevUrl = backgroundAudioUrlValue.trim();
+      if (prevUrl && prevUrl.includes("/api/files/")) {
+        const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
+        if (match) form.append("replaceFid", match[1]);
+      }
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setBackgroundAudioUploadError(data.error ?? "Upload failed");
+      } else {
+        const base = typeof window !== "undefined" ? window.location.origin : "";
+        const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+        setBackgroundAudioUrlValue(url);
+      }
+    } finally {
+      setBackgroundAudioUploading(false);
+    }
+  }, [backgroundAudioUrlValue]);
   const [customFontValue, setCustomFontValue] = useState(() => {
     const p = profile as { customFont?: string; customFontUrl?: string };
     return p.customFontUrl ? "custom" : (p.customFont ?? "");
@@ -364,6 +382,12 @@ export default function DashboardMyProfile({
   const [cursorUploadError, setCursorUploadError] = useState<string | null>(null);
   const cursorFileRef = useRef<HTMLInputElement>(null);
   const [showAudioPlayerValue, setShowAudioPlayerValue] = useState((profile as { showAudioPlayer?: boolean }).showAudioPlayer ?? false);
+  const [audioVisualizerStyleValue, setAudioVisualizerStyleValue] = useState(() => {
+    const s = (profile as { audioVisualizerStyle?: string }).audioVisualizerStyle;
+    if (!s) return (profile as { showAudioVisualizer?: boolean }).showAudioVisualizer ? "bars" : "";
+    const map: Record<string, string> = { waveform: "wave", circle: "bars", line: "bars", blocks: "bars" };
+    return map[s] ?? (["bars", "wave", "spectrum"].includes(s) ? s : "");
+  });
   const [audioTracksValue, setAudioTracksValue] = useState<{ url: string; title?: string }[]>(() => {
     const raw = (profile as { audioTracks?: string }).audioTracks;
     if (typeof raw === "string") {
@@ -384,6 +408,45 @@ export default function DashboardMyProfile({
   const [audioTrackUploading, setAudioTrackUploading] = useState(false);
   const [audioTrackUploadError, setAudioTrackUploadError] = useState<string | null>(null);
   const audioTrackFileRef = useRef<HTMLInputElement>(null);
+  const [audioTracksDragOver, setAudioTracksDragOver] = useState(false);
+  const [editingTrackIndex, setEditingTrackIndex] = useState<number | null>(null);
+  const [editingTrackTitle, setEditingTrackTitle] = useState("");
+  const [draggedTrackIndex, setDraggedTrackIndex] = useState<number | null>(null);
+
+  const handleAudioTrackUpload = useCallback(async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setAudioTrackUploadError("Track must be 10 MB or smaller");
+      return;
+    }
+    setAudioTrackUploadError(null);
+    setAudioTrackUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("purpose", "audio-player");
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) {
+        setAudioTrackUploadError(data.error ?? "Upload failed");
+      } else {
+        const base = typeof window !== "undefined" ? window.location.origin : "";
+        const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
+        setAudioTracksValue((prev) => [...prev, { url, title: file.name.replace(/\.[^.]*$/, "") || undefined }]);
+      }
+    } finally {
+      setAudioTrackUploading(false);
+    }
+  }, []);
+
+  const moveTrack = useCallback((from: number, to: number) => {
+    setAudioTracksValue((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(from, 1);
+      next.splice(to, 0, removed);
+      return next;
+    });
+  }, []);
+
   const [cardOpacityValue, setCardOpacityValue] = useState((profile as { cardOpacity?: number }).cardOpacity ?? 95);
   const slugCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
@@ -480,18 +543,13 @@ export default function DashboardMyProfile({
                 <span className="truncate">{label}</span>
               </button>
             ))}
-            <div className="mt-auto pt-3 border-t border-[var(--border)] space-y-2">
-              <p className="text-xs font-medium text-[var(--muted)] px-2">Templates</p>
-              {PROFILE_TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTemplateModal(t)}
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-left text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
-                >
-                  {t.name}
-                </button>
-              ))}
+            <div className="mt-auto pt-3 border-t border-[var(--border)]">
+              <Link
+                href="/marketplace"
+                className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                Browse templates →
+              </Link>
             </div>
           </nav>
           <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4">
@@ -969,13 +1027,11 @@ export default function DashboardMyProfile({
                     }
                     className="mt-1 block w-full max-w-xs rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                   >
-                    <option value="accent">Default (accent)</option>
-                    <option value="fire">Fire</option>
-                    <option value="cyan">Cyan</option>
-                    <option value="green">Green</option>
-                    <option value="purple">Purple</option>
-                    <option value="orange">Orange</option>
-                    <option value="rose">Rose</option>
+                    {BANNER_STYLE_OPTIONS.map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)] pt-6">
@@ -1112,11 +1168,11 @@ export default function DashboardMyProfile({
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 >
                   <option value="">Default (cyan)</option>
-                  <option value="cyan">Cyan</option>
-                  <option value="green">Green</option>
-                  <option value="purple">Purple</option>
-                  <option value="orange">Orange</option>
-                  <option value="rose">Rose</option>
+                  {ACCENT_COLOR_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
@@ -1150,6 +1206,9 @@ export default function DashboardMyProfile({
                 >
                   <option value="circle">Circle</option>
                   <option value="rounded">Rounded square</option>
+                  <option value="square">Square</option>
+                  <option value="soft">Soft (rounded-xl)</option>
+                  <option value="hexagon">Hexagon</option>
                 </select>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
@@ -1174,6 +1233,9 @@ export default function DashboardMyProfile({
                   <option value="default">Default (rounded)</option>
                   <option value="sharp">Sharp corners</option>
                   <option value="glass">Glass (blur)</option>
+                  <option value="neon">Neon (accent glow)</option>
+                  <option value="minimal">Minimal</option>
+                  <option value="elevated">Elevated</option>
                 </select>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
@@ -1214,7 +1276,7 @@ export default function DashboardMyProfile({
                     <input
                       ref={customFontFileRef}
                       type="file"
-                      accept=".ttf,.otf,.woff,font/ttf,font/otf,font/woff"
+                      accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2"
                       className="sr-only"
                       aria-hidden
                       onChange={async (e) => {
@@ -1236,7 +1298,9 @@ export default function DashboardMyProfile({
                           if (!res.ok) setCustomFontUploadError(data.error ?? "Upload failed");
                           else {
                             const base = typeof window !== "undefined" ? window.location.origin : "";
-                            setCustomFontUrlValue(data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`);
+                            const fullUrl = (data.url || "").startsWith("http") ? data.url : `${base}${data.url || ""}`;
+                            const typeParam = data.contentType ? `?type=${encodeURIComponent(data.contentType)}` : "";
+                            setCustomFontUrlValue(`${fullUrl}${typeParam}`);
                           }
                         } finally {
                           setCustomFontUploading(false);
@@ -1251,7 +1315,7 @@ export default function DashboardMyProfile({
                       className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
                     >
                       <UploadSimple size={16} weight="regular" />
-                      {customFontUploading ? "Uploading…" : "Upload .ttf, .otf, .woff"}
+                      {customFontUploading ? "Uploading…" : "Upload .ttf, .otf, .woff, .woff2"}
                     </button>
                     {customFontUploadError && <p className="text-xs text-[var(--warning)]">{customFontUploadError}</p>}
                   </div>
@@ -1367,278 +1431,442 @@ export default function DashboardMyProfile({
                 </select>
                 <p className="mt-0.5 text-[10px] text-[var(--muted)]">Entrance animations play on load. Ongoing/hover effects add ambient motion.</p>
               </label>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-xs font-medium text-[var(--muted)]">
-                    Custom background <span className="text-[var(--muted)]/70">(image or video behind profile)</span>
-                  </label>
-                  <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
-                  <input type="hidden" name="backgroundUrl" value={backgroundTypeValue === "none" ? "" : backgroundUrlValue} />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className="inline-flex items-center gap-2 cursor-pointer text-sm">
-                      <input
-                        type="radio"
-                        checked={backgroundTypeValue === "none"}
-                        onChange={() => {
-                          setBackgroundTypeValue("none");
-                          setBackgroundUrlValue("");
-                          setBackgroundUploadError(null);
-                        }}
-                        className="rounded border-[var(--border)]"
-                      />
-                      None
-                    </label>
-                    <input
-                      ref={backgroundFileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/x-m4v,video/webm,video/quicktime,video/x-matroska"
-                      className="sr-only"
-                      aria-hidden
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const type = file.type?.toLowerCase().split(";")[0]?.trim();
-                        const isVideo = type && BACKGROUND_VIDEO_TYPES.includes(type);
-                        const isImage = type && BACKGROUND_IMAGE_TYPES.includes(type);
-                        if (!isImage && !isVideo) {
-                          setBackgroundUploadError("Use PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, or MKV");
-                          e.target.value = "";
-                          return;
-                        }
-                        if (isVideo && file.size > 100 * 1024 * 1024) {
-                          setBackgroundUploadError("Video must be 100 MB or smaller");
-                          e.target.value = "";
-                          return;
-                        }
-                        if (isImage && file.size > 100 * 1024 * 1024) {
-                          setBackgroundUploadError("Image must be 100 MB or smaller");
-                          e.target.value = "";
-                          return;
-                        }
-                        setBackgroundUploadError(null);
-                        setBackgroundUploading(true);
-                        try {
-                          const form = new FormData();
-                          form.append("file", file);
-                          if (isVideo) form.append("purpose", "background-video");
-                          else form.append("purpose", "background-image");
-                          const prevUrl = backgroundUrlValue.trim();
-                          if (prevUrl && prevUrl.includes("/api/files/")) {
-                            const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
-                            if (match) form.append("replaceFid", match[1]);
-                          }
-                          const res = await fetch("/api/upload", { method: "POST", body: form });
-                          const data = await res.json();
-                          if (!res.ok) {
-                            setBackgroundUploadError(data.error ?? "Upload failed");
-                          } else {
-                            const base = typeof window !== "undefined" ? window.location.origin : "";
-                            const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
-                            setBackgroundTypeValue(isVideo ? "video" : "image");
-                            setBackgroundUrlValue(url);
-                          }
-                        } finally {
-                          setBackgroundUploading(false);
-                          e.target.value = "";
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => backgroundFileInputRef.current?.click()}
-                      disabled={backgroundUploading}
-                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
-                    >
-                      <UploadSimple size={16} weight="regular" />
-                      {backgroundUploading ? "Uploading…" : "Upload image/video"}
-                    </button>
+              <div className="space-y-5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden transition-all hover:border-[var(--border-bright)]">
+                  <div className="px-4 py-3 border-b border-[var(--border)]/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg bg-[var(--accent)]/10 p-1.5">
+                        <ImageIcon size={18} weight="duotone" className="text-[var(--accent)]" aria-hidden />
+                      </div>
+                      <span className="text-sm font-medium text-[var(--foreground)]">Custom background</span>
+                    </div>
+                      <span className="text-[10px] text-[var(--muted)]">Grid, gradient, animated, or custom media</span>
                   </div>
-                  {backgroundTypeValue !== "none" && backgroundUrlValue && (
-                    <p className="text-[10px] text-[var(--muted)]">
-                      {backgroundTypeValue === "image" ? "Image" : "Video"} set. Upload again to replace (old file removed), or None to remove.
-                    </p>
-                  )}
-                  {backgroundUploadError && (
-                    <p className="text-[10px] text-[var(--warning)]">{backgroundUploadError}</p>
-                  )}
-                  <p className="text-[10px] text-[var(--muted)]">
-                    PNG, JPG, GIF, WebP, MP4, M4V, WebM, MOV, MKV (max 100 MB). Uses a &quot;Click to view profile&quot; overlay.
-                  </p>
+                  <div className="p-4 space-y-4">
+                    <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
+                    <input type="hidden" name="backgroundUrl" value={["image", "video"].includes(backgroundTypeValue) ? backgroundUrlValue : ""} />
+                    <div className="flex flex-wrap gap-2">
+                      {BG_OPTIONS.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            if (opt === "none") {
+                              setBackgroundTypeValue("none");
+                              setBackgroundUrlValue("");
+                              setBackgroundUploadError(null);
+                            } else {
+                              setBackgroundTypeValue(opt);
+                              setBackgroundUploadError(null);
+                              if (opt === "grid" || opt === "gradient" || opt === "dither") {
+                                setBackgroundUrlValue("");
+                              } else if ((opt === "image" && backgroundTypeValue === "video") || (opt === "video" && backgroundTypeValue === "image")) {
+                                setBackgroundUrlValue("");
+                              }
+                            }
+                          }}
+                          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                            backgroundTypeValue === opt
+                              ? "bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40"
+                              : "bg-[var(--bg)]/60 text-[var(--muted)] border border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                          }`}
+                        >
+                          {opt === "none" && <X size={16} weight="bold" />}
+                          {opt === "grid" && <GridFour size={16} weight="regular" />}
+                          {opt === "gradient" && <Sparkle size={16} weight="regular" />}
+                          {opt === "dither" && <SquaresFour size={16} weight="regular" />}
+                          {opt === "image" && <ImageIcon size={16} weight="regular" />}
+                          {opt === "video" && <VideoCamera size={16} weight="regular" />}
+                          {opt === "none" ? "None" : opt === "grid" ? "Grid" : opt === "gradient" ? "Gradient" : opt === "dither" ? "Animated" : opt === "image" ? "Image" : "Video"}
+                        </button>
+                      ))}
+                    </div>
+                    {(backgroundTypeValue === "image" || backgroundTypeValue === "video") && (
+                      <>
+                        {backgroundUrlValue ? (
+                          <div className="relative rounded-lg overflow-hidden border border-[var(--border)]/50 bg-[var(--bg)]/80 group">
+                            {backgroundTypeValue === "image" ? (
+                              <div className="aspect-video relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={backgroundUrlValue} alt="" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
+                                  <span className="text-xs font-medium text-white/90">{backgroundTypeValue === "image" ? "Image" : "Video"} loaded</span>
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => backgroundFileInputRef.current?.click()}
+                                      disabled={backgroundUploading}
+                                      className="rounded-md bg-white/20 px-2 py-1 text-xs font-medium text-white hover:bg-white/30 disabled:opacity-50"
+                                    >
+                                      Replace
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setBackgroundTypeValue("none"); setBackgroundUrlValue(""); }}
+                                      className="rounded-md bg-red-500/30 px-2 py-1 text-xs font-medium text-red-200 hover:bg-red-500/50"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="aspect-video relative flex items-center justify-center bg-[var(--bg)]">
+                                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                                <video src={backgroundUrlValue} muted playsInline className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
+                                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--accent)]/20">
+                                    <Play size={24} weight="fill" className="text-[var(--accent)] ml-0.5" />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => backgroundFileInputRef.current?.click()}
+                                      disabled={backgroundUploading}
+                                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)]/80 px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent)] disabled:opacity-50"
+                                    >
+                                      <UploadSimple size={16} weight="bold" />
+                                      Replace
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setBackgroundTypeValue("none"); setBackgroundUrlValue(""); }}
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-hover)]"
+                                    >
+                                      <X size={16} weight="bold" />
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") backgroundFileInputRef.current?.click(); }}
+                            onClick={() => backgroundFileInputRef.current?.click()}
+                            onDragOver={(e) => { e.preventDefault(); setBackgroundDragOver(true); }}
+                            onDragLeave={() => setBackgroundDragOver(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setBackgroundDragOver(false);
+                              const file = e.dataTransfer?.files?.[0];
+                              if (file) handleBackgroundFileUpload(file);
+                            }}
+                            className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-10 px-6 cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${
+                              backgroundDragOver ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] bg-[var(--bg)]/40 hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/5"
+                            }`}
+                          >
+                            <div className="rounded-full bg-[var(--accent)]/10 p-4">
+                              <UploadSimple size={32} weight="duotone" className="text-[var(--accent)]" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-sm font-medium text-[var(--foreground)]">Drop {backgroundTypeValue === "image" ? "an image" : "a video"} here or click to upload</p>
+                              <p className="text-[10px] text-[var(--muted)] mt-0.5">PNG, JPG, GIF, WebP · MP4, WebM, MOV · max 100 MB</p>
+                            </div>
+                            <span className="text-xs text-[var(--accent)] font-medium">Click to browse</span>
+                          </div>
+                        )}
+                        <input
+                          ref={backgroundFileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/x-m4v,video/webm,video/quicktime,video/x-matroska"
+                          className="sr-only"
+                          aria-hidden
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleBackgroundFileUpload(file);
+                            e.target.value = "";
+                          }}
+                        />
+                        {backgroundUploading && (
+                          <p className="text-xs text-[var(--accent)] animate-pulse">Uploading…</p>
+                        )}
+                      </>
+                    )}
+                    {backgroundUploadError && (
+                      <p className="text-xs text-[var(--warning)] rounded-lg bg-[var(--warning)]/10 px-3 py-2">{backgroundUploadError}</p>
+                    )}
+                    <p className="text-[10px] text-[var(--muted)]">Uses a &quot;Click to view profile&quot; overlay when media plays.</p>
+                  </div>
                 </div>
-                <div className="space-y-2 pt-3 border-t border-[var(--border)]/50">
-                  <label className="block text-xs font-medium text-[var(--muted)]">
-                    Background audio <span className="text-[var(--muted)]/70">(ambient, separate from image/video)</span>
-                  </label>
-                  <input type="hidden" name="backgroundAudioUrl" value={backgroundAudioUrlValue} />
-                  <div className="flex flex-wrap items-center gap-2">
+
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden transition-all hover:border-[var(--border-bright)]">
+                  <div className="px-4 py-3 border-b border-[var(--border)]/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg bg-[var(--accent)]/10 p-1.5">
+                        <MusicNotes size={18} weight="duotone" className="text-[var(--accent)]" aria-hidden />
+                      </div>
+                      <span className="text-sm font-medium text-[var(--foreground)]">Background audio</span>
+                    </div>
+                    <span className="text-[10px] text-[var(--muted)]">Ambient loop · separate from visual</span>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <input type="hidden" name="backgroundAudioUrl" value={backgroundAudioUrlValue} />
+                    {backgroundAudioUrlValue ? (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-[var(--accent)]/15 shrink-0">
+                            <MusicNotes size={24} weight="fill" className="text-[var(--accent)]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[var(--foreground)]">Audio track loaded</p>
+                            <p className="text-[10px] text-[var(--muted)]">Plays when visitor unlocks profile</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                          <audio src={backgroundAudioUrlValue} controls className="h-8 flex-1 min-w-0 max-w-full sm:max-w-[160px] opacity-90" preload="metadata" />
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => backgroundAudioFileRef.current?.click()}
+                              disabled={backgroundAudioUploading}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                            >
+                              <UploadSimple size={14} weight="bold" />
+                              Replace
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBackgroundAudioUrlValue("")}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:border-[var(--warning)]/50 hover:text-[var(--warning)] transition-colors"
+                            >
+                              <X size={14} weight="bold" />
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") backgroundAudioFileRef.current?.click(); }}
+                        onClick={() => backgroundAudioFileRef.current?.click()}
+                        onDragOver={(e) => { e.preventDefault(); setAudioDragOver(true); }}
+                        onDragLeave={() => setAudioDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setAudioDragOver(false);
+                          const file = e.dataTransfer?.files?.[0];
+                          if (file && (file.type.startsWith("audio/") || /\.(mp3|aac|m4a)$/i.test(file.name))) handleBackgroundAudioUpload(file);
+                        }}
+                        className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed py-8 px-6 cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${
+                          audioDragOver ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] bg-[var(--bg)]/40 hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/5"
+                        }`}
+                      >
+                        <div className="rounded-full bg-[var(--accent)]/10 p-3">
+                          <MusicNotes size={28} weight="duotone" className="text-[var(--accent)]" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-[var(--foreground)]">Drop an audio file or click to upload</p>
+                          <p className="text-[10px] text-[var(--muted)] mt-0.5">MP3 or AAC · max 10 MB</p>
+                        </div>
+                        <span className="text-xs text-[var(--accent)] font-medium">Click to browse</span>
+                      </div>
+                    )}
                     <input
                       ref={backgroundAudioFileRef}
                       type="file"
                       accept=".mp3,.aac,audio/mpeg,audio/mp3,audio/aac"
                       className="sr-only"
                       aria-hidden
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 10 * 1024 * 1024) {
-                          setBackgroundAudioUploadError("Audio must be 10 MB or smaller");
-                          e.target.value = "";
-                          return;
-                        }
-                        setBackgroundAudioUploadError(null);
-                        setBackgroundAudioUploading(true);
-                        try {
-                          const form = new FormData();
-                          form.append("file", file);
-                          form.append("purpose", "background-audio");
-                          const prevUrl = backgroundAudioUrlValue.trim();
-                          if (prevUrl && prevUrl.includes("/api/files/")) {
-                            const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
-                            if (match) form.append("replaceFid", match[1]);
-                          }
-                          const res = await fetch("/api/upload", { method: "POST", body: form });
-                          const data = await res.json();
-                          if (!res.ok) {
-                            setBackgroundAudioUploadError(data.error ?? "Upload failed");
-                          } else {
-                            const base = typeof window !== "undefined" ? window.location.origin : "";
-                            const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
-                            setBackgroundAudioUrlValue(url);
-                          }
-                        } finally {
-                          setBackgroundAudioUploading(false);
-                          e.target.value = "";
-                        }
+                        if (file) handleBackgroundAudioUpload(file);
+                        e.target.value = "";
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => backgroundAudioFileRef.current?.click()}
-                      disabled={backgroundAudioUploading}
-                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
-                    >
-                      <UploadSimple size={16} weight="regular" />
-                      {backgroundAudioUploading ? "Uploading…" : "Upload audio"}
-                    </button>
-                    {backgroundAudioUrlValue && (
-                      <button
-                        type="button"
-                        onClick={() => setBackgroundAudioUrlValue("")}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--warning)]/50 hover:text-[var(--warning)]"
-                      >
-                        Remove
-                      </button>
+                    {backgroundAudioUploading && (
+                      <p className="text-xs text-[var(--accent)] animate-pulse">Uploading…</p>
                     )}
+                    {backgroundAudioUploadError && (
+                      <p className="text-xs text-[var(--warning)] rounded-lg bg-[var(--warning)]/10 px-3 py-2">{backgroundAudioUploadError}</p>
+                    )}
+                    <p className="text-[10px] text-[var(--muted)]">Works with image, video, or no visual background.</p>
                   </div>
-                  {backgroundAudioUrlValue && (
-                    <p className="text-[10px] text-[var(--muted)]">
-                      Background audio set. Plays when visitor unlocks the profile. Works with image, video, or no visual background.
-                    </p>
-                  )}
-                  {backgroundAudioUploadError && (
-                    <p className="text-[10px] text-[var(--warning)]">{backgroundAudioUploadError}</p>
-                  )}
-                  <p className="text-[10px] text-[var(--muted)]">
-                    MP3 or AAC, max 10 MB. Ambient loop. Separate from the visual background.
-                  </p>
                 </div>
               </div>
             </div>
 
             <div className={activeEditorSection === "audio" ? "block space-y-4" : "hidden"}>
-              <div className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
-                <p className="text-xs text-[var(--muted)] mb-3">
-                  An audio player widget will be displayed on your profile where visitors can control your tracks.
-                </p>
-                <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--foreground)]">
-                  <input
-                    type="checkbox"
-                    name="showAudioPlayer"
-                    checked={showAudioPlayerValue}
-                    onChange={(e) => setShowAudioPlayerValue(e.target.checked)}
-                    className="rounded border-[var(--border)]"
-                  />
-                  Audio Player
-                </label>
-              </div>
-              {showAudioPlayerValue && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-[var(--muted)]">Tracks</p>
-                  <input type="hidden" name="audioTracks" value={JSON.stringify(audioTracksValue)} />
-                  <ul className="space-y-2">
-                    {audioTracksValue.map((track, i) => (
-                      <li
-                        key={`${track.url}-${i}`}
-                        className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 px-3 py-2 text-sm"
-                      >
-                        <span className="truncate min-w-0" title={track.url}>
-                          {track.title || `Track ${i + 1}`}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setAudioTracksValue((prev) => prev.filter((_, j) => j !== i))}
-                          className="shrink-0 rounded p-1 text-[var(--muted)] hover:bg-[var(--warning)]/20 hover:text-[var(--warning)] transition-colors"
-                          aria-label="Remove track"
-                        >
-                          <Trash size={16} weight="regular" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      ref={audioTrackFileRef}
-                      type="file"
-                      accept=".mp3,.aac,audio/mpeg,audio/mp3,audio/aac"
-                      className="sr-only"
-                      aria-hidden
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 10 * 1024 * 1024) {
-                          setAudioTrackUploadError("Track must be 10 MB or smaller");
-                          e.target.value = "";
-                          return;
-                        }
-                        setAudioTrackUploadError(null);
-                        setAudioTrackUploading(true);
-                        try {
-                          const form = new FormData();
-                          form.append("file", file);
-                          form.append("purpose", "audio-player");
-                          const res = await fetch("/api/upload", { method: "POST", body: form });
-                          const data = await res.json();
-                          if (!res.ok) {
-                            setAudioTrackUploadError(data.error ?? "Upload failed");
-                          } else {
-                            const base = typeof window !== "undefined" ? window.location.origin : "";
-                            const url = data.url?.startsWith("http") ? data.url : `${base}${data.url || ""}`;
-                            setAudioTracksValue((prev) => [...prev, { url, title: file.name.replace(/\.[^.]*$/, "") || undefined }]);
-                          }
-                        } finally {
-                          setAudioTrackUploading(false);
-                          e.target.value = "";
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => audioTrackFileRef.current?.click()}
-                      disabled={audioTrackUploading}
-                      className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
-                    >
-                      <UploadSimple size={16} weight="regular" />
-                      {audioTrackUploading ? "Uploading…" : "Add track"}
-                    </button>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden transition-all hover:border-[var(--border-bright)]">
+                <div className="px-4 py-3 border-b border-[var(--border)]/50 flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-[var(--accent)]/10 p-1.5">
+                      <MusicNotes size={18} weight="duotone" className="text-[var(--accent)]" aria-hidden />
+                    </div>
+                    <span className="text-sm font-medium text-[var(--foreground)]">Audio Player</span>
                   </div>
-                  {audioTrackUploadError && (
-                    <p className="text-xs text-[var(--warning)]">{audioTrackUploadError}</p>
-                  )}
-                  <p className="text-[10px] text-[var(--muted)]">
-                    MP3 or AAC, max 10 MB per track.
-                  </p>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="inline-flex items-center gap-3 cursor-pointer group">
+                      <span className="text-xs text-[var(--muted)]">Show player on profile</span>
+                      <span className={`relative w-10 h-6 rounded-full transition-colors ${showAudioPlayerValue ? "bg-[var(--accent)]/30" : "bg-[var(--border)]"}`}>
+                        <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-[var(--foreground)] transition-transform ${showAudioPlayerValue ? "translate-x-5" : "translate-x-0"}`} />
+                      </span>
+                      <input
+                        type="checkbox"
+                        name="showAudioPlayer"
+                        checked={showAudioPlayerValue}
+                        onChange={(e) => setShowAudioPlayerValue(e.target.checked)}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
                 </div>
-              )}
+                <div className="p-4">
+                  <p className="text-xs text-[var(--muted)] mb-4">
+                    Visitors can play your tracks directly on your profile. Add tracks below and enable the player.
+                  </p>
+                  {showAudioPlayerValue && (
+                    <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 p-4">
+                      <p className="text-xs font-medium text-[var(--foreground)] mb-3">Visualizer</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(["", "bars", "wave", "spectrum"] as const).map((opt) => {
+                          const v = audioVisualizerStyleValue;
+                          const match = opt ? v === opt : !v || !["bars", "wave", "spectrum"].includes(v ?? "");
+                          return (
+                            <button
+                              key={opt || "none"}
+                              type="button"
+                              onClick={() => setAudioVisualizerStyleValue(opt)}
+                              className={`rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+                                match
+                                  ? "bg-[var(--accent)]/25 text-[var(--accent)] border border-[var(--accent)]/50"
+                                  : "bg-[var(--bg)]/80 text-[var(--muted)] border border-[var(--border)]/50 hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                              }`}
+                            >
+                              {opt || "None"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <input type="hidden" name="audioVisualizerStyle" value={(() => {
+                        const v = audioVisualizerStyleValue;
+                        return ["bars", "wave", "spectrum"].includes(v ?? "") ? v : "";
+                      })()} />
+                    </div>
+                  )}
+                  {showAudioPlayerValue && (
+                    <>
+                      <input type="hidden" name="audioTracks" value={JSON.stringify(audioTracksValue)} />
+                      {audioTracksValue.length > 0 ? (
+                        <div className="space-y-2 mb-4">
+                          {audioTracksValue.map((track, i) => (
+                            <div
+                              key={`${track.url}-${i}`}
+                              draggable
+                              onDragStart={() => setDraggedTrackIndex(i)}
+                              onDragEnd={() => setDraggedTrackIndex(null)}
+                              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const from = draggedTrackIndex;
+                                if (from != null && from !== i) moveTrack(from, i);
+                                setDraggedTrackIndex(null);
+                              }}
+                              className={`flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 px-3 py-2.5 transition-all group ${draggedTrackIndex === i ? "opacity-50 border-dashed" : "hover:border-[var(--border-bright)]"}`}
+                            >
+                              <DotsSixVertical size={18} weight="regular" className="text-[var(--muted)] cursor-grab active:cursor-grabbing shrink-0" />
+                              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--accent)]/10 shrink-0">
+                                <MusicNotes size={18} weight="fill" className="text-[var(--accent)]" />
+                              </div>
+                              {editingTrackIndex === i ? (
+                                <input
+                                  type="text"
+                                  value={editingTrackTitle}
+                                  onChange={(e) => setEditingTrackTitle(e.target.value)}
+                                  onBlur={() => {
+                                    setAudioTracksValue((prev) => {
+                                      const next = [...prev];
+                                      next[i] = { ...next[i], title: editingTrackTitle.trim() || undefined };
+                                      return next;
+                                    });
+                                    setEditingTrackIndex(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                  }}
+                                  autoFocus
+                                  className="flex-1 min-w-0 rounded border border-[var(--accent)]/50 bg-[var(--bg)] px-2 py-1 text-sm text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTrackIndex(i);
+                                    setEditingTrackTitle(track.title || `Track ${i + 1}`);
+                                  }}
+                                  className="flex-1 min-w-0 text-left text-sm font-medium text-[var(--foreground)] truncate hover:text-[var(--accent)] transition-colors flex items-center gap-2"
+                                >
+                                  {track.title || `Track ${i + 1}`}
+                                  <PencilSimple size={12} weight="regular" className="shrink-0 opacity-50 group-hover:opacity-100" />
+                                </button>
+                              )}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setAudioTracksValue((prev) => prev.filter((_, j) => j !== i))}
+                                  className="rounded p-1.5 text-[var(--muted)] hover:bg-[var(--warning)]/20 hover:text-[var(--warning)] transition-colors"
+                                  aria-label="Remove track"
+                                >
+                                  <Trash size={14} weight="regular" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") audioTrackFileRef.current?.click(); }}
+                        onClick={() => audioTrackFileRef.current?.click()}
+                        onDragOver={(e) => { e.preventDefault(); setAudioTracksDragOver(true); }}
+                        onDragLeave={() => setAudioTracksDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setAudioTracksDragOver(false);
+                          const file = e.dataTransfer?.files?.[0];
+                          if (file && (file.type.startsWith("audio/") || /\.(mp3|aac|m4a)$/i.test(file.name))) handleAudioTrackUpload(file);
+                        }}
+                        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-6 px-4 cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${
+                          audioTracksDragOver ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] bg-[var(--bg)]/40 hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/5"
+                        }`}
+                      >
+                        <div className="rounded-full bg-[var(--accent)]/10 p-2.5">
+                          <UploadSimple size={22} weight="duotone" className="text-[var(--accent)]" />
+                        </div>
+                        <p className="text-sm font-medium text-[var(--foreground)]">
+                          {audioTracksValue.length > 0 ? "Add another track" : "Add tracks — drop or click"}
+                        </p>
+                        <p className="text-[10px] text-[var(--muted)]">MP3 or AAC · max 10 MB per track</p>
+                      </div>
+                      <input
+                        ref={audioTrackFileRef}
+                        type="file"
+                        accept=".mp3,.aac,audio/mpeg,audio/mp3,audio/aac"
+                        className="sr-only"
+                        aria-hidden
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAudioTrackUpload(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      {audioTrackUploading && (
+                        <p className="mt-2 text-xs text-[var(--accent)] animate-pulse">Uploading…</p>
+                      )}
+                      {audioTrackUploadError && (
+                        <p className="mt-2 text-xs text-[var(--warning)] rounded-lg bg-[var(--warning)]/10 px-3 py-2">{audioTrackUploadError}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
             {state?.success && (
@@ -1684,26 +1912,6 @@ export default function DashboardMyProfile({
           />
         </div>
       </section>
-      )}
-
-      {templateModal && (
-        <TemplateConfirmModal
-          template={templateModal}
-          onClose={() => setTemplateModal(null)}
-          onConfirm={async () => {
-            setTemplateApplying(true);
-            const result = await applyTemplateAction(profile.id, templateModal.id);
-            setTemplateApplying(false);
-            if (result.error) {
-              toast.error(result.error);
-            } else {
-              setTemplateModal(null);
-              toast.success("Template applied");
-              router.refresh();
-            }
-          }}
-          applying={templateApplying}
-        />
       )}
 
       <ConfirmDialog

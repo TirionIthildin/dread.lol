@@ -69,6 +69,10 @@ try {
   await db.collection("pastes").createIndex({ slug: 1 }, { unique: true });
   await db.collection("pastes").createIndex({ createdAt: -1 });
 
+  await db.collection("profile_templates").createIndex({ creatorId: 1, updatedAt: -1 });
+  await db.collection("profile_templates").createIndex({ status: 1, applyCount: -1 });
+  await db.collection("profile_templates").createIndex({ status: 1, createdAt: -1 });
+
   console.log("MongoDB indexes created.");
 } catch (err) {
   console.error("Migration failed:", err.message);

@@ -30,6 +30,9 @@ export const COLLECTIONS = {
   userGuilds: "user_guilds",
   profileReports: "profile_reports",
   pastes: "pastes",
+  profileTemplates: "profile_templates",
+  templateFavorites: "template_favorites",
+  templateReports: "template_reports",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

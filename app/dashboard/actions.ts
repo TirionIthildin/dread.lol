@@ -20,7 +20,6 @@ import {
   setUserCustomBadges,
 } from "@/lib/member-profiles";
 import { normalizeSlug } from "@/lib/slug";
-import { getProfileTemplate } from "@/lib/profile-templates";
 import { validateUrlOrEmpty, requireSafeUrl, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 
 function parseAudioTracksValue(raw: string | null | undefined): string | null {
@@ -94,8 +93,9 @@ export async function updateProfileAction(
   const banner = validateUrlOrEmpty(formData.get("banner") as string);
   const ogImageUrl = validateUrlOrEmpty(formData.get("ogImageUrl") as string);
   const bgType = (formData.get("backgroundType") as string)?.trim();
-  const usesVisualBackground = ["image", "video"].includes(bgType ?? "");
-  const rawBackgroundUrl = usesVisualBackground
+  const usesCustomMedia = ["image", "video"].includes(bgType ?? "");
+  const usesVisualBackground = usesCustomMedia || ["grid", "gradient", "dither"].includes(bgType ?? "");
+  const rawBackgroundUrl = usesCustomMedia
     ? (formData.get("backgroundUrl") as string)?.trim()
     : undefined;
   const backgroundUrl = validateBackgroundUrl(rawBackgroundUrl);
@@ -106,7 +106,7 @@ export async function updateProfileAction(
   if ((formData.get("banner") as string)?.trim() && !banner) return { error: "Banner URL must use https or http" };
   if ((formData.get("ogImageUrl") as string)?.trim() && !ogImageUrl) return { error: "OG image URL must use https or http" };
   if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
-  if (usesVisualBackground && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
+  if (usesCustomMedia && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
   if (rawBackgroundAudioUrl && !backgroundAudioUrl) return { error: "Background audio URL must use https or http or a valid path" };
 
   try {
@@ -189,9 +189,14 @@ export async function updateProfileAction(
         : null,
       animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
       backgroundType: usesVisualBackground ? bgType : null,
-      backgroundUrl: usesVisualBackground ? backgroundUrl : null,
+      backgroundUrl: usesCustomMedia ? backgroundUrl : null,
       backgroundAudioUrl: backgroundAudioUrl || null,
       showAudioPlayer: formData.get("showAudioPlayer") === "on",
+      audioVisualizerStyle: (() => {
+        const s = (formData.get("audioVisualizerStyle") as string)?.trim();
+        return ["bars", "wave", "spectrum"].includes(s ?? "") ? s : null;
+      })(),
+      audioVisualizerAnimation: null,
       audioTracks: parseAudioTracksValue((formData.get("audioTracks") as string) ?? undefined),
     });
   } catch (e) {
@@ -201,49 +206,6 @@ export async function updateProfileAction(
   revalidatePath("/dashboard");
   if (slug) revalidatePath(`/${slug}`);
   return { success: true, savedAt: new Date().toISOString() };
-}
-
-/** Apply a profile template to the user's profile. Replaces content fields (tagline, description, banner, etc.). */
-export async function applyTemplateAction(
-  profileId: string,
-  templateId: string
-): Promise<{ error?: string }> {
-  const session = await getSession();
-  if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
-  const template = getProfileTemplate(templateId);
-  if (!template) return { error: "Template not found" };
-  const d = template.data;
-  const update: Parameters<typeof updateMemberProfile>[2] = {};
-  if (d.tagline !== undefined) update.tagline = d.tagline;
-  if (d.description !== undefined) update.description = d.description;
-  if (d.banner !== undefined) update.banner = d.banner;
-  if (d.discord !== undefined) update.discord = d.discord;
-  if (d.roblox !== undefined) update.roblox = d.roblox;
-  if (d.bannerSmall !== undefined) update.bannerSmall = d.bannerSmall;
-  if (d.bannerAnimatedFire !== undefined) update.bannerAnimatedFire = d.bannerAnimatedFire;
-  if (d.bannerStyle !== undefined) update.bannerStyle = d.bannerStyle;
-  if (d.useTerminalLayout !== undefined) update.useTerminalLayout = d.useTerminalLayout;
-  if (d.terminalTitle !== undefined) update.terminalTitle = d.terminalTitle;
-  if (d.terminalCommands !== undefined) update.terminalCommands = d.terminalCommands;
-  if (d.easterEgg !== undefined) update.easterEgg = d.easterEgg;
-  if (d.easterEggTaglineWord !== undefined) update.easterEggTaglineWord = d.easterEggTaglineWord;
-  if (d.easterEggLinkTrigger !== undefined) update.easterEggLinkTrigger = d.easterEggLinkTrigger;
-  if (d.easterEggLinkUrl !== undefined) update.easterEggLinkUrl = d.easterEggLinkUrl;
-  if (d.easterEggLinkPopupUrl !== undefined) update.easterEggLinkPopupUrl = d.easterEggLinkPopupUrl;
-  if (d.tags !== undefined) update.tags = d.tags;
-  if (d.links !== undefined) update.links = typeof d.links === "string" ? d.links : (d.links ? JSON.stringify(d.links) : null);
-  if (d.quote !== undefined) update.quote = d.quote;
-  try {
-    await updateMemberProfile(profileId, session.sub, update);
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Failed to apply template" };
-  }
-  revalidatePath("/dashboard");
-  const slug = await getProfileSlugByUserId(session.sub);
-  if (slug) revalidatePath(`/${slug}`);
-  return {};
 }
 
 /** Add a gallery item (image URL, optional title/description). */
