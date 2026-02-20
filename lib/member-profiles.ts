@@ -636,7 +636,7 @@ export async function getProfileSlugsByUserIds(userIds: string[]): Promise<Map<s
     .toArray();
   const map = new Map<string, string>();
   for (const d of docs) {
-    const row = d as { userId: string; slug: string };
+    const row = d as unknown as { userId: string; slug: string };
     if (row.userId && row.slug) map.set(row.userId, row.slug);
   }
   return map;

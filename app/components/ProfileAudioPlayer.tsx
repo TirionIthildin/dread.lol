@@ -102,7 +102,7 @@ export default function ProfileAudioPlayer({
 
     const ctx =
       ctxRef.current ??
-      new (window.AudioContext || (window as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     if (!ctxRef.current) ctxRef.current = ctx;
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
 

@@ -198,7 +198,10 @@ export async function listPublishedTemplates(options?: {
     ];
   }
 
-  const sortObj = sort === "recent" ? { createdAt: -1, applyCount: -1 } : { applyCount: -1, createdAt: -1 };
+  const sortObj =
+    sort === "recent"
+      ? ({ createdAt: -1, applyCount: -1 } as const)
+      : ({ applyCount: -1, createdAt: -1 } as const);
 
   // Fetch featured separately for the "Featured" section
   const featuredFilter = { ...filter, featured: true };
