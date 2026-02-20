@@ -34,9 +34,9 @@ export default function ProfileCursorEffect({
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) return;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
+        setIsHovering(true);
         setPos({ x: e.clientX, y: e.clientY });
         if (cursorStyle === "trail") {
           setTrail((prev) => [
@@ -51,16 +51,34 @@ export default function ProfileCursorEffect({
 
   const handleMouseEnter = useCallback(() => setIsHovering(true), []);
   const handleMouseLeave = useCallback(() => {
-    setIsHovering(false);
-    setPos(null);
-    setTrail([]);
+    // Intentionally no-op: hide only when pointer leaves the window (document mouseout).
+    // Moving to the background area should keep our custom cursor visible.
   }, []);
 
   useEffect(() => {
     if (cursorStyle !== "glow" && cursorStyle !== "trail") return;
+    const handleGlobalMouseOut = (e: MouseEvent) => {
+      const to = (e as unknown as { relatedTarget: Node | null }).relatedTarget;
+      if (!to || !document.body.contains(to)) {
+        setIsHovering(false);
+        setPos(null);
+        setTrail([]);
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        setIsHovering(false);
+        setPos(null);
+        setTrail([]);
+      }
+    };
     window.addEventListener("mousemove", handleMouseMove);
+    document.documentElement.addEventListener("mouseout", handleGlobalMouseOut);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
+      document.documentElement.removeEventListener("mouseout", handleGlobalMouseOut);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [cursorStyle, handleMouseMove]);

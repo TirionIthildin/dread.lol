@@ -577,6 +577,13 @@
     cursor: none;
   }
 
+  /* Force custom cursor on all descendants (links, buttons, etc. otherwise show pointer) */
+  .profile-cursor-active *,
+  .profile-cursor-active *::before,
+  .profile-cursor-active *::after {
+    cursor: inherit !important;
+  }
+
   /* Profile animation presets */
   .profile-animate-fade-in {
     animation: profile-fade-in 0.4s ease-out both;

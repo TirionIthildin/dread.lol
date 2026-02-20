@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { Profile } from "@/lib/profiles";
-import { getThemeClass } from "@/lib/profile-themes";
+import { getThemeClass, getProfileCursorProps } from "@/lib/profile-themes";
 
 /** Resolve URL for media (handles relative paths). */
 function resolveMediaUrl(url: string): string {
@@ -27,13 +27,19 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   const customBgType = ["image", "video"].includes(profile.backgroundType ?? "")
     ? profile.backgroundType
     : null;
-  const builtInBg = BUILT_IN_BACKGROUNDS.includes(profile.backgroundType as (typeof BUILT_IN_BACKGROUNDS)[number])
-    ? (profile.backgroundType as (typeof BUILT_IN_BACKGROUNDS)[number])
-    : null;
+  const builtInBg = (() => {
+    const t = profile.backgroundType ?? "";
+    if (BUILT_IN_BACKGROUNDS.includes(t as (typeof BUILT_IN_BACKGROUNDS)[number])) {
+      return t as (typeof BUILT_IN_BACKGROUNDS)[number];
+    }
+    if (t === "") return "grid"; // empty/none defaults to grid
+    return null;
+  })();
   const backgroundUrl = profile.backgroundUrl?.trim();
   const backgroundAudioUrl = profile.backgroundAudioUrl?.trim();
 
   const themeClass = getThemeClass(profile.accentColor);
+  const { cursorClass, cursorStyle } = getProfileCursorProps(profile, resolveMediaUrl);
   const hasVisualBackground = customBgType === "image" || customBgType === "video" || !!builtInBg;
   const needsUnlock = (customBgType === "video") || !!backgroundAudioUrl;
 
@@ -81,7 +87,15 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     />
   );
 
-  const wrapperClassName = themeClass ? `min-h-screen flex flex-col ${themeClass}` : "min-h-screen flex flex-col";
+  const hasCustomCursor = Boolean(cursorClass || cursorStyle?.cursor);
+  const wrapperClassName = [
+    "min-h-screen flex flex-col",
+    themeClass,
+    cursorClass,
+    hasCustomCursor && "profile-cursor-active",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (builtInBg) {
     const bgClass =
@@ -91,7 +105,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
           ? "profile-bg-gradient"
           : "profile-bg-dither";
     return (
-      <div className={wrapperClassName}>
+      <div className={wrapperClassName} style={cursorStyle}>
         <div
           className={`fixed inset-0 z-0 overflow-hidden ${bgClass}`}
           aria-hidden
@@ -115,7 +129,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   if (customBgType === "image" && backgroundUrl) {
     const resolvedImageUrl = resolveMediaUrl(backgroundUrl);
     return (
-      <div className={wrapperClassName}>
+      <div className={wrapperClassName} style={cursorStyle}>
         <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden>
           <img
             src={resolvedImageUrl}
@@ -149,7 +163,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     if (!resolvedUrl) return <>{children}</>;
 
     return (
-      <div className={wrapperClassName}>
+      <div className={wrapperClassName} style={cursorStyle}>
         <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden>
           <video
             ref={videoRef}
@@ -189,7 +203,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     if (!resolvedUrl) return <>{children}</>;
 
     return (
-      <div className={themeClass ? `min-h-screen flex flex-col ${themeClass}` : "min-h-screen flex flex-col"}>
+      <div className={wrapperClassName} style={cursorStyle}>
         <audio ref={audioRef} src={resolvedUrl} loop preload="metadata" className="sr-only" aria-hidden />
         {unlockOverlay}
         {content}
@@ -197,5 +211,9 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className={wrapperClassName} style={cursorStyle}>
+      {children}
+    </div>
+  );
 }

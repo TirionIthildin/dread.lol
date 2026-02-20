@@ -269,13 +269,13 @@ export default function DashboardMyProfile({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
-  const BG_OPTIONS = ["none", "grid", "gradient", "dither", "image", "video"] as const;
+  const BG_OPTIONS = ["grid", "gradient", "dither", "image", "video"] as const;
   const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(() => {
-    const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
-    return ["image", "video", "grid", "gradient", "dither"].includes(t) ? t : "none";
+    const t = (profile as { backgroundType?: string }).backgroundType ?? "grid";
+    return ["image", "video", "grid", "gradient", "dither"].includes(t) ? t : "grid";
   });
   const [backgroundUrlValue, setBackgroundUrlValue] = useState(() => {
-    const t = (profile as { backgroundType?: string }).backgroundType ?? "none";
+    const t = (profile as { backgroundType?: string }).backgroundType ?? "grid";
     return ["image", "video"].includes(t) ? ((profile as { backgroundUrl?: string }).backgroundUrl ?? "") : "";
   });
   const [backgroundUploading, setBackgroundUploading] = useState(false);
@@ -1443,7 +1443,7 @@ export default function DashboardMyProfile({
                       <span className="text-[10px] text-[var(--muted)]">Grid, gradient, animated, or custom media</span>
                   </div>
                   <div className="p-4 space-y-4">
-                    <input type="hidden" name="backgroundType" value={backgroundTypeValue === "none" ? "" : backgroundTypeValue} />
+                    <input type="hidden" name="backgroundType" value={backgroundTypeValue} />
                     <input type="hidden" name="backgroundUrl" value={["image", "video"].includes(backgroundTypeValue) ? backgroundUrlValue : ""} />
                     <div className="flex flex-wrap gap-2">
                       {BG_OPTIONS.map((opt) => (
@@ -1451,18 +1451,12 @@ export default function DashboardMyProfile({
                           key={opt}
                           type="button"
                           onClick={() => {
-                            if (opt === "none") {
-                              setBackgroundTypeValue("none");
+                            setBackgroundTypeValue(opt);
+                            setBackgroundUploadError(null);
+                            if (opt === "grid" || opt === "gradient" || opt === "dither") {
                               setBackgroundUrlValue("");
-                              setBackgroundUploadError(null);
-                            } else {
-                              setBackgroundTypeValue(opt);
-                              setBackgroundUploadError(null);
-                              if (opt === "grid" || opt === "gradient" || opt === "dither") {
-                                setBackgroundUrlValue("");
-                              } else if ((opt === "image" && backgroundTypeValue === "video") || (opt === "video" && backgroundTypeValue === "image")) {
-                                setBackgroundUrlValue("");
-                              }
+                            } else if ((opt === "image" && backgroundTypeValue === "video") || (opt === "video" && backgroundTypeValue === "image")) {
+                              setBackgroundUrlValue("");
                             }
                           }}
                           className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
@@ -1471,13 +1465,12 @@ export default function DashboardMyProfile({
                               : "bg-[var(--bg)]/60 text-[var(--muted)] border border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
                           }`}
                         >
-                          {opt === "none" && <X size={16} weight="bold" />}
                           {opt === "grid" && <GridFour size={16} weight="regular" />}
                           {opt === "gradient" && <Sparkle size={16} weight="regular" />}
                           {opt === "dither" && <SquaresFour size={16} weight="regular" />}
                           {opt === "image" && <ImageIcon size={16} weight="regular" />}
                           {opt === "video" && <VideoCamera size={16} weight="regular" />}
-                          {opt === "none" ? "None" : opt === "grid" ? "Grid" : opt === "gradient" ? "Gradient" : opt === "dither" ? "Animated" : opt === "image" ? "Image" : "Video"}
+                          {opt === "grid" ? "Grid" : opt === "gradient" ? "Gradient" : opt === "dither" ? "Animated" : opt === "image" ? "Image" : "Video"}
                         </button>
                       ))}
                     </div>

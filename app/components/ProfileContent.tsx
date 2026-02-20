@@ -41,23 +41,6 @@ const CARD_STYLES = ["default", "sharp", "glass", "neon", "minimal", "elevated"]
 const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded", "square", "soft", "hexagon"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
-const CURSOR_STYLES = [
-  "default",
-  "crosshair",
-  "pointer",
-  "text",
-  "grab",
-  "minimal",
-  "beam",
-  "spot",
-  "ring",
-  "neon",
-  "bolt",
-  "cross",
-  "hex",
-  "glow",
-  "trail",
-] as const;
 const ANIMATION_PRESETS = [
   "none",
   "fade-in",
@@ -204,16 +187,6 @@ export default function ProfileContent({ profile, vouches, reactions, similarPro
       : profile.customFont && CUSTOM_FONTS.includes(profile.customFont as (typeof CUSTOM_FONTS)[number])
         ? `profile-font-${profile.customFont}`
         : "";
-  const cursorClass =
-    profile.cursorImageUrl
-      ? ""
-      : profile.cursorStyle && CURSOR_STYLES.includes(profile.cursorStyle as (typeof CURSOR_STYLES)[number]) && profile.cursorStyle !== "default"
-        ? `profile-cursor-${profile.cursorStyle}`
-        : "";
-  const cursorStyleInline =
-    profile.cursorImageUrl
-      ? { cursor: `url("${resolveMediaUrl(profile.cursorImageUrl).replace(/"/g, "%22")}") 0 0, auto` }
-      : undefined;
   const customFontUrlResolved = profile.customFontUrl ? resolveMediaUrl(profile.customFontUrl) : "";
   const animationClass =
     profile.animationPreset && ANIMATION_PRESETS.includes(profile.animationPreset as (typeof ANIMATION_PRESETS)[number]) && profile.animationPreset !== "none"
@@ -232,8 +205,7 @@ export default function ProfileContent({ profile, vouches, reactions, similarPro
         />
       )}
     <div
-      className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass} ${cursorClass}`}
-      style={cursorStyleInline}
+      className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass}`}
     >
       <article
         className={`rounded-xl border border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden transition-shadow duration-300 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)] ${cardClass} ${densityClass} ${animationClass}`}

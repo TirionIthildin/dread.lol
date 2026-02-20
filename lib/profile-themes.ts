@@ -135,6 +135,46 @@ export const ACCENT_COLOR_OPTIONS: { value: AccentTheme; label: string }[] = [
   { value: "sky", label: "Sky" },
 ];
 
+/** Valid cursor style keys (match globals.css profile-cursor-*). */
+export const CURSOR_STYLES = [
+  "crosshair",
+  "pointer",
+  "text",
+  "grab",
+  "minimal",
+  "beam",
+  "spot",
+  "ring",
+  "neon",
+  "bolt",
+  "cross",
+  "hex",
+  "glow",
+  "trail",
+] as const;
+
+/** Returns cursor class and inline style for a profile. Apply to the outermost profile wrapper so cursor works over background too. */
+export function getProfileCursorProps(
+  profile: { cursorStyle?: string | null; cursorImageUrl?: string | null },
+  resolveUrl: (url: string) => string
+): { cursorClass: string; cursorStyle?: { cursor: string } } {
+  if (profile.cursorImageUrl) {
+    const url = resolveUrl(profile.cursorImageUrl).replace(/"/g, "%22");
+    return {
+      cursorClass: "",
+      cursorStyle: url ? { cursor: `url("${url}") 0 0, auto` } : undefined,
+    };
+  }
+  if (
+    profile.cursorStyle &&
+    profile.cursorStyle !== "default" &&
+    CURSOR_STYLES.includes(profile.cursorStyle as (typeof CURSOR_STYLES)[number])
+  ) {
+    return { cursorClass: `profile-cursor-${profile.cursorStyle}` };
+  }
+  return { cursorClass: "" };
+}
+
 /** Options for banner gradient dropdown (value, label). */
 export const BANNER_STYLE_OPTIONS: { value: string; label: string }[] = [
   { value: "accent", label: "Default (accent)" },
