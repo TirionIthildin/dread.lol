@@ -54,9 +54,9 @@ export default async function BillingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Premium</h1>
-        <p className="text-sm text-[var(--muted)] mt-1">
-          Manage your subscription and payment methods.
+        <h1 className="text-2xl font-semibold text-[var(--foreground)]">Premium</h1>
+        <p className="mt-1.5 text-sm text-[var(--muted)]">
+          Manage your subscription, unlock effects, analytics, and more.
         </p>
       </div>
 

@@ -21,8 +21,8 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
   },
   {
     date: "2026-02",
-    title: "Redesigned Premium page",
-    description: "Hero status, pricing cards, features grid, and clearer CTAs for Subscribe vs Buy.",
+    title: "Improved Premium page",
+    description: "Clearer status badges, expanded feature list (microblog, gallery, pastes), trust cues, and better pricing cards with period labels.",
   },
   {
     date: "2026-02",

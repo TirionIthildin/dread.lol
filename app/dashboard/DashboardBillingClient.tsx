@@ -12,6 +12,10 @@ import {
   Palette,
   ImageSquare,
   CrownSimple,
+  Article,
+  Copy,
+  Stack,
+  ShieldCheck,
 } from "@phosphor-icons/react";
 import type { PremiumSource } from "@/lib/premium-permissions";
 
@@ -40,11 +44,14 @@ type Props = {
 };
 
 const PREMIUM_FEATURES = [
-  { icon: Sparkle, label: "Username effects", desc: "Typewriter, sparkle effects" },
+  { icon: Sparkle, label: "Username effects", desc: "Typewriter, sparkle, animated text" },
   { icon: Palette, label: "Custom colors", desc: "Accent, text, background" },
   { icon: ImageSquare, label: "Background effects", desc: "Snow, rain, blur, retro" },
-  { icon: ChartLine, label: "Profile analytics", desc: "Views, traffic sources" },
+  { icon: ChartLine, label: "Profile analytics", desc: "Views, traffic sources, devices" },
   { icon: CrownSimple, label: "Premium badge", desc: "Stand out on your profile" },
+  { icon: Article, label: "Profile microblog", desc: "Write posts on your profile" },
+  { icon: Stack, label: "Unlimited gallery", desc: "No limit on profile images" },
+  { icon: Copy, label: "Unlimited pastes", desc: "Create pastes without monthly caps" },
 ];
 
 export default function DashboardBillingClient({
@@ -66,67 +73,83 @@ export default function DashboardBillingClient({
 
   if (!billingEnabled) {
     return (
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 p-12 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--border)]/50">
-          <CreditCard size={32} weight="duotone" className="text-[var(--muted)]" />
+      <div className="rounded-2xl border border-[var(--border)] bg-gradient-to-b from-[var(--surface)] to-[var(--surface)]/50 p-12 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--accent)]/10 ring-1 ring-[var(--accent)]/20">
+          <CreditCard size={40} weight="duotone" className="text-[var(--accent)]" />
         </div>
-        <h2 className="mt-4 text-lg font-semibold text-[var(--foreground)]">
-          Premium not configured
+        <h2 className="mt-5 text-xl font-semibold text-[var(--foreground)]">
+          Premium not yet available
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--muted)]">
-          Admins can enable billing and add products in Admin → Billing.
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
+          Billing is not configured yet. Admins can enable it and add products in Admin → Billing.
         </p>
       </div>
     );
   }
 
+  const statusLabel =
+    premiumSource === "granted"
+      ? "Complimentary access from admin"
+      : premiumSource === "subscription"
+        ? "Active subscription"
+        : premiumSource === "product"
+          ? "Lifetime access"
+          : null;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Hero status */}
       <div
-        className={`relative overflow-hidden rounded-2xl border p-6 md:p-8 ${
+        className={`relative overflow-hidden rounded-2xl border p-6 md:p-8 transition-colors ${
           hasPremiumAccess
-            ? "border-[var(--accent)]/40 bg-gradient-to-br from-[var(--accent)]/10 via-[var(--accent)]/5 to-transparent"
-            : "border-[var(--border)] bg-[var(--surface)]"
+            ? "border-[var(--accent)]/50 bg-gradient-to-br from-[var(--accent)]/15 via-[var(--accent)]/8 to-transparent shadow-[0_0_40px_-12px_var(--accent)]"
+            : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-bright)]"
         }`}
       >
         {hasPremiumAccess && (
-          <div className="pointer-events-none absolute -right-8 -top-8 text-[8rem] opacity-[0.07]">
-            <Crown weight="fill" className="text-[var(--accent)]" />
-          </div>
+          <>
+            <div className="pointer-events-none absolute -right-4 -top-4 text-[10rem] opacity-[0.06]">
+              <Crown weight="fill" className="text-[var(--accent)]" />
+            </div>
+            <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-[var(--accent)]/10 blur-2xl" />
+          </>
         )}
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                  hasPremiumAccess ? "bg-[var(--accent)]/20" : "bg-[var(--border)]/50"
-                }`}
-              >
-                {hasPremiumAccess ? (
-                  <Crown size={24} weight="fill" className="text-[var(--accent)]" />
-                ) : (
-                  <Crown size={24} weight="regular" className="text-[var(--muted)]" />
-                )}
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-[var(--foreground)]">
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-colors ${
+                hasPremiumAccess ? "bg-[var(--accent)]/25 shadow-inner" : "bg-[var(--border)]/40"
+              }`}
+            >
+              {hasPremiumAccess ? (
+                <Crown size={28} weight="fill" className="text-[var(--accent)]" />
+              ) : (
+                <Crown size={28} weight="regular" className="text-[var(--muted)]" />
+              )}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-semibold text-[var(--foreground)] md:text-2xl">
                   {hasPremiumAccess ? `You have ${tierName}` : `Upgrade to ${tierName}`}
                 </h2>
-                <p className="text-sm text-[var(--muted)]">
-                  {premiumSource === "granted" && "Complimentary access from an admin"}
-                  {premiumSource === "subscription" && "Active subscription"}
-                  {premiumSource === "product" && "One-time purchase"}
-                  {!hasPremiumAccess && "Unlock effects, analytics, and more"}
-                </p>
+                {statusLabel && (
+                  <span className="inline-flex items-center rounded-full bg-[var(--accent)]/20 px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
+                    {statusLabel}
+                  </span>
+                )}
               </div>
+              <p className="mt-1.5 text-sm text-[var(--muted)]">
+                {hasPremiumAccess
+                  ? "All premium features are unlocked on your profile."
+                  : "Unlock effects, analytics, custom colors, and more."}
+              </p>
             </div>
           </div>
           {hasPremiumAccess && hasActiveSubscription && (
             <Link
               href="/api/polar/customer-portal"
               prefetch={false}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-5 py-2.5 text-sm font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/15 px-5 py-3 text-sm font-medium text-[var(--accent)] transition-all hover:bg-[var(--accent)]/25 hover:border-[var(--accent)]/70"
             >
               <CreditCard size={18} weight="regular" />
               Manage subscription
@@ -138,16 +161,20 @@ export default function DashboardBillingClient({
       {/* Upgrade section – when no access or has one-time but no sub */}
       {(!hasPremiumAccess || (ownedPremium && !hasActiveSubscription && hasSubscriptionProducts)) && (
         <section>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
             {hasPremiumAccess ? "Add recurring access" : "Choose your plan"}
           </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <p className="mb-4 text-xs text-[var(--muted)]">
+            Secure payments via Polar. Cancel anytime.
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {subProducts.map((prod) => (
               <PlanCard
                 key={prod.id}
                 name={tierName}
                 priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
-                description="Recurring access, cancel anytime"
+                period="/month"
+                description="Cancel anytime. Full access to all features."
                 cta="Subscribe"
                 href="/api/polar/checkout-redirect?prefer=recurring"
                 icon={<Plus size={20} weight="regular" />}
@@ -159,8 +186,9 @@ export default function DashboardBillingClient({
                 key={prod.id}
                 name={prod.name}
                 priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
-                description="Pay once, keep forever"
-                cta="Buy"
+                period="one-time"
+                description="Pay once, keep forever. No recurring charges."
+                cta="Buy lifetime"
                 href="/api/polar/checkout-redirect?prefer=one_time"
                 icon={<CreditCard size={20} weight="regular" />}
               />
@@ -169,6 +197,7 @@ export default function DashboardBillingClient({
               <PlanCard
                 name={tierName}
                 priceStr={null}
+                period={null}
                 description="Get started"
                 cta="Get Premium"
                 href="/api/polar/checkout-redirect"
@@ -176,6 +205,16 @@ export default function DashboardBillingClient({
                 featured
               />
             )}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[var(--muted)]">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck size={14} weight="fill" className="text-[var(--accent)]" />
+              Secure checkout
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CreditCard size={14} weight="regular" />
+              Cancel anytime (subscriptions)
+            </span>
           </div>
         </section>
       )}
@@ -186,7 +225,7 @@ export default function DashboardBillingClient({
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
             Your products
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {ownedProductIds.map((id) => {
               const prod = premiumProducts.find((p) => p.id === id);
               const label = prod ? (prod.isRecurring ? tierName : prod.name) : id;
@@ -194,13 +233,17 @@ export default function DashboardBillingClient({
               return (
                 <div
                   key={id}
-                  className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+                  className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 transition-colors hover:border-[var(--accent)]/30"
                 >
-                  <CheckCircle size={18} weight="fill" className="text-[var(--accent)] shrink-0" />
-                  <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
-                  {priceStr && (
-                    <span className="text-xs text-[var(--muted)]">({priceStr})</span>
-                  )}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/15">
+                    <CheckCircle size={18} weight="fill" className="text-[var(--accent)]" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
+                    {priceStr && (
+                      <span className="ml-2 text-xs text-[var(--muted)]">({priceStr})</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -209,29 +252,38 @@ export default function DashboardBillingClient({
       )}
 
       {/* Features */}
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 p-6">
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
-          <Lock size={18} weight="regular" className="text-[var(--muted)]" />
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 md:p-8">
+        <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-[var(--foreground)]">
+          <Lock size={20} weight="regular" className="text-[var(--muted)]" />
           What {tierName} unlocks
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <p className="mb-5 text-sm text-[var(--muted)]">
+          Everything you need to make your profile stand out.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {PREMIUM_FEATURES.map(({ icon: Icon, label, desc }) => (
             <div
               key={label}
-              className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+              className={`flex items-start gap-3 rounded-xl border px-4 py-3.5 transition-colors ${
                 hasPremiumAccess
-                  ? "border-[var(--accent)]/20 bg-[var(--accent)]/5"
-                  : "border-[var(--border)] bg-[var(--bg)]/30"
+                  ? "border-[var(--accent)]/25 bg-[var(--accent)]/8"
+                  : "border-[var(--border)] bg-[var(--bg)]/40 hover:border-[var(--border-bright)]"
               }`}
             >
-              <Icon
-                size={20}
-                weight="regular"
-                className={`mt-0.5 shrink-0 ${hasPremiumAccess ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}
-              />
-              <div>
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  hasPremiumAccess ? "bg-[var(--accent)]/20" : "bg-[var(--border)]/50"
+                }`}
+              >
+                <Icon
+                  size={18}
+                  weight="regular"
+                  className={hasPremiumAccess ? "text-[var(--accent)]" : "text-[var(--muted)]"}
+                />
+              </div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-[var(--foreground)]">{label}</p>
-                <p className="text-xs text-[var(--muted)]">{desc}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted)]">{desc}</p>
               </div>
             </div>
           ))}
@@ -244,6 +296,7 @@ export default function DashboardBillingClient({
 function PlanCard({
   name,
   priceStr,
+  period,
   description,
   cta,
   href,
@@ -252,6 +305,7 @@ function PlanCard({
 }: {
   name: string;
   priceStr: string | null;
+  period: string | null;
   description: string;
   cta: string;
   href: string;
@@ -260,25 +314,30 @@ function PlanCard({
 }) {
   return (
     <div
-      className={`flex flex-col justify-between rounded-2xl border p-6 transition-colors ${
+      className={`flex flex-col justify-between rounded-2xl border p-6 transition-all ${
         featured
-          ? "border-[var(--accent)]/40 bg-[var(--accent)]/5 hover:border-[var(--accent)]/60"
-          : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-bright)]"
+          ? "border-[var(--accent)]/50 bg-[var(--accent)]/8 shadow-[0_0_24px_-8px_var(--accent)] hover:border-[var(--accent)]/60 hover:bg-[var(--accent)]/12"
+          : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-bright)] hover:bg-[var(--surface-hover)]"
       }`}
     >
       <div>
         <h4 className="text-lg font-semibold text-[var(--foreground)]">{name}</h4>
         {priceStr && (
-          <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{priceStr}</p>
+          <p className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-bold tabular-nums text-[var(--foreground)]">{priceStr}</span>
+            {period && (
+              <span className="text-sm font-normal text-[var(--muted)]">{period}</span>
+            )}
+          </p>
         )}
-        <p className="mt-2 text-sm text-[var(--muted)]">{description}</p>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">{description}</p>
       </div>
       <Link
         href={href}
         prefetch={false}
-        className={`mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+        className={`mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
           featured
-            ? "border-2 border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)] hover:bg-[var(--accent)]/30"
+            ? "bg-[var(--accent)]/25 text-[var(--accent)] ring-1 ring-[var(--accent)]/40 hover:bg-[var(--accent)]/35 hover:ring-[var(--accent)]/60"
             : "border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--foreground)] hover:border-[var(--border-bright)]"
         }`}
       >

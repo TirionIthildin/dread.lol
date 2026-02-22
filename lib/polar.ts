@@ -4,7 +4,7 @@
  * See Nimlos for reference implementation.
  */
 import { Polar } from "@polar-sh/sdk";
-import { SITE_URL } from "@/lib/site";
+import { getCanonicalOrigin } from "@/lib/site";
 
 const isSandbox =
   process.env.POLAR_SANDBOX === "1" || process.env.POLAR_SANDBOX === "true";
@@ -160,7 +160,7 @@ export function getCheckoutUrl(options: {
   customerExternalId?: string;
   metadata?: Record<string, string>;
 }) {
-  const url = new URL("/api/polar/checkout", SITE_URL);
+  const url = new URL("/api/polar/checkout", getCanonicalOrigin());
   url.searchParams.set("products", options.products);
   if (options.customerEmail)
     url.searchParams.set("customerEmail", options.customerEmail);

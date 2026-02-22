@@ -7,7 +7,12 @@ function resolveSiteUrl(): string {
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_HOME_URL ||
     CANONICAL_ORIGIN;
-  return u.replace(/\/$/, "");
+  const base = u.replace(/\/$/, "");
+  // Never use internal/bind addresses - Docker/Coolify may inject wrong env (e.g. 0.0.0.0:3000)
+  if (base.includes("0.0.0.0") || base.includes("127.0.0.1")) {
+    return CANONICAL_ORIGIN;
+  }
+  return base;
 }
 
 /** Site URL and canonical base for metadata, sitemap, Open Graph, etc. */
