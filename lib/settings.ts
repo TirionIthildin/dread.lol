@@ -50,11 +50,13 @@ export interface BillingSettings {
   sandbox: boolean;
   /** Whether Polar env vars are configured (read-only indicator). */
   polarConfigured: boolean;
-  /** Max gallery images for free users. Premium users have no limit. 0 = unlimited. */
-  galleryMaxFree: number;
+  /** Product IDs that grant gallery addon (image hosting). Premium also includes gallery. */
+  galleryAddonProductIds: string[];
   /** When true, only Premium users can create blog posts. */
   blogPremiumOnly: boolean;
-  /** Max pastes per month for free users. Premium unlimited. 0 = unlimited. */
+  /** When true, only Premium users can create pastes. */
+  pastePremiumOnly: boolean;
+  /** Max pastes per month for free users when pastePremiumOnly is false. Premium unlimited. 0 = unlimited. */
   pasteMaxFreePerMonth: number;
   /** Product IDs that grant custom badge addon (user can create their own badge). */
   customBadgeProductIds: string[];
@@ -77,14 +79,14 @@ export async function getBillingSettings(): Promise<BillingSettings> {
       ? String(tierNameFromDb).trim()
       : "Premium";
 
-  const galleryMaxFreeFromDb = await getSetting<number>("billing.galleryMaxFree");
-  const galleryMaxFree =
-    galleryMaxFreeFromDb !== undefined && galleryMaxFreeFromDb !== null && typeof galleryMaxFreeFromDb === "number"
-      ? Math.max(0, Math.round(galleryMaxFreeFromDb))
-      : 10;
+  const galleryAddonProductIdsFromDb = await getSetting<string[] | string | null>("billing.galleryAddonProductIds");
+  const galleryAddonProductIds = parseProductIds(galleryAddonProductIdsFromDb, null);
 
   const blogPremiumOnlyFromDb = await getSetting<boolean>("billing.blogPremiumOnly");
   const blogPremiumOnly = blogPremiumOnlyFromDb !== undefined && blogPremiumOnlyFromDb !== null ? Boolean(blogPremiumOnlyFromDb) : true;
+
+  const pastePremiumOnlyFromDb = await getSetting<boolean>("billing.pastePremiumOnly");
+  const pastePremiumOnly = pastePremiumOnlyFromDb !== undefined && pastePremiumOnlyFromDb !== null ? Boolean(pastePremiumOnlyFromDb) : true;
 
   const pasteMaxFreePerMonthFromDb = await getSetting<number>("billing.pasteMaxFreePerMonth");
   const pasteMaxFreePerMonth =
@@ -111,8 +113,9 @@ export async function getBillingSettings(): Promise<BillingSettings> {
     productIds,
     sandbox,
     polarConfigured,
-    galleryMaxFree,
+    galleryAddonProductIds,
     blogPremiumOnly,
+    pastePremiumOnly,
     pasteMaxFreePerMonth,
     customBadgeProductIds,
   };

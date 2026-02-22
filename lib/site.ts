@@ -34,10 +34,19 @@ function isUsableOrigin(origin: string): boolean {
 
 /**
  * Canonical origin for redirects (checkout, auth callbacks, etc.).
- * Hardcoded to avoid Docker/proxy env issues.
+ * Uses SITE_URL / NEXT_PUBLIC_SITE_URL when set; falls back to CANONICAL_ORIGIN.
  */
 export function getCanonicalOrigin(): string {
-  return CANONICAL_ORIGIN;
+  const u =
+    process.env.SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_HOME_URL ||
+    CANONICAL_ORIGIN;
+  const base = u.replace(/\/$/, "");
+  if (base.includes("0.0.0.0") || base.includes("127.0.0.1")) {
+    return CANONICAL_ORIGIN;
+  }
+  return base;
 }
 
 /** Origin from request. Use getCanonicalOrigin() for Polar/auth redirects instead. */

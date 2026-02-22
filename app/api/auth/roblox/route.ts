@@ -6,7 +6,8 @@ function getBaseUrl(request: NextRequest): string {
   const host = request.headers.get("host");
   const proto = request.headers.get("x-forwarded-proto") ?? "http";
   if (host) return `${proto}://${host}`;
-  return process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const u = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return u.replace(/\/$/, "");
 }
 
 /** GET: Redirect to Roblox OAuth to link account. */

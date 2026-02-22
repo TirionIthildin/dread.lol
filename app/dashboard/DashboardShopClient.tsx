@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Medal,
   PencilSimple,
+  Trash,
 } from "@phosphor-icons/react";
 import type { PremiumSource } from "@/lib/premium-permissions";
 import { BADGE_ICON_OPTIONS } from "@/lib/badge-icons";
@@ -49,6 +50,19 @@ type Props = {
   premiumSource: PremiumSource;
   customBadgeProducts: PremiumProduct[];
   hasCustomBadgeAddon: boolean;
+  customBadgeSlotCount: number;
+  galleryAddonProducts: PremiumProduct[];
+  hasGalleryAddon: boolean;
+};
+
+type UserCreatedBadge = {
+  id: string;
+  label: string;
+  description?: string | null;
+  color?: string | null;
+  badgeType?: "label" | "image" | "icon";
+  imageUrl?: string | null;
+  iconName?: string | null;
 };
 
 const PREMIUM_FEATURES = [
@@ -73,15 +87,13 @@ export default function DashboardShopClient({
   premiumSource,
   customBadgeProducts,
   hasCustomBadgeAddon,
+  customBadgeSlotCount = 0,
+  galleryAddonProducts,
+  hasGalleryAddon,
 }: Props) {
-  const [customBadge, setCustomBadge] = useState<{
-    label: string;
-    description?: string | null;
-    color?: string | null;
-    badgeType?: "label" | "image" | "icon";
-    imageUrl?: string | null;
-    iconName?: string | null;
-  } | null>(null);
+  const [badges, setBadges] = useState<UserCreatedBadge[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [formLabel, setFormLabel] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formColor, setFormColor] = useState("");
@@ -90,30 +102,48 @@ export default function DashboardShopClient({
   const [formIconName, setFormIconName] = useState("");
   const [badgeSaving, setBadgeSaving] = useState(false);
 
-  const fetchCustomBadge = useCallback(async () => {
+  const fetchBadges = useCallback(async () => {
     if (!hasCustomBadgeAddon) return;
     try {
       const res = await fetch("/api/dashboard/shop/custom-badge");
       if (!res.ok) return;
       const data = await res.json();
-      const b = data.badge;
-      if (b) {
-        setCustomBadge(b);
-        setFormLabel(b.label ?? "");
-        setFormDescription(b.description ?? "");
-        setFormColor(b.color ?? "");
-        setFormBadgeType((b.badgeType as "label" | "image" | "icon") ?? "label");
-        setFormImageUrl(b.imageUrl ?? "");
-        setFormIconName(b.iconName ?? "");
-      }
+      setBadges(data.badges ?? []);
     } catch {
       // ignore
     }
   }, [hasCustomBadgeAddon]);
 
   useEffect(() => {
-    fetchCustomBadge();
-  }, [fetchCustomBadge]);
+    fetchBadges();
+  }, [fetchBadges]);
+
+  function startEdit(b: UserCreatedBadge) {
+    setEditingId(b.id);
+    setIsAdding(false);
+    setFormLabel(b.label ?? "");
+    setFormDescription(b.description ?? "");
+    setFormColor(b.color ?? "");
+    setFormBadgeType((b.badgeType as "label" | "image" | "icon") ?? "label");
+    setFormImageUrl(b.imageUrl ?? "");
+    setFormIconName(b.iconName ?? "");
+  }
+
+  function startAdd() {
+    setEditingId(null);
+    setIsAdding(true);
+    setFormLabel("");
+    setFormDescription("");
+    setFormColor("");
+    setFormBadgeType("label");
+    setFormImageUrl("");
+    setFormIconName("");
+  }
+
+  function cancelForm() {
+    setEditingId(null);
+    setIsAdding(false);
+  }
 
   const premiumProductIds = premiumProducts.map((p) => p.id);
   const hasSubscriptionProducts = premiumProducts.some((p) => p.isRecurring);
@@ -147,7 +177,7 @@ export default function DashboardShopClient({
           ? "Lifetime access"
           : null;
 
-  const allProducts = [...premiumProducts, ...customBadgeProducts];
+  const allProducts = [...premiumProducts, ...customBadgeProducts, ...galleryAddonProducts];
 
   return (
     <div className="space-y-10">
@@ -270,15 +300,66 @@ export default function DashboardShopClient({
             Custom badge addon
           </h3>
           <p className="mb-4 text-sm text-[var(--muted)]">
-            Create your own badge with label, color, icon, or image. It appears on your profile.
+            Create your own badges with label, color, icon, or image. Each purchase = one badge slot. Buy more to add more.
           </p>
 
           {hasCustomBadgeAddon ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
-                <CheckCircle size={18} weight="fill" />
-                You have the custom badge addon
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="text-[var(--accent)] flex items-center gap-2">
+                  <CheckCircle size={18} weight="fill" />
+                  {customBadgeSlotCount} slot{customBadgeSlotCount !== 1 ? "s" : ""} · {badges.length} badge{badges.length !== 1 ? "s" : ""} used
+                </span>
               </div>
+
+              {badges.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-[var(--muted)]">Your badges</p>
+                  <div className="flex flex-wrap gap-2">
+                    {badges.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 px-3 py-2"
+                      >
+                        <span className="text-sm font-medium">{b.label}</span>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(b)}
+                          className="text-[var(--muted)] hover:text-[var(--foreground)] p-0.5"
+                          title="Edit"
+                        >
+                          <PencilSimple size={14} weight="regular" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!confirm("Delete this badge?")) return;
+                            try {
+                              const res = await fetch(`/api/dashboard/shop/custom-badge?id=${encodeURIComponent(b.id)}`, { method: "DELETE" });
+                              if (res.ok) {
+                                setBadges((prev) => prev.filter((x) => x.id !== b.id));
+                                if (editingId === b.id) cancelForm();
+                                toast.success("Badge deleted");
+                              } else {
+                                const d = await res.json();
+                                toast.error(d.error ?? "Failed to delete");
+                              }
+                            } catch {
+                              toast.error("Failed to delete");
+                            }
+                          }}
+                          className="text-[var(--muted)] hover:text-[var(--warning)] p-0.5"
+                          title="Delete"
+                        >
+                          <Trash size={14} weight="regular" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(isAdding || editingId) && (
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -292,6 +373,7 @@ export default function DashboardShopClient({
                       method: "PATCH",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
+                        badgeId: editingId || undefined,
                         label: formLabel.trim(),
                         description: formDescription.trim() || undefined,
                         color: formColor.trim() || undefined,
@@ -304,7 +386,12 @@ export default function DashboardShopClient({
                     if (data.error) {
                       toast.error(data.error);
                     } else {
-                      setCustomBadge(data.badge);
+                      if (editingId) {
+                        setBadges((prev) => prev.map((x) => (x.id === editingId ? data.badge : x)));
+                      } else {
+                        setBadges((prev) => [...prev, data.badge]);
+                      }
+                      cancelForm();
                       toast.success("Badge saved");
                     }
                   } catch {
@@ -313,7 +400,7 @@ export default function DashboardShopClient({
                     setBadgeSaving(false);
                   }
                 }}
-                className="space-y-4"
+                className="space-y-4 rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 p-4"
               >
                 <div>
                   <label htmlFor="badge-label" className="block text-sm font-medium text-[var(--foreground)] mb-1">
@@ -399,15 +486,36 @@ export default function DashboardShopClient({
                     className="w-full max-w-[180px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={badgeSaving}
-                  className="flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
-                >
-                  <PencilSimple size={16} weight="regular" />
-                  {badgeSaving ? "Saving…" : "Save badge"}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={badgeSaving}
+                    className="flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+                  >
+                    <PencilSimple size={16} weight="regular" />
+                    {badgeSaving ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelForm}
+                    className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
+              )}
+
+              {!isAdding && !editingId && badges.length < customBadgeSlotCount && (
+                <button
+                  type="button"
+                  onClick={startAdd}
+                  className="flex items-center gap-2 rounded-lg border border-dashed border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] transition-colors"
+                >
+                  <Plus size={16} weight="regular" />
+                  Add badge
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -421,6 +529,41 @@ export default function DashboardShopClient({
                   cta="Get addon"
                   href={`/api/polar/checkout-redirect?product=${prod.id}`}
                   icon={<Medal size={20} weight="regular" />}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Gallery addon */}
+      {galleryAddonProducts.length > 0 && (
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 md:p-8">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+            <ImageSquare size={18} weight="regular" />
+            Gallery addon
+          </h3>
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Image hosting on your profile. Add images to your gallery. Premium includes this; or get just the addon.
+          </p>
+
+          {hasGalleryAddon || hasPremiumAccess ? (
+            <div className="flex items-center gap-2 text-sm">
+              <CheckCircle size={18} weight="fill" className="text-[var(--accent)]" />
+              <span className="text-[var(--accent)]">You have gallery access</span>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {galleryAddonProducts.map((prod) => (
+                <PlanCard
+                  key={prod.id}
+                  name="Gallery addon"
+                  priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
+                  period="one-time"
+                  description="Host images on your profile gallery."
+                  cta="Get addon"
+                  href={`/api/polar/checkout-redirect?product=${prod.id}`}
+                  icon={<ImageSquare size={20} weight="regular" />}
                 />
               ))}
             </div>

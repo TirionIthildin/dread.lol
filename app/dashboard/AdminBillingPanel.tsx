@@ -10,8 +10,9 @@ export type BillingSettingsState = {
   productIds: string[];
   sandbox: boolean;
   polarConfigured: boolean;
-  galleryMaxFree: number;
+  galleryAddonProductIds: string[];
   blogPremiumOnly: boolean;
+  pastePremiumOnly: boolean;
   pasteMaxFreePerMonth: number;
   customBadgeProductIds: string[];
 };
@@ -25,8 +26,9 @@ export default function AdminBillingPanel() {
   const [formTierName, setFormTierName] = useState("Premium");
   const [formProductIds, setFormProductIds] = useState("");
   const [formSandbox, setFormSandbox] = useState(false);
-  const [formGalleryMaxFree, setFormGalleryMaxFree] = useState(10);
+  const [formGalleryAddonProductIds, setFormGalleryAddonProductIds] = useState("");
   const [formBlogPremiumOnly, setFormBlogPremiumOnly] = useState(true);
+  const [formPastePremiumOnly, setFormPastePremiumOnly] = useState(true);
   const [formPasteMaxFreePerMonth, setFormPasteMaxFreePerMonth] = useState(10);
   const [formCustomBadgeProductIds, setFormCustomBadgeProductIds] = useState("");
 
@@ -44,8 +46,9 @@ export default function AdminBillingPanel() {
         productIds: prodIds,
         sandbox: !!b.sandbox,
         polarConfigured: !!b.polarConfigured,
-        galleryMaxFree: typeof b.galleryMaxFree === "number" ? b.galleryMaxFree : 10,
+        galleryAddonProductIds: Array.isArray(b.galleryAddonProductIds) ? b.galleryAddonProductIds : [],
         blogPremiumOnly: typeof b.blogPremiumOnly === "boolean" ? b.blogPremiumOnly : true,
+        pastePremiumOnly: typeof b.pastePremiumOnly === "boolean" ? b.pastePremiumOnly : true,
         pasteMaxFreePerMonth: typeof b.pasteMaxFreePerMonth === "number" ? b.pasteMaxFreePerMonth : 10,
         customBadgeProductIds: customBadgeIds,
       });
@@ -54,6 +57,7 @@ export default function AdminBillingPanel() {
       setFormProductIds(prodIds.join("\n"));
       setFormSandbox(!!b.sandbox);
       setFormCustomBadgeProductIds(customBadgeIds.join("\n"));
+      setFormGalleryAddonProductIds((Array.isArray(b.galleryAddonProductIds) ? b.galleryAddonProductIds : []).join("\n"));
       setError(null);
     } catch {
       setError("Failed to load settings");
@@ -73,8 +77,9 @@ export default function AdminBillingPanel() {
       setFormTierName(settings.tierName);
       setFormProductIds(settings.productIds.join("\n"));
       setFormSandbox(settings.sandbox);
-      setFormGalleryMaxFree(settings.galleryMaxFree ?? 10);
+      setFormGalleryAddonProductIds(settings.galleryAddonProductIds?.join("\n") ?? "");
       setFormBlogPremiumOnly(settings.blogPremiumOnly ?? true);
+      setFormPastePremiumOnly(settings.pastePremiumOnly ?? true);
       setFormPasteMaxFreePerMonth(settings.pasteMaxFreePerMonth ?? 10);
       setFormCustomBadgeProductIds(settings.customBadgeProductIds?.join("\n") ?? "");
     }
@@ -93,8 +98,9 @@ export default function AdminBillingPanel() {
               tierName: formTierName.trim() || "Premium",
               productIds: formProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               sandbox: formSandbox,
-              galleryMaxFree: formGalleryMaxFree,
+              galleryAddonProductIds: formGalleryAddonProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               blogPremiumOnly: formBlogPremiumOnly,
+              pastePremiumOnly: formPastePremiumOnly,
               pasteMaxFreePerMonth: formPasteMaxFreePerMonth,
               customBadgeProductIds: formCustomBadgeProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
             },
@@ -112,8 +118,9 @@ export default function AdminBillingPanel() {
           productIds: pIds,
           sandbox: data.billing.sandbox,
           polarConfigured: data.billing.polarConfigured,
-          galleryMaxFree: data.billing.galleryMaxFree ?? 10,
+          galleryAddonProductIds: Array.isArray(data.billing.galleryAddonProductIds) ? data.billing.galleryAddonProductIds : [],
           blogPremiumOnly: data.billing.blogPremiumOnly ?? true,
+          pastePremiumOnly: data.billing.pastePremiumOnly ?? true,
           pasteMaxFreePerMonth: data.billing.pasteMaxFreePerMonth ?? 10,
           customBadgeProductIds: Array.isArray(data.billing.customBadgeProductIds) ? data.billing.customBadgeProductIds : [],
         });
@@ -242,7 +249,24 @@ export default function AdminBillingPanel() {
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
               />
               <p className="text-xs text-[var(--muted)] mt-1">
-                Polar one-time product IDs that grant the custom badge addon. Users can then create their own badge.
+                Polar one-time product IDs. Each purchase = one badge slot. Users can buy multiple to create more badges.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="billing-gallery-addon-ids" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
+                Gallery addon product IDs
+              </label>
+              <textarea
+                id="billing-gallery-addon-ids"
+                rows={2}
+                value={formGalleryAddonProductIds}
+                onChange={(e) => setFormGalleryAddonProductIds(e.target.value)}
+                placeholder="prod_xxx (one per line)"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Polar product IDs that grant image hosting (gallery). Premium includes gallery; this addon is for users who want just gallery.
               </p>
             </div>
 
@@ -252,22 +276,6 @@ export default function AdminBillingPanel() {
                 Free users hit these limits. Premium users have no limits.
               </p>
               <div className="space-y-4">
-                <div>
-                  <label htmlFor="billing-gallery-max-free" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Gallery max (free)
-                  </label>
-                  <input
-                    id="billing-gallery-max-free"
-                    type="number"
-                    min={0}
-                    value={formGalleryMaxFree}
-                    onChange={(e) => setFormGalleryMaxFree(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                    className="w-full max-w-[100px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-                  />
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    Max gallery images for free users. 0 = unlimited.
-                  </p>
-                </div>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -282,9 +290,23 @@ export default function AdminBillingPanel() {
                 <p className="text-xs text-[var(--muted)] -mt-2">
                   When on, only Premium users can create blog posts.
                 </p>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formPastePremiumOnly}
+                    onChange={(e) => setFormPastePremiumOnly(e.target.checked)}
+                    className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                  />
+                  <span className="text-sm font-medium text-[var(--foreground)]">
+                    Paste requires Premium
+                  </span>
+                </label>
+                <p className="text-xs text-[var(--muted)] -mt-2">
+                  When on, only Premium users can create pastes. When off, use paste limit below.
+                </p>
                 <div>
                   <label htmlFor="billing-paste-max-free" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Pastes per month (free)
+                    Pastes per month (free, when Paste Premium is off)
                   </label>
                   <input
                     id="billing-paste-max-free"

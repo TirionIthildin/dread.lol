@@ -12,7 +12,8 @@ const SAFE_LINK_PROTOCOLS = ["https:", "http:"];
 function isSafeHref(href: string | undefined | null): boolean {
   if (!href || typeof href !== "string") return false;
   try {
-    const protocol = new URL(href, "https://dread.lol").protocol.toLowerCase();
+    const base = process.env.NEXT_PUBLIC_SITE_URL || "https://dread.lol";
+    const protocol = new URL(href, base).protocol.toLowerCase();
     return SAFE_LINK_PROTOCOLS.includes(protocol);
   } catch {
     return false;

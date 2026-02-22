@@ -146,3 +146,27 @@ export async function getUserPolarState(userId: string): Promise<UserPolarState>
     ownedProductQuantities,
   };
 }
+
+/**
+ * Wipe a user's subscription and order data from local DB (admin only).
+ * Also removes their user-created badges (from custom badge addon). Polar may resync on next request.
+ */
+export async function wipeUserSubscriptionData(
+  userId: string
+): Promise<{ subscriptionsDeleted: number; ordersDeleted: number; badgesDeleted: number }> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+
+  const [subResult, orderResult, badgeResult] = await Promise.all([
+    db.collection(COLLECTIONS.polarSubscriptions).deleteMany({ userId }),
+    db.collection(COLLECTIONS.polarOrders).deleteMany({ userId }),
+    db.collection(COLLECTIONS.userCreatedBadges).deleteMany({ userId }),
+  ]);
+
+  return {
+    subscriptionsDeleted: subResult.deletedCount,
+    ordersDeleted: orderResult.deletedCount,
+    badgesDeleted: badgeResult.deletedCount,
+  };
+}

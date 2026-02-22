@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile, getGalleryForProfile } from "@/lib/member-profiles";
-import { getBillingSettings } from "@/lib/settings";
 import { canUseDashboard } from "@/lib/dashboard-access";
+import { hasGalleryAddon } from "@/lib/gallery-addon";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardGallery from "@/app/dashboard/DashboardGallery";
@@ -19,10 +19,10 @@ export default async function GalleryPage() {
   if (!session) {
     redirect("/dashboard");
   }
-  const [user, billing, premiumAccess] = await Promise.all([
+  const [user, premiumAccess, galleryAddon] = await Promise.all([
     getOrCreateUser(session),
-    getBillingSettings(),
     getPremiumAccess(session.sub),
+    hasGalleryAddon(session.sub),
   ]);
   if (!canUseDashboard(user)) redirect("/dashboard");
   const slug = slugFromUsername(session.preferred_username ?? session.name ?? session.sub);
@@ -46,8 +46,7 @@ export default async function GalleryPage() {
         profileId={profile.id}
         profileSlug={profile.slug}
         initialGallery={gallery}
-        galleryMaxFree={billing.galleryMaxFree}
-        hasPremiumAccess={premiumAccess.hasAccess}
+        hasGalleryAccess={premiumAccess.hasAccess || galleryAddon}
       />
     </div>
   );

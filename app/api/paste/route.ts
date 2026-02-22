@@ -30,6 +30,12 @@ export async function POST(request: Request) {
       getBillingSettings(),
       getPremiumAccess(session.sub),
     ]);
+    if (billing.pastePremiumOnly && !premiumAccess.hasAccess) {
+      return NextResponse.json(
+        { error: "Paste requires Premium. Upgrade at /dashboard/shop to create pastes." },
+        { status: 403 }
+      );
+    }
     if (billing.pasteMaxFreePerMonth > 0 && !premiumAccess.hasAccess) {
       const count = await countPastesByUserIdThisMonth(session.sub);
       if (count >= billing.pasteMaxFreePerMonth) {

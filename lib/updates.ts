@@ -11,6 +11,16 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Open signup & access model",
+    description: "Anyone can sign up and get access. Free: no gallery, no paste. Gallery and paste are addons or included in Premium.",
+  },
+  {
+    date: "2026-02",
+    title: "Gallery addon",
+    description: "Image hosting is now a separate purchasable addon. Get it standalone or as part of Premium. Configure product IDs in Admin → Shop.",
+  },
+  {
+    date: "2026-02",
     title: "Shop: Premium + addons",
     description: "Billing is now the Shop. Premium unlocks all features. Custom badge addon lets you create your own badge with full design control (label, color, icon, image).",
   },
@@ -22,7 +32,7 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
     title: "Configurable Premium limits",
-    description: "Gallery max, microblog Premium-only, and paste limit are configurable in Admin → Billing.",
+    description: "Gallery addon product IDs, microblog Premium-only, and paste limit are configurable in Admin → Shop.",
   },
   {
     date: "2026-02",

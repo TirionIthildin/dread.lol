@@ -75,7 +75,7 @@ export async function createPaste(data: {
         createdAt: new Date(),
       };
       await pastes.insertOne(doc);
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dread.lol";
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://dread.lol";
       return {
         id: doc._id.toString(),
         slug,
@@ -136,7 +136,7 @@ export async function listPastesByUserId(userId: string): Promise<PasteListItem[
     .limit(50)
     .toArray();
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dread.lol";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://dread.lol";
   return docs.map((d) => ({
     slug: d.slug,
     url: `${baseUrl}/p/${d.slug}`,

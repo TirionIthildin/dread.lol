@@ -7,9 +7,11 @@ import PasteHistory from "@/app/components/PasteHistory";
 
 interface PasteSectionProps {
   isLoggedIn: boolean;
+  /** When false, user cannot create pastes (Premium required). */
+  canCreatePaste?: boolean;
 }
 
-export default function PasteSection({ isLoggedIn }: PasteSectionProps) {
+export default function PasteSection({ isLoggedIn, canCreatePaste = false }: PasteSectionProps) {
   const [editing, setEditing] = useState<{
     slug: string;
     content: string;
@@ -43,6 +45,7 @@ export default function PasteSection({ isLoggedIn }: PasteSectionProps) {
         <div className="space-y-4">
           <PasteCreateForm
             isLoggedIn={isLoggedIn}
+            canCreatePaste={canCreatePaste}
             editing={editing}
             onEditCancel={handleEditCancel}
             onEditSuccess={handleEditSuccess}

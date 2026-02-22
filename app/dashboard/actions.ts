@@ -35,6 +35,8 @@ import {
 } from "@/lib/premium-features";
 import { getBillingSettings } from "@/lib/settings";
 import { canUseDashboard } from "@/lib/dashboard-access";
+import { wipeUserSubscriptionData } from "@/lib/polar-subscription";
+import { hasGalleryAddon } from "@/lib/gallery-addon";
 
 function parseAudioTracksValue(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
@@ -370,18 +372,15 @@ export async function addGalleryItemAction(
 ): Promise<{ error?: string; id?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing, premiumAccess] = await Promise.all([
+  const [user, premiumAccess, galleryAddon] = await Promise.all([
     getOrCreateUser(session),
-    getBillingSettings(),
     getPremiumAccess(session.sub),
+    hasGalleryAddon(session.sub),
   ]);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
-  if (billing.galleryMaxFree > 0 && !premiumAccess.hasAccess) {
-    const { getGalleryForProfile } = await import("@/lib/member-profiles");
-    const gallery = await getGalleryForProfile(profileId);
-    if (gallery.length >= billing.galleryMaxFree) {
-      return { error: `Free accounts are limited to ${billing.galleryMaxFree} gallery images. Upgrade to Premium for unlimited.` };
-    }
+  const hasGalleryAccess = premiumAccess.hasAccess || galleryAddon;
+  if (!hasGalleryAccess) {
+    return { error: "Image hosting requires Premium or the Gallery addon. Get it in the Shop." };
   }
   if (!data.imageUrl?.trim()) return { error: "Image URL required" };
   try {
@@ -608,6 +607,28 @@ export async function setUserCustomBadgesAction(userId: string, badgeIds: string
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
   return {};
+}
+
+/** Wipe user's subscription and order data from local DB (admin only). Clears Polar cache and user-created badges. */
+export async function wipeUserSubscriptionAction(
+  userId: string
+): Promise<{ error?: string; wiped?: { subscriptions: number; orders: number; badges: number } }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const id = userId?.trim();
+  if (!id) return { error: "Missing user" };
+  const result = await wipeUserSubscriptionData(id);
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/shop");
+  const slug = await getProfileSlugByUserId(id);
+  if (slug) revalidatePath(`/${slug}`);
+  return {
+    wiped: {
+      subscriptions: result.subscriptionsDeleted,
+      orders: result.ordersDeleted,
+      badges: result.badgesDeleted,
+    },
+  };
 }
 
 /** Save current profile as a version (up to 5, includes assets). */

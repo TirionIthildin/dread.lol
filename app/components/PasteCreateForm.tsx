@@ -28,6 +28,8 @@ const LANGUAGES = [
 
 interface PasteCreateFormProps {
   isLoggedIn?: boolean;
+  /** When false, show Premium required message. */
+  canCreatePaste?: boolean;
   /** When set, form is in edit mode. Pass slug, content, language. */
   editing?: { slug: string; content: string; language: string } | null;
   onEditCancel?: () => void;
@@ -37,6 +39,7 @@ interface PasteCreateFormProps {
 
 export default function PasteCreateForm({
   isLoggedIn = false,
+  canCreatePaste = false,
   editing = null,
   onEditCancel,
   onEditSuccess,
@@ -60,6 +63,10 @@ export default function PasteCreateForm({
     e.preventDefault();
     if (!isLoggedIn) {
       window.location.href = "/api/auth/discord";
+      return;
+    }
+    if (!canCreatePaste) {
+      toast.error("Paste requires Premium. Upgrade at the Shop.");
       return;
     }
     if (!content.trim()) {
@@ -177,6 +184,18 @@ export default function PasteCreateForm({
           </Link>
         </div>
       )}
+      {isLoggedIn && !canCreatePaste && (
+        <div className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-sm text-[var(--foreground)]">
+          Paste requires Premium.{" "}
+          <Link
+            href="/dashboard/shop"
+            className="inline-flex items-center gap-2 font-medium text-[var(--accent)] hover:underline"
+          >
+            Upgrade at the Shop
+          </Link>{" "}
+          to create pastes.
+        </div>
+      )}
       <div className="mb-3 max-w-[200px]">
         <SearchableSelect
           value={language}
@@ -211,18 +230,20 @@ export default function PasteCreateForm({
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"
-          disabled={isSubmitting || !isLoggedIn}
+          disabled={isSubmitting || !isLoggedIn || !canCreatePaste}
           className="px-4 py-2 rounded border border-[var(--terminal)] bg-[var(--terminal)]/10 text-[var(--terminal)] hover:bg-[var(--terminal)]/20 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {!isLoggedIn
             ? "Log in to create"
-            : isSubmitting
-              ? editing
-                ? "Updating…"
-                : "Creating…"
-              : editing
-                ? "Update paste"
-                : "Create paste"}
+            : !canCreatePaste
+              ? "Premium required"
+              : isSubmitting
+                ? editing
+                  ? "Updating…"
+                  : "Creating…"
+                : editing
+                  ? "Update paste"
+                  : "Create paste"}
         </button>
         {editing && (
           <button

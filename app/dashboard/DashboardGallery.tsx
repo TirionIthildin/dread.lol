@@ -19,13 +19,13 @@ type Props = {
   profileId: string;
   profileSlug: string;
   initialGallery: GalleryItem[];
-  galleryMaxFree?: number;
-  hasPremiumAccess?: boolean;
+  /** When false, user sees upgrade message and cannot add images. */
+  hasGalleryAccess?: boolean;
 };
 
-export default function DashboardGallery({ profileId, profileSlug, initialGallery, galleryMaxFree = 0, hasPremiumAccess = false }: Props) {
+export default function DashboardGallery({ profileId, profileSlug, initialGallery, hasGalleryAccess = false }: Props) {
   const [gallery, setGallery] = useState<GalleryItem[]>(initialGallery);
-  const atGalleryLimit = galleryMaxFree > 0 && !hasPremiumAccess && gallery.length >= galleryMaxFree;
+  const atGalleryLimit = !hasGalleryAccess;
   const [galleryAddUrl, setGalleryAddUrl] = useState("");
   const [galleryAddTitle, setGalleryAddTitle] = useState("");
   const [galleryAddDescription, setGalleryAddDescription] = useState("");
@@ -158,11 +158,11 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
         <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-4 space-y-4">
           {atGalleryLimit && (
             <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3 text-sm text-[var(--muted)]">
-              Free accounts are limited to {galleryMaxFree} images. <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Upgrade to Premium</Link> for unlimited.
+              Image hosting requires Premium or the Gallery addon. <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Get it in the Shop</Link>
             </div>
           )}
           <p className="text-sm font-medium text-[var(--foreground)]">
-            Add image {galleryMaxFree > 0 && !hasPremiumAccess && `(${gallery.length}/${galleryMaxFree})`}
+            Add image
           </p>
           {galleryAddError && <p className="text-xs text-[var(--warning)]">{galleryAddError}</p>}
             <label className={`block text-xs font-medium text-[var(--muted)] ${atGalleryLimit ? "opacity-60 pointer-events-none" : ""}`}>

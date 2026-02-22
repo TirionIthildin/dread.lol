@@ -96,7 +96,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
       username: session.preferred_username ?? null,
       displayName: session.name ?? null,
       avatarUrl: session.picture ?? null,
-      approved: false,
+      approved: true,
       isAdmin: false,
       verified: false,
       staff: false,
@@ -120,7 +120,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
     }
     throw err;
   }
-  return { id, approved: false, isAdmin: getAdminDiscordIds().includes(session.sub), createdAt: now };
+  return { id, approved: true, isAdmin: getAdminDiscordIds().includes(session.sub), createdAt: now };
 }
 
 export type PendingUserRow = {
@@ -355,9 +355,9 @@ export async function getCustomBadgesForUser(userId: string): Promise<CustomBadg
   const badges = db.collection(COLLECTIONS.badges);
   const userCreatedBadges = db.collection(COLLECTIONS.userCreatedBadges);
 
-  const [ubDocs, userCreated] = await Promise.all([
+  const [ubDocs, userCreatedDocs] = await Promise.all([
     userBadges.find({ userId }).toArray(),
-    userCreatedBadges.findOne({ userId }),
+    userCreatedBadges.find({ userId }).sort({ sortOrder: 1, _id: 1 }).toArray(),
   ]);
 
   const result: CustomBadge[] = [];
@@ -381,18 +381,20 @@ export async function getCustomBadgesForUser(userId: string): Promise<CustomBadg
     result.push(...assigned);
   }
 
-  if (userCreated && userCreated.label) {
-    result.push({
-      id: (userCreated._id ?? "").toString(),
-      key: "user-created",
-      label: userCreated.label,
-      description: userCreated.description ?? undefined,
-      color: userCreated.color ?? undefined,
-      sortOrder: userCreated.sortOrder ?? 999,
-      badgeType: userCreated.badgeType ?? undefined,
-      imageUrl: userCreated.imageUrl ?? undefined,
-      iconName: userCreated.iconName ?? undefined,
-    });
+  for (const uc of userCreatedDocs) {
+    if (uc.label) {
+      result.push({
+        id: (uc._id ?? "").toString(),
+        key: "user-created",
+        label: uc.label,
+        description: uc.description ?? undefined,
+        color: uc.color ?? undefined,
+        sortOrder: uc.sortOrder ?? 999,
+        badgeType: uc.badgeType ?? undefined,
+        imageUrl: uc.imageUrl ?? undefined,
+        iconName: uc.iconName ?? undefined,
+      });
+    }
   }
 
   return result.sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));

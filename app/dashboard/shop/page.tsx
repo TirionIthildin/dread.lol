@@ -6,7 +6,8 @@ import { getBillingSettings } from "@/lib/settings";
 import { getUserPolarState } from "@/lib/polar-subscription";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getProductsWithTypes, formatPrice, type PolarProductPrice } from "@/lib/polar-products";
-import { hasCustomBadgeAddon } from "@/lib/custom-badge-addon";
+import { hasCustomBadgeAddon, getCustomBadgeAddonCount } from "@/lib/custom-badge-addon";
+import { hasGalleryAddon } from "@/lib/gallery-addon";
 import DashboardShopClient from "@/app/dashboard/DashboardShopClient";
 
 export const metadata: Metadata = {
@@ -30,16 +31,19 @@ export default async function ShopPage() {
     );
   }
 
-  const [billing, polarState, premiumAccess, customBadgeAddon] = await Promise.all([
+  const [billing, polarState, premiumAccess, customBadgeAddon, customBadgeSlotCount, galleryAddon] = await Promise.all([
     getBillingSettings(),
     getUserPolarState(session.sub),
     getPremiumAccess(session.sub),
     hasCustomBadgeAddon(session.sub),
+    getCustomBadgeAddonCount(session.sub),
+    hasGalleryAddon(session.sub),
   ]);
 
   const allProductIds = [
     ...billing.productIds,
     ...(billing.customBadgeProductIds ?? []),
+    ...(billing.galleryAddonProductIds ?? []),
   ];
   const productMap =
     allProductIds.length > 0
@@ -58,6 +62,17 @@ export default async function ShopPage() {
   });
 
   const customBadgeProducts = (billing.customBadgeProductIds ?? []).map((id) => {
+    const info = productMap.get(id);
+    return {
+      id,
+      name: info?.name ?? id,
+      isRecurring: info?.isRecurring ?? false,
+      priceFormatted: info?.price ? formatPrice(info.price) : null,
+      pricesFormatted: info?.prices?.map((p: PolarProductPrice) => formatPrice(p)).filter(Boolean) ?? [],
+    };
+  });
+
+  const galleryAddonProducts = (billing.galleryAddonProductIds ?? []).map((id) => {
     const info = productMap.get(id);
     return {
       id,
@@ -88,6 +103,9 @@ export default async function ShopPage() {
         premiumSource={premiumAccess.source}
         customBadgeProducts={customBadgeProducts}
         hasCustomBadgeAddon={customBadgeAddon}
+        customBadgeSlotCount={customBadgeSlotCount}
+        galleryAddonProducts={galleryAddonProducts}
+        hasGalleryAddon={galleryAddon}
       />
     </div>
   );

@@ -4,7 +4,8 @@ import Image from "next/image";
 import { X } from "@phosphor-icons/react";
 import { useState, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { approveUserAction, setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction } from "@/app/dashboard/actions";
+import { toast } from "sonner";
+import { approveUserAction, setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction, wipeUserSubscriptionAction } from "@/app/dashboard/actions";
 import type { CustomBadge } from "@/app/dashboard/AdminBadgesPanel";
 
 export type AdminUser = {
@@ -36,6 +37,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [userBadgeIds, setUserBadgeIds] = useState<string[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [wipePending, setWipePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,6 +109,22 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
         else setPremiumGranted(!value);
       } else {
         onUpdate({ ...user, [badge]: value });
+      }
+    });
+  }
+
+  function handleWipeSubscription() {
+    if (!confirm("Wipe this user's subscription and order data from the local database? They will lose Premium/access until Polar re-syncs (or they re-subscribe).")) return;
+    setError(null);
+    setWipePending(true);
+    wipeUserSubscriptionAction(user.id).then((result) => {
+      setWipePending(false);
+      if (result.error) {
+        setError(result.error);
+        toast.error(result.error);
+      } else if (result.wiped) {
+        toast.success(`Wiped ${result.wiped.subscriptions} sub(s), ${result.wiped.orders} order(s), ${result.wiped.badges} badge(s)`);
+        onClose();
       }
     });
   }
@@ -284,6 +302,21 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
                 Create custom badges in the Badges section to assign them here.
               </p>
             )}
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-[var(--border)]">
+            <p className="text-xs font-medium text-[var(--muted)] mb-2">Subscription</p>
+            <button
+              type="button"
+              onClick={handleWipeSubscription}
+              disabled={wipePending}
+              className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 disabled:opacity-50 transition-colors"
+            >
+              {wipePending ? "Wiping…" : "Wipe subscription data"}
+            </button>
+            <p className="text-xs text-[var(--muted)] mt-1">
+              Clears cached Polar subscriptions and orders. User loses Premium/addons until Polar re-syncs.
+            </p>
           </div>
         </div>
       </div>

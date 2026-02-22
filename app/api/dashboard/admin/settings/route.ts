@@ -16,8 +16,9 @@ export async function GET() {
       productIds: billing.productIds,
       sandbox: billing.sandbox,
       polarConfigured: billing.polarConfigured,
-      galleryMaxFree: billing.galleryMaxFree,
+      galleryAddonProductIds: billing.galleryAddonProductIds,
       blogPremiumOnly: billing.blogPremiumOnly,
+      pastePremiumOnly: billing.pastePremiumOnly,
       pasteMaxFreePerMonth: billing.pasteMaxFreePerMonth,
       customBadgeProductIds: billing.customBadgeProductIds,
     },
@@ -37,8 +38,9 @@ export async function PATCH(request: NextRequest) {
       tierName?: string;
       productIds?: string[];
       sandbox?: boolean;
-      galleryMaxFree?: number;
+      galleryAddonProductIds?: string[];
       blogPremiumOnly?: boolean;
+      pastePremiumOnly?: boolean;
       pasteMaxFreePerMonth?: number;
       customBadgeProductIds?: string[];
     };
@@ -64,11 +66,15 @@ export async function PATCH(request: NextRequest) {
     if (typeof billing.sandbox === "boolean") {
       await setSetting("billing.sandbox", billing.sandbox);
     }
-    if (billing.galleryMaxFree !== undefined && typeof billing.galleryMaxFree === "number") {
-      await setSetting("billing.galleryMaxFree", Math.max(0, Math.round(billing.galleryMaxFree)));
+    if (billing.galleryAddonProductIds !== undefined && Array.isArray(billing.galleryAddonProductIds)) {
+      const ids = billing.galleryAddonProductIds.map((id) => String(id).trim()).filter(Boolean);
+      await setSetting("billing.galleryAddonProductIds", ids);
     }
     if (typeof billing.blogPremiumOnly === "boolean") {
       await setSetting("billing.blogPremiumOnly", billing.blogPremiumOnly);
+    }
+    if (typeof billing.pastePremiumOnly === "boolean") {
+      await setSetting("billing.pastePremiumOnly", billing.pastePremiumOnly);
     }
     if (billing.pasteMaxFreePerMonth !== undefined && typeof billing.pasteMaxFreePerMonth === "number") {
       await setSetting("billing.pasteMaxFreePerMonth", Math.max(0, Math.round(billing.pasteMaxFreePerMonth)));
@@ -87,8 +93,9 @@ export async function PATCH(request: NextRequest) {
       productIds: updated.productIds,
       sandbox: updated.sandbox,
       polarConfigured: updated.polarConfigured,
-      galleryMaxFree: updated.galleryMaxFree,
+      galleryAddonProductIds: updated.galleryAddonProductIds,
       blogPremiumOnly: updated.blogPremiumOnly,
+      pastePremiumOnly: updated.pastePremiumOnly,
       pasteMaxFreePerMonth: updated.pasteMaxFreePerMonth,
       customBadgeProductIds: updated.customBadgeProductIds,
     },
