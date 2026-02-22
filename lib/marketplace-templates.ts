@@ -58,6 +58,8 @@ export interface TemplateData {
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;
+  backgroundEffect?: string | null;
+  widgetsMatchAccent?: boolean | null;
   unlockOverlayText?: string | null;
   ogImageUrl?: string | null;
   /** Gallery items: imageUrl, title?, description? */
@@ -148,6 +150,8 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     backgroundType: profile.backgroundType ?? null,
     backgroundUrl: profile.backgroundUrl ?? null,
     backgroundAudioUrl: profile.backgroundAudioUrl ?? null,
+    backgroundEffect: (profile as { backgroundEffect?: string | null }).backgroundEffect ?? null,
+    widgetsMatchAccent: (profile as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? null,
     unlockOverlayText: (profile as { unlockOverlayText?: string | null }).unlockOverlayText ?? null,
     ogImageUrl: profile.ogImageUrl ?? null,
     showAudioPlayer: profile.showAudioPlayer ?? false,
@@ -562,6 +566,8 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.backgroundType !== undefined) update.backgroundType = data.backgroundType;
   if (data.backgroundUrl !== undefined) update.backgroundUrl = data.backgroundUrl;
   if (data.backgroundAudioUrl !== undefined) update.backgroundAudioUrl = data.backgroundAudioUrl;
+  if (data.backgroundEffect !== undefined) update.backgroundEffect = data.backgroundEffect;
+  if (data.widgetsMatchAccent !== undefined) update.widgetsMatchAccent = data.widgetsMatchAccent;
   if (data.unlockOverlayText !== undefined) update.unlockOverlayText = data.unlockOverlayText;
   if (data.ogImageUrl !== undefined) update.ogImageUrl = data.ogImageUrl;
   if (data.showAudioPlayer !== undefined) update.showAudioPlayer = data.showAudioPlayer;
@@ -673,6 +679,8 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     backgroundType: d.backgroundType ?? undefined,
     backgroundUrl: d.backgroundUrl ?? undefined,
     backgroundAudioUrl: d.backgroundAudioUrl ?? undefined,
+    backgroundEffect: (d as { backgroundEffect?: string | null }).backgroundEffect ?? undefined,
+    widgetsMatchAccent: (d as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? undefined,
     unlockOverlayText: d.unlockOverlayText ?? undefined,
     ogImageUrl: d.ogImageUrl ?? undefined,
     showAudioPlayer: d.showAudioPlayer ?? false,

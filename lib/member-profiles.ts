@@ -1528,6 +1528,8 @@ export function memberProfileToProfile(
       return row.backgroundUrl ?? undefined;
     })(),
     backgroundAudioUrl: row.backgroundAudioUrl ?? (row.backgroundType === "audio" ? row.backgroundUrl ?? undefined : undefined),
+    backgroundEffect: (row as { backgroundEffect?: string | null }).backgroundEffect ?? undefined,
+    widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
     unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { Profile } from "@/lib/profiles";
 import { getThemeClass, getProfileCursorProps, getCustomColorVars } from "@/lib/profile-themes";
+import BackgroundEffectOverlay, { BACKGROUND_EFFECTS } from "@/app/components/BackgroundEffects";
 
 const FADE_MS = 350;
 
@@ -69,6 +70,9 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
   const needsUnlock = (customBgType === "video") || !!backgroundAudioUrl;
   const pageTheme = profile.pageTheme ?? "classic-dark";
   const isLightTheme = pageTheme === "minimalist-light" || pageTheme === "classic-light";
+  const backgroundEffect = profile.backgroundEffect && BACKGROUND_EFFECTS.includes(profile.backgroundEffect as (typeof BACKGROUND_EFFECTS)[number])
+    ? (profile.backgroundEffect as (typeof BACKGROUND_EFFECTS)[number])
+    : null;
 
   const handleUnlock = useCallback(() => {
     if (customBgType === "video" && videoRef.current) {
@@ -175,6 +179,13 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
           className={`fixed inset-0 z-0 overflow-hidden ${bgClass}`}
           aria-hidden
         />
+        {backgroundEffect && (
+          <BackgroundEffectOverlay
+            effect={backgroundEffect}
+            isLightTheme={isLightTheme}
+            aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+          />
+        )}
         {backgroundAudioUrl && (
           <audio
             ref={audioRef}
@@ -206,6 +217,13 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
             }}
           />
         </div>
+        {backgroundEffect && (
+          <BackgroundEffectOverlay
+            effect={backgroundEffect}
+            isLightTheme={isLightTheme}
+            aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+          />
+        )}
         {themedOverlay}
         {backgroundAudioUrl && (
           <audio
@@ -246,6 +264,13 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
             }}
           />
         </div>
+        {backgroundEffect && (
+          <BackgroundEffectOverlay
+            effect={backgroundEffect}
+            isLightTheme={isLightTheme}
+            aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+          />
+        )}
         {themedOverlay}
         {backgroundAudioUrl && (
           <audio
@@ -269,6 +294,13 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
 
     return (
       <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
+        {backgroundEffect && (
+          <BackgroundEffectOverlay
+            effect={backgroundEffect}
+            isLightTheme={isLightTheme}
+            aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+          />
+        )}
         <audio ref={audioRef} src={resolvedUrl} loop preload="metadata" className="sr-only" aria-hidden />
         {unlockOverlay}
         {content}
@@ -278,6 +310,13 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
 
   return (
     <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
+      {backgroundEffect && (
+          <BackgroundEffectOverlay
+            effect={backgroundEffect}
+            isLightTheme={isLightTheme}
+            aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+          />
+        )}
       {children}
     </div>
   );

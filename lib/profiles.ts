@@ -105,6 +105,8 @@ export interface Profile {
   backgroundUrl?: string;
   /** Ambient background audio URL (separate from visual background). */
   backgroundAudioUrl?: string;
+  /** Background overlay effect: snow, rain, blur, retro-computer. */
+  backgroundEffect?: string;
   /** Custom text for the unlock overlay when profile has video or audio (default: "Click here to view profile"). */
   unlockOverlayText?: string;
   /** When true, ask search engines not to index this profile. */
@@ -157,6 +159,8 @@ export interface Profile {
     accountAge?: { createdAt: Date; label: string };
     profile?: { url: string; displayName: string; username: string };
   };
+  /** When true, widgets use profile accent color instead of brand colors. */
+  widgetsMatchAccent?: boolean;
   /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
   discordWidgets?: {
     accountAge?: { createdAt: Date; label: string };

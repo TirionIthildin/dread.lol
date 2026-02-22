@@ -6,6 +6,8 @@ const labelClass = "text-[10px] font-medium uppercase tracking-wider";
 
 interface RobloxWidgetsDisplayProps {
   data: RobloxWidgetData;
+  /** When true, use accent color instead of Roblox brand color. */
+  matchAccent?: boolean;
 }
 
 function RobloxIcon({ className }: { className?: string }) {
@@ -38,11 +40,14 @@ function RobloxAvatar({ avatarUrl, size = 36 }: { avatarUrl: string; size?: numb
   );
 }
 
-export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps) {
+export default function RobloxWidgetsDisplay({ data, matchAccent = false }: RobloxWidgetsDisplayProps) {
   const widgets: React.ReactNode[] = [];
-
-  const widgetBase =
-    "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[#00A2FF]/40";
+  const widgetBase = matchAccent
+    ? "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--accent)]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--accent)]/40"
+    : "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[#00A2FF]/40";
+  const iconColor = matchAccent ? "var(--accent)" : "#00A2FF";
+  const labelColorClass = matchAccent ? "text-[var(--accent)]/80" : "text-[#00A2FF]/80";
+  const linkHoverClass = matchAccent ? "hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10" : "hover:border-[#00A2FF]/50 hover:bg-[#00A2FF]/10";
 
   if (data.accountAge) {
     const createdAt = data.accountAge.createdAt instanceof Date
@@ -57,11 +62,11 @@ export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps
         className={widgetBase}
         title={title}
       >
-        <span className="shrink-0 text-[#00A2FF]">
+        <span className="shrink-0" style={{ color: iconColor }}>
           <RobloxIcon className="block" />
         </span>
         <div>
-          <p className={`${labelClass} text-[#00A2FF]/80`}>Account age</p>
+          <p className={`${labelClass} ${labelColorClass}`}>Account age</p>
           <p className="text-[var(--foreground)] font-medium">
             {data.accountAge.label}
           </p>
@@ -73,23 +78,23 @@ export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps
   if (data.profile) {
     const label = data.profile.displayName || data.profile.username || "View profile";
     widgets.push(
-      <Link
+        <Link
         key="profile"
         href={data.profile.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${widgetBase} text-[var(--foreground)] hover:border-[#00A2FF]/50 hover:bg-[#00A2FF]/10 group`}
+        className={`${widgetBase} text-[var(--foreground)] ${linkHoverClass} group`}
         aria-label={`Open Roblox profile for ${data.profile.displayName || data.profile.username}`}
       >
         {data.profile.avatarUrl ? (
           <RobloxAvatar avatarUrl={data.profile.avatarUrl} />
         ) : (
-          <span className="shrink-0 text-[#00A2FF]">
+          <span className="shrink-0" style={{ color: iconColor }}>
             <RobloxIcon className="block" />
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className={`${labelClass} text-[#00A2FF]/80`}>Roblox</p>
+          <p className={`${labelClass} ${labelColorClass}`}>Roblox</p>
           <p className="font-medium truncate">{label}</p>
         </div>
         <ArrowSquareOut

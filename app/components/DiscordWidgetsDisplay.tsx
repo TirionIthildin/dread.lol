@@ -25,19 +25,25 @@ export function normalizeWidgetData(data: DiscordWidgetData | null | undefined):
   return out;
 }
 
-const discordIconProps = { size: 18, weight: "fill" as const, className: "discord-widget-icon shrink-0 text-[#5865F2]" };
-const joinedIconProps = { size: 18, weight: "regular" as const, className: "shrink-0 text-[var(--accent)]" };
-const labelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[#5865F2]/80";
-const joinedLabelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]";
-
 interface DiscordWidgetsDisplayProps {
   data: DiscordWidgetData;
+  /** When true, use accent color instead of Discord brand color. */
+  matchAccent?: boolean;
 }
 
-export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayProps) {
+export default function DiscordWidgetsDisplay({ data, matchAccent = false }: DiscordWidgetsDisplayProps) {
+  const accent = matchAccent ? "var(--accent)" : "#5865F2";
+  const discordIconProps = { size: 18, weight: "fill" as const, className: "shrink-0", style: { color: accent } };
+  const joinedIconProps = { size: 18, weight: "regular" as const, className: "shrink-0 text-[var(--accent)]" };
+  const labelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider";
+  const joinedLabelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]";
   const widgets: React.ReactNode[] = [];
 
-  const widgetBase = "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[#5865F2]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors";
+  const widgetBase = matchAccent
+    ? "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--accent)]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors"
+    : "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[#5865F2]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors";
+  const hoverClass = matchAccent ? "hover:border-[var(--accent)]/40" : "hover:border-[#5865F2]/40";
+  const linkHoverClass = matchAccent ? "hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10" : "hover:border-[#5865F2]/50 hover:bg-[#5865F2]/10";
   const joinedWidgetBase = "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--border)]/50 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--border-bright)]/50";
 
   if (data.accountAge) {
@@ -50,12 +56,12 @@ export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayPro
     widgets.push(
       <div
         key="accountAge"
-        className={`${widgetBase} hover:border-[#5865F2]/40`}
+        className={`${widgetBase} ${hoverClass}`}
         title={accountAgeTitle}
       >
         <DiscordLogo {...discordIconProps} aria-hidden />
         <div>
-          <p className={labelClass}>Account age</p>
+          <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Account age</p>
           <p className="text-[var(--foreground)] font-medium">{data.accountAge.label}</p>
         </div>
       </div>
@@ -82,12 +88,12 @@ export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayPro
     widgets.push(
       <div
         key="serverCount"
-        className={`${widgetBase} hover:border-[#5865F2]/40`}
+        className={`${widgetBase} ${hoverClass}`}
         title="Number of Discord servers this user is in"
       >
         <DiscordLogo {...discordIconProps} aria-hidden />
         <div>
-          <p className={labelClass}>Servers</p>
+          <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Servers</p>
           <p className="text-[var(--foreground)] font-medium">
             {data.serverCount} server{data.serverCount !== 1 ? "s" : ""}
           </p>
@@ -105,7 +111,7 @@ export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayPro
       <>
         <DiscordLogo {...discordIconProps} aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className={labelClass}>Join server</p>
+          <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Join server</p>
           <p className="font-medium truncate">{label}</p>
         </div>
         {!isPlaceholder && (
@@ -127,7 +133,7 @@ export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayPro
           href={data.serverInvite.url}
           target="_blank"
           rel="noopener noreferrer"
-          className={`${widgetBase} text-[var(--foreground)] hover:border-[#5865F2]/50 hover:bg-[#5865F2]/10 group`}
+          className={`${widgetBase} text-[var(--foreground)] ${linkHoverClass} group`}
         >
           {content}
         </Link>

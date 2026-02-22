@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
-const FIELD_ANIMATIONS = ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"] as const;
+const FIELD_ANIMATIONS = ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in", "sparkle", "sparkle-stars"] as const;
 export type FieldAnimation = (typeof FIELD_ANIMATIONS)[number];
 
 interface TypewriterTextProps {

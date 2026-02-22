@@ -92,6 +92,8 @@ export interface ProfileDoc {
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;
+  /** Background overlay effect: snow, rain, blur, retro-computer. */
+  backgroundEffect?: string | null;
   /** Custom text for unlock overlay (video/audio); default "Click here to view profile". */
   unlockOverlayText?: string | null;
   showDiscordBadges?: boolean;
@@ -106,6 +108,8 @@ export interface ProfileDoc {
   discordInviteUrl?: string | null;
   /** Roblox widgets to show: comma-separated accountAge,profile (requires OAuth link). */
   showRobloxWidgets?: string | null;
+  /** When true, widgets use profile accent color instead of brand colors. */
+  widgetsMatchAccent?: boolean | null;
   showAudioPlayer?: boolean;
   /** Audio visualizer style: none, bars, waveform, circle, line, blocks */
   audioVisualizerStyle?: string | null;

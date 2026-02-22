@@ -21,6 +21,10 @@ import {
   DotsSixVertical,
   GridFour,
   ListChecks,
+  Snowflake,
+  CloudRain,
+  CircleHalf,
+  Monitor,
   Sparkle,
   SquaresFour,
   ClockCounterClockwise,
@@ -393,6 +397,11 @@ export default function DashboardMyProfile({
   const backgroundAudioFileRef = useRef<HTMLInputElement>(null);
   const [backgroundDragOver, setBackgroundDragOver] = useState(false);
   const [audioDragOver, setAudioDragOver] = useState(false);
+  const BG_EFFECT_OPTIONS = ["none", "snow", "rain", "blur", "retro-computer"] as const;
+  const [backgroundEffectValue, setBackgroundEffectValue] = useState<string>(() => {
+    const v = (profile as { backgroundEffect?: string }).backgroundEffect ?? "";
+    return BG_EFFECT_OPTIONS.includes(v as (typeof BG_EFFECT_OPTIONS)[number]) ? v : "none";
+  });
 
   const [widgetAccountAge, setWidgetAccountAge] = useState(() =>
     (profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("accountAge") ?? false
@@ -411,6 +420,9 @@ export default function DashboardMyProfile({
   );
   const [widgetRobloxProfile, setWidgetRobloxProfile] = useState(() =>
     (profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("profile") ?? false
+  );
+  const [widgetsMatchAccent, setWidgetsMatchAccent] = useState(() =>
+    (profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false
   );
   const [discordInviteInput, setDiscordInviteInput] = useState(
     (profile as { discordInviteUrl?: string }).discordInviteUrl ?? ""
@@ -661,8 +673,10 @@ export default function DashboardMyProfile({
           : baseProfileForPreview.backgroundType,
         backgroundUrl: ["image", "video"].includes(backgroundTypeValue) ? backgroundUrlValue || undefined : undefined,
         backgroundAudioUrl: backgroundAudioUrlValue?.trim() || undefined,
+        backgroundEffect: backgroundEffectValue && backgroundEffectValue !== "none" ? backgroundEffectValue : undefined,
         cardOpacity: cardOpacityValue,
         cardBlur: ["none", "sm", "md", "lg"].includes(cardBlurValue) ? (cardBlurValue as "none" | "sm" | "md" | "lg") : baseProfileForPreview.cardBlur,
+        widgetsMatchAccent: widgetsMatchAccent,
         discordWidgets: widgetPreviewFiltered ?? undefined,
         robloxWidgets: widgetRobloxAccountAge || widgetRobloxProfile ? baseProfileForPreview.robloxWidgets : undefined,
         showAudioPlayer: showAudioPlayerValue,
@@ -680,6 +694,8 @@ export default function DashboardMyProfile({
     backgroundTypeValue,
     backgroundUrlValue,
     backgroundAudioUrlValue,
+    backgroundEffectValue,
+    widgetsMatchAccent,
     cardOpacityValue,
     cardBlurValue,
     widgetPreviewFiltered,
@@ -718,6 +734,8 @@ export default function DashboardMyProfile({
     );
     const audio = (profile as { backgroundAudioUrl?: string }).backgroundAudioUrl?.trim();
     setBackgroundAudioUrlValue(audio ?? (bgType === "audio" ? ((profile as { backgroundUrl?: string }).backgroundUrl ?? "") : ""));
+    const eff = (profile as { backgroundEffect?: string }).backgroundEffect ?? "";
+    setBackgroundEffectValue(BG_EFFECT_OPTIONS.includes(eff as (typeof BG_EFFECT_OPTIONS)[number]) ? eff : "none");
     setWidgetAccountAge((profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("accountAge") ?? false);
     setWidgetJoined((profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("joined") ?? false);
     setWidgetServerCount((profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("serverCount") ?? false);
@@ -725,6 +743,7 @@ export default function DashboardMyProfile({
     setDiscordInviteInput((profile as { discordInviteUrl?: string }).discordInviteUrl ?? "");
     setWidgetRobloxAccountAge((profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("accountAge") ?? false);
     setWidgetRobloxProfile((profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("profile") ?? false);
+    setWidgetsMatchAccent((profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false);
     setCardOpacityValue((profile as { cardOpacity?: number }).cardOpacity ?? 95);
     setCardBlurValue((profile as { cardBlur?: string }).cardBlur ?? "sm");
     setCustomFontValue((() => {
@@ -1839,6 +1858,8 @@ export default function DashboardMyProfile({
                       options={[
                         { value: "none", label: "None" },
                         { value: "typewriter", label: "Typewriter" },
+                        { value: "sparkle", label: "Sparkle" },
+                        { value: "sparkle-stars", label: "Sparkle stars" },
                         { value: "fade-in", label: "Fade in" },
                         { value: "slide-up", label: "Slide up" },
                         { value: "slide-in-left", label: "Slide in left" },
@@ -1921,6 +1942,31 @@ export default function DashboardMyProfile({
                         </button>
                       ))}
                     </div>
+                    <label className="block">
+                      <span className="text-[10px] text-[var(--muted)] block mb-1">Background effect</span>
+                      <div className="flex flex-wrap gap-2">
+                        {BG_EFFECT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setBackgroundEffectValue(opt)}
+                            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                              backgroundEffectValue === opt
+                                ? "bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40"
+                                : "bg-[var(--bg)]/60 text-[var(--muted)] border border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                            }`}
+                          >
+                            {opt === "none" && <X size={16} weight="regular" />}
+                            {opt === "snow" && <Snowflake size={16} weight="regular" />}
+                            {opt === "rain" && <CloudRain size={16} weight="regular" />}
+                            {opt === "blur" && <CircleHalf size={16} weight="regular" />}
+                            {opt === "retro-computer" && <Monitor size={16} weight="regular" />}
+                            {opt === "none" ? "None" : opt === "snow" ? "Snow" : opt === "rain" ? "Rain" : opt === "blur" ? "Blur" : "Retro"}
+                          </button>
+                        ))}
+                      </div>
+                      <input type="hidden" name="backgroundEffect" value={backgroundEffectValue === "none" ? "" : backgroundEffectValue} />
+                    </label>
                     {(backgroundTypeValue === "image" || backgroundTypeValue === "video") && (
                       <>
                         {backgroundUrlValue ? (
@@ -2162,6 +2208,19 @@ export default function DashboardMyProfile({
                   <p className="text-xs text-[var(--muted)]">
                     Info cards appear on your profile. Choose up to {MAX_WIDGETS} total across all sources.
                   </p>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="widgetsMatchAccent"
+                      checked={widgetsMatchAccent}
+                      onChange={(e) => setWidgetsMatchAccent(e.target.checked)}
+                      className="rounded border-[var(--border)]"
+                    />
+                    <span className="text-sm font-medium text-[var(--foreground)]">Match accent color</span>
+                  </label>
+                  <p className="text-[11px] text-[var(--muted)] -mt-3">
+                    When on, widgets use your profile accent color instead of brand colors.
+                  </p>
                   {(() => {
                     const WidgetCheckbox = ({
                       id,
@@ -2363,7 +2422,7 @@ export default function DashboardMyProfile({
                     <div className="pt-2 border-t border-[var(--border)]">
                       <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] mb-2">Preview</p>
                       <div className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/60 p-3 space-y-3">
-                        {widgetPreviewFiltered && <DiscordWidgetsDisplay data={widgetPreviewFiltered} />}
+                        {widgetPreviewFiltered && <DiscordWidgetsDisplay data={widgetPreviewFiltered} matchAccent={widgetsMatchAccent} />}
                         {(widgetRobloxAccountAge || widgetRobloxProfile) && baseProfileForPreview?.robloxWidgets && (
                           <RobloxWidgetsDisplay
                             data={{
@@ -2374,6 +2433,7 @@ export default function DashboardMyProfile({
                                 ? { profile: baseProfileForPreview.robloxWidgets.profile }
                                 : {}),
                             }}
+                            matchAccent={widgetsMatchAccent}
                           />
                         )}
                       </div>

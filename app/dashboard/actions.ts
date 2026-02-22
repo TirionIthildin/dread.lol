@@ -268,6 +268,7 @@ export async function updateProfileAction(
         return ["pills", "minimal", "stacked", "inline", "widget"].includes(s) ? s : undefined;
       })(),
       showDiscordWidgets: widgetSelection.discord.length > 0 ? widgetSelection.discord.join(",") : null,
+      widgetsMatchAccent: formData.get("widgetsMatchAccent") === "on",
       ...(formData.get("showDiscordWidgetServerInvite") === "on" && {
         discordInviteUrl: (() => {
           const v = (formData.get("discordInviteUrl") as string)?.trim();
@@ -301,7 +302,7 @@ export async function updateProfileAction(
       animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
       nameAnimation: (() => {
         const v = (formData.get("nameAnimation") as string)?.trim();
-        return v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+        return v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in", "sparkle", "sparkle-stars"].includes(v) ? v : undefined;
       })(),
       taglineAnimation: (() => {
         const v = (formData.get("taglineAnimation") as string)?.trim();
@@ -314,6 +315,10 @@ export async function updateProfileAction(
       backgroundType: usesVisualBackground ? bgType : null,
       backgroundUrl: usesCustomMedia ? backgroundUrl : null,
       backgroundAudioUrl: backgroundAudioUrl || null,
+      backgroundEffect: (() => {
+        const v = (formData.get("backgroundEffect") as string)?.trim();
+        return v && ["snow", "rain", "blur", "retro-computer"].includes(v) ? v : null;
+      })(),
       ...(bgType === "video" || backgroundAudioUrl
         ? {
             unlockOverlayText: ((formData.get("unlockOverlayText") as string)?.trim() || null)?.slice(0, 80) ?? null,

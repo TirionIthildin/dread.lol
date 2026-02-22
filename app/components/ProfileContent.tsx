@@ -13,6 +13,7 @@ import ProfileTags from "@/app/components/ProfileTags";
 import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
 import TypewriterText, { AnimatedField } from "@/app/components/TypewriterText";
+import SparkleUsername from "@/app/components/SparkleUsername";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
 import ProfileReportButton from "@/app/components/ProfileReportButton";
@@ -45,7 +46,7 @@ const CARD_STYLES = ["default", "sharp", "glass", "neon", "minimal", "elevated"]
 const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded", "square", "soft", "hexagon"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
-const FIELD_ANIMATIONS = ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"] as const;
+const FIELD_ANIMATIONS = ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in", "sparkle", "sparkle-stars"] as const;
 const ANIMATION_PRESETS = [
   "none",
   "fade-in",
@@ -278,6 +279,13 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                       />
                     );
                   }
+                  if (nameAnim === "sparkle" || nameAnim === "sparkle-stars") {
+                    return (
+                      <SparkleUsername variant={nameAnim}>
+                        {profile.name}
+                      </SparkleUsername>
+                    );
+                  }
                   if (nameAnim !== "none") {
                     return (
                       <AnimatedField animation={nameAnim}>
@@ -469,13 +477,13 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
               profile.discordWidgets.serverCount != null ||
               profile.discordWidgets.serverInvite) && (
               <div className="mt-4">
-                <DiscordWidgetsDisplay data={profile.discordWidgets} />
+                <DiscordWidgetsDisplay data={profile.discordWidgets} matchAccent={profile.widgetsMatchAccent} />
               </div>
             )}
           {profile.robloxWidgets &&
             (profile.robloxWidgets.accountAge || profile.robloxWidgets.profile) && (
               <div className="mt-4">
-                <RobloxWidgetsDisplay data={profile.robloxWidgets} />
+                <RobloxWidgetsDisplay data={profile.robloxWidgets} matchAccent={profile.widgetsMatchAccent} />
               </div>
             )}
           <div className="mt-4 flex flex-wrap gap-2">

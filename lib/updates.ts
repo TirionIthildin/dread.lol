@@ -11,6 +11,16 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Background effects",
+    description: "Add snow, rain, blur, or retro-computer overlay effects to your profile background.",
+  },
+  {
+    date: "2026-02",
+    title: "Username effects",
+    description: "Typewriter and sparkle effects for your display name—like those forum-style floating sparkles.",
+  },
+  {
+    date: "2026-02",
     title: "Per-field animations",
     description: "Set typewriter, fade-in, slide-up, and other animations for your name, tagline, and description.",
   },
