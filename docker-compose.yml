@@ -5,6 +5,7 @@
 #   DATABASE_URL=mongodb://dread:dread@localhost:27017/dread?authSource=admin
 #   VALKEY_URL=redis://localhost:6379
 #   DISCORD_OAUTH_*, AUTH_*
+#   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET (optional: POLAR_SANDBOX, POLAR_PRODUCT_ID, POLAR_BASIC_PRODUCT_ID)
 
 services:
   mongodb:
