@@ -106,6 +106,8 @@ export interface ProfileViewDoc {
   profileId: ObjectId;
   visitorIp: string;
   userAgent?: string | null;
+  /** Hash of IP+UA for unique view counting. New records only. */
+  visitorKey?: string | null;
   viewedAt: Date;
 }
 

@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Unique view counts",
+    description: "Profile views now count unique visitors (IP + browser) instead of every page load.",
+  },
+  {
+    date: "2026-02",
     title: "Profile versions",
     description: "Save and restore up to 5 snapshots of your profile, including gallery and short links.",
   },

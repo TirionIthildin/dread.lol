@@ -13,7 +13,8 @@ function fadeAudio(audio: HTMLAudioElement, toVolume: number, onDone?: () => voi
   const step = (now: number) => {
     const elapsed = now - startTime;
     const t = Math.min(1, elapsed / FADE_MS);
-    audio.volume = start + diff * (1 - (1 - t) ** 2);
+    const eased = 1 - (1 - t) ** 2;
+    audio.volume = Math.max(0, Math.min(1, start + diff * eased));
     if (t < 1) requestAnimationFrame(step);
     else onDone?.();
   };

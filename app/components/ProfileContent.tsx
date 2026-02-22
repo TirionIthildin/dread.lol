@@ -79,7 +79,7 @@ function BannerPre({
   if (!isGradient) {
     return (
       <pre
-        className={`leading-tight whitespace-pre font-mono mt-1.5 mb-4 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
+        className={`leading-tight whitespace-pre font-mono mt-1 mb-3 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
         style={preStyle}
         aria-hidden
       >
@@ -89,7 +89,7 @@ function BannerPre({
   }
   return (
     <pre
-      className={`leading-tight whitespace-pre font-mono mt-1.5 mb-4 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
+      className={`leading-tight whitespace-pre font-mono mt-1 mb-3 overflow-x-auto overflow-y-hidden rounded-lg py-2 px-1 ${bannerClass}`}
       style={preStyle}
       aria-hidden
     >
@@ -204,7 +204,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
         style={{ backgroundColor: `color-mix(in srgb, var(--surface) ${cardOpacity}%, transparent)` }}
         aria-labelledby="profile-name"
       >
-        <div className={`flex items-center gap-2 px-3 py-2.5 sm:px-4 ${isMinimalist ? "border-b border-[var(--border)]/40 bg-transparent" : "border-b border-[var(--border)] bg-[var(--bg)]/90"}`}>
+        <div className={`flex items-center gap-2 px-3 py-2 sm:px-4 ${isMinimalist ? "border-b border-[var(--border)]/40 bg-transparent" : "border-b border-[var(--border)] bg-[var(--bg)]/90"}`}>
           {isMinimalist ? (
             <>
               <span className="flex-1 min-w-0" />
@@ -224,7 +224,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
             </>
           )}
         </div>
-        <div className={`profile-content-inner border-t ${isMinimalist ? "profile-minimalist p-8 sm:p-10 text-[16px] border-[var(--border)]/30" : "p-3 sm:p-4 border-[var(--border)]/50 font-mono text-sm sm:text-sm"}`}>
+        <div className={`profile-content-inner border-t ${isMinimalist ? "profile-minimalist pt-6 px-8 pb-8 sm:pt-8 sm:px-10 sm:pb-10 text-[16px] border-[var(--border)]/30" : "pt-2 px-3 pb-3 sm:pt-3 sm:px-4 sm:pb-4 border-[var(--border)]/50 font-mono text-sm sm:text-sm"}`}>
           {!isMinimalist && (
             <p className="text-[var(--terminal)]">
               <span className="text-[var(--muted)]">{prompt}</span> cat {profile.slug}.txt
@@ -233,7 +233,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
           {profile.banner && (
             <BannerPre banner={profile.banner} bannerClass={bannerClass} bannerSmall={profile.bannerSmall} />
           )}
-          <div className={`flex items-center ${isMinimalist ? "mt-8 gap-8" : "mt-4 gap-4"}`}>
+          <div className={`flex items-center ${isMinimalist ? "mt-6 gap-8" : "mt-3 gap-4"}`}>
             {profile.avatar && (
               profile.avatar.includes("cdn.discordapp.com") ? (
                 <Image

@@ -31,33 +31,34 @@
 
 /* ========== CLASSIC LIGHT ========== */
 [data-page-theme="classic-light"] {
-  --bg: #f1f5f9;
-  --bg-grid: #e2e8f0;
+  --bg: #f4f6f9;
+  --bg-grid: #e8ecf1;
   --surface: #ffffff;
-  --border: #cbd5e1;
+  --border: #c5cdd9;
   --border-bright: #94a3b8;
   --text: #0f172a;
-  --muted: #64748b;
-  --terminal: #16a34a;
-  --terminal-dim: #15803d;
-  --accent: #0891b2;
-  --accent-dim: #0e7490;
-  --surface-hover: #e2e8f0;
-  --accent-muted: color-mix(in srgb, var(--accent) 15%, transparent);
+  --muted: #475569;
+  --terminal: #047857;
+  --terminal-dim: #065f46;
+  --accent: #0369a1;
+  --accent-dim: #0c4a6e;
+  --surface-hover: #e8ecf1;
+  --accent-muted: color-mix(in srgb, var(--accent) 22%, transparent);
+  --warning: #b45309;
   --radius: 6px;
   --radius-sm: 4px;
   --radius-lg: 10px;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.05);
 }
 
-/* Classic light: softer grid, no scanlines */
+/* Classic light: softer grid with subtle warmth, no scanlines */
 .grid-bg:has([data-page-theme="classic-light"]) {
-  background-color: #f1f5f9;
+  background-color: #f4f6f9;
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.2) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.2) 1px, transparent 1px);
+    linear-gradient(rgba(148, 163, 184, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.25) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -69,27 +70,46 @@
   display: none;
 }
 
+/* Classic light: softer shadows for profile card (override hardcoded shadow-black/50) */
+[data-page-theme="classic-light"] article.rounded-xl:not(.profile-minimalist-card) {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.1), 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+[data-page-theme="classic-light"] article.rounded-xl:not(.profile-minimalist-card):hover {
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Light themes: improve amber/warning badges (Staff, Report, etc.) */
+[data-page-theme="classic-light"] .text-amber-600,
+[data-page-theme="minimalist-light"] .text-amber-600 {
+  color: var(--warning) !important;
+}
+[data-page-theme="classic-light"] .bg-amber-500\/15,
+[data-page-theme="minimalist-light"] .bg-amber-500\/15 {
+  background-color: color-mix(in srgb, var(--warning) 15%, transparent) !important;
+}
+
 /* ========== MINIMALIST LIGHT (Notion / Arc / Linear inspired) ========== */
 [data-page-theme="minimalist-light"] {
-  --bg: #f8f7f4;
-  --bg-grid: #f0efe9;
+  --bg: #faf9f6;
+  --bg-grid: #f2f0eb;
   --surface: #ffffff;
-  --border: #e8e6e1;
-  --border-bright: #dad8d2;
-  --text: #1c1917;
-  --muted: #78716c;
-  --terminal: #6366f1;
-  --terminal-dim: #4f46e5;
-  --accent: #6366f1;
-  --accent-dim: #4f46e5;
-  --surface-hover: #f5f5f0;
-  --accent-muted: color-mix(in srgb, var(--accent) 8%, transparent);
+  --border: #e5e2dc;
+  --border-bright: #d4d1c9;
+  --text: #1a1816;
+  --muted: #57534e;
+  --terminal: #4338ca;
+  --terminal-dim: #3730a3;
+  --accent: #4f46e5;
+  --accent-dim: #4338ca;
+  --surface-hover: #f5f4f0;
+  --accent-muted: color-mix(in srgb, var(--accent) 14%, transparent);
+  --warning: #b45309;
   --radius: 16px;
   --radius-sm: 10px;
   --radius-lg: 20px;
-  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.03);
-  --shadow: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 2px 6px rgba(28, 25, 23, 0.04), 0 12px 24px -8px rgba(28, 25, 23, 0.08);
-  --shadow-lg: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 4px 12px rgba(28, 25, 23, 0.06), 0 24px 48px -12px rgba(28, 25, 23, 0.12);
+  --shadow-sm: 0 1px 2px rgba(26, 24, 22, 0.04);
+  --shadow: 0 0 0 1px rgba(26, 24, 22, 0.06), 0 2px 8px rgba(26, 24, 22, 0.05), 0 12px 28px -8px rgba(26, 24, 22, 0.1);
+  --shadow-lg: 0 0 0 1px rgba(26, 24, 22, 0.06), 0 4px 16px rgba(26, 24, 22, 0.08), 0 24px 48px -12px rgba(26, 24, 22, 0.14);
   --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
   font-family: var(--font-body);
   font-size: 16px;
@@ -97,10 +117,11 @@
   letter-spacing: -0.02em;
 }
 
-/* Minimalist light: warm paper-like background */
+/* Minimalist light: warm paper-like background with subtle accent glow */
 .grid-bg:has([data-page-theme="minimalist-light"]) {
-  background: radial-gradient(ellipse 100% 80% at 50% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 50%),
-    linear-gradient(180deg, #f8f7f4 0%, #f0efe9 100%);
+  background: radial-gradient(ellipse 120% 90% at 50% 0%, rgba(255, 255, 255, 0.95) 0%, rgba(249, 248, 246, 0.6) 40%, transparent 70%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
+    linear-gradient(180deg, #faf9f6 0%, #f2f0eb 100%);
 }
 
 /* ========== MINIMALIST DARK (Arc / Vercel inspired) ========== */
@@ -151,7 +172,7 @@
 [data-page-theme="minimalist-light"] .profile-bg-grid,
 [data-page-theme="minimalist-light"] .profile-bg-gradient,
 [data-page-theme="minimalist-light"] .profile-bg-dither {
-  background: linear-gradient(180deg, #f8f7f4 0%, #f0efe9 100%) !important;
+  background: linear-gradient(180deg, #faf9f6 0%, #f2f0eb 100%) !important;
 }
 
 [data-page-theme="minimalist-dark"] .profile-bg-grid,
@@ -205,6 +226,12 @@
   color: var(--accent) !important;
 }
 
+/* Light themes: stronger accent-muted for readable badge/pill backgrounds */
+[data-page-theme="classic-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span),
+[data-page-theme="minimalist-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) {
+  background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+}
+
 /* Minimalist: skills as refined chips (no nested span) */
 .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:not(:has(span)) {
   border-color: var(--border) !important;
@@ -248,27 +275,48 @@
   font-style: italic;
 }
 
+/* Light themes: quote block - clearer background, border, and punctuation */
+[data-page-theme="classic-light"] .profile-content-inner blockquote,
+[data-page-theme="minimalist-light"] .profile-content-inner blockquote,
+[data-page-theme="minimalist"] .profile-content-inner blockquote {
+  background: var(--accent-muted) !important;
+  border-left-color: var(--accent-dim) !important;
+}
+
+[data-page-theme="classic-light"] .profile-content-inner blockquote:hover,
+[data-page-theme="minimalist-light"] .profile-content-inner blockquote:hover,
+[data-page-theme="minimalist"] .profile-content-inner blockquote:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent) !important;
+}
+
+[data-page-theme="classic-light"] .profile-content-inner blockquote > span[aria-hidden],
+[data-page-theme="minimalist-light"] .profile-content-inner blockquote > span[aria-hidden],
+[data-page-theme="minimalist"] .profile-content-inner blockquote > span[aria-hidden] {
+  color: var(--accent-dim) !important;
+}
+
 /* Legacy: minimalist (no variant) → minimalist-light */
 [data-page-theme="minimalist"] {
-  --bg: #f8f7f4;
-  --bg-grid: #f0efe9;
+  --bg: #faf9f6;
+  --bg-grid: #f2f0eb;
   --surface: #ffffff;
-  --border: #e8e6e1;
-  --border-bright: #dad8d2;
-  --text: #1c1917;
-  --muted: #78716c;
+  --border: #e5e2dc;
+  --border-bright: #d4d1c9;
+  --text: #1a1816;
+  --muted: #57534e;
   --terminal: #6366f1;
   --terminal-dim: #4f46e5;
   --accent: #6366f1;
   --accent-dim: #4f46e5;
-  --surface-hover: #f5f5f0;
-  --accent-muted: color-mix(in srgb, var(--accent) 8%, transparent);
+  --surface-hover: #f5f4f0;
+  --accent-muted: color-mix(in srgb, var(--accent) 14%, transparent);
+  --warning: #b45309;
   --radius: 16px;
   --radius-sm: 10px;
   --radius-lg: 20px;
-  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.03);
-  --shadow: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 2px 6px rgba(28, 25, 23, 0.04), 0 12px 24px -8px rgba(28, 25, 23, 0.08);
-  --shadow-lg: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 4px 12px rgba(28, 25, 23, 0.06), 0 24px 48px -12px rgba(28, 25, 23, 0.12);
+  --shadow-sm: 0 1px 2px rgba(26, 24, 22, 0.04);
+  --shadow: 0 0 0 1px rgba(26, 24, 22, 0.06), 0 2px 8px rgba(26, 24, 22, 0.05), 0 12px 28px -8px rgba(26, 24, 22, 0.1);
+  --shadow-lg: 0 0 0 1px rgba(26, 24, 22, 0.06), 0 4px 16px rgba(26, 24, 22, 0.08), 0 24px 48px -12px rgba(26, 24, 22, 0.14);
   --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
   font-family: var(--font-body);
   font-size: 16px;
@@ -742,17 +790,29 @@
   .profile-theme-teal { --accent: #14b8a6; --accent-dim: #0d9488; --terminal: #2dd4bf; }
   .profile-theme-sky { --accent: #0ea5e9; --accent-dim: #0284c7; --terminal: #38bdf8; }
 
-  /* Minimalist light: refined, slightly deeper accents that sit well on warm paper */
-  [data-page-theme="minimalist-light"].profile-theme-cyan { --accent: #0e7490; --accent-dim: #0b5a6b; --terminal: #0d9488; }
-  [data-page-theme="minimalist-light"].profile-theme-green { --accent: #15803d; --accent-dim: #166534; --terminal: #16a34a; }
-  [data-page-theme="minimalist-light"].profile-theme-purple { --accent: #7c3aed; --accent-dim: #6d28d9; --terminal: #a78bfa; }
-  [data-page-theme="minimalist-light"].profile-theme-orange { --accent: #ea580c; --accent-dim: #c2410c; --terminal: #f97316; }
-  [data-page-theme="minimalist-light"].profile-theme-rose { --accent: #e11d48; --accent-dim: #be123c; --terminal: #fb7185; }
-  [data-page-theme="minimalist-light"].profile-theme-amber { --accent: #d97706; --accent-dim: #b45309; --terminal: #f59e0b; }
-  [data-page-theme="minimalist-light"].profile-theme-blue { --accent: #2563eb; --accent-dim: #1d4ed8; --terminal: #3b82f6; }
-  [data-page-theme="minimalist-light"].profile-theme-indigo { --accent: #4f46e5; --accent-dim: #4338ca; --terminal: #6366f1; }
-  [data-page-theme="minimalist-light"].profile-theme-teal { --accent: #0d9488; --accent-dim: #0f766e; --terminal: #14b8a6; }
-  [data-page-theme="minimalist-light"].profile-theme-sky { --accent: #0284c7; --accent-dim: #0369a1; --terminal: #0ea5e9; }
+  /* Classic light: vibrant but readable accents on light backgrounds */
+  [data-page-theme="classic-light"].profile-theme-cyan { --accent: #0d9488; --accent-dim: #0f766e; --terminal: #047857; }
+  [data-page-theme="classic-light"].profile-theme-green { --accent: #059669; --accent-dim: #047857; --terminal: #0d9668; }
+  [data-page-theme="classic-light"].profile-theme-purple { --accent: #7c3aed; --accent-dim: #6d28d9; --terminal: #8b5cf6; }
+  [data-page-theme="classic-light"].profile-theme-orange { --accent: #ea580c; --accent-dim: #c2410c; --terminal: #f97316; }
+  [data-page-theme="classic-light"].profile-theme-rose { --accent: #dc2626; --accent-dim: #b91c1c; --terminal: #f43f5e; }
+  [data-page-theme="classic-light"].profile-theme-amber { --accent: #d97706; --accent-dim: #b45309; --terminal: #f59e0b; }
+  [data-page-theme="classic-light"].profile-theme-blue { --accent: #2563eb; --accent-dim: #1d4ed8; --terminal: #3b82f6; }
+  [data-page-theme="classic-light"].profile-theme-indigo { --accent: #4f46e5; --accent-dim: #4338ca; --terminal: #6366f1; }
+  [data-page-theme="classic-light"].profile-theme-teal { --accent: #0d9488; --accent-dim: #0f766e; --terminal: #14b8a6; }
+  [data-page-theme="classic-light"].profile-theme-sky { --accent: #0284c7; --accent-dim: #0369a1; --terminal: #0ea5e9; }
+
+  /* Minimalist light: rich accents on warm paper */
+  [data-page-theme="minimalist-light"].profile-theme-cyan { --accent: #0d9488; --accent-dim: #0f766e; --terminal: #0f766e; }
+  [data-page-theme="minimalist-light"].profile-theme-green { --accent: #059669; --accent-dim: #047857; --terminal: #047857; }
+  [data-page-theme="minimalist-light"].profile-theme-purple { --accent: #7c3aed; --accent-dim: #6d28d9; --terminal: #6d28d9; }
+  [data-page-theme="minimalist-light"].profile-theme-orange { --accent: #ea580c; --accent-dim: #c2410c; --terminal: #c2410c; }
+  [data-page-theme="minimalist-light"].profile-theme-rose { --accent: #dc2626; --accent-dim: #b91c1c; --terminal: #e11d48; }
+  [data-page-theme="minimalist-light"].profile-theme-amber { --accent: #d97706; --accent-dim: #b45309; --terminal: #b45309; }
+  [data-page-theme="minimalist-light"].profile-theme-blue { --accent: #2563eb; --accent-dim: #1d4ed8; --terminal: #1d4ed8; }
+  [data-page-theme="minimalist-light"].profile-theme-indigo { --accent: #4f46e5; --accent-dim: #4338ca; --terminal: #4338ca; }
+  [data-page-theme="minimalist-light"].profile-theme-teal { --accent: #0d9488; --accent-dim: #0f766e; --terminal: #0f766e; }
+  [data-page-theme="minimalist-light"].profile-theme-sky { --accent: #0284c7; --accent-dim: #0369a1; --terminal: #0369a1; }
 
   /* Minimalist dark: softer accents with better visibility on near-black */
   [data-page-theme="minimalist-dark"].profile-theme-cyan { --accent: #22d3ee; --accent-dim: #06b6d4; --terminal: #67e8f9; }
@@ -788,6 +848,32 @@
   .profile-card-elevated {
     box-shadow: 0 16px 48px -16px rgba(0, 0, 0, 0.5),
       0 0 0 1px var(--border);
+  }
+
+  /* Light themes: override dark-oriented card styles */
+  [data-page-theme="classic-light"] .profile-card-glass,
+  [data-page-theme="minimalist-light"] .profile-card-glass {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  }
+  [data-page-theme="classic-light"] .profile-card-neon,
+  [data-page-theme="minimalist-light"] .profile-card-neon {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+      0 4px 20px color-mix(in srgb, var(--accent) 8%, transparent),
+      0 8px 32px rgba(15, 23, 42, 0.06);
+  }
+  [data-page-theme="classic-light"] .profile-card-minimal,
+  [data-page-theme="minimalist-light"] .profile-card-minimal {
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06), 0 0 0 1px var(--border);
+  }
+  [data-page-theme="classic-light"] .profile-card-elevated,
+  [data-page-theme="minimalist-light"] .profile-card-elevated {
+    box-shadow: 0 20px 50px -16px rgba(15, 23, 42, 0.12),
+      0 0 0 1px rgba(15, 23, 42, 0.06);
   }
 
   .profile-density-compact .profile-content-inner {

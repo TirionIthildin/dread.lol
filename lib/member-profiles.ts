@@ -1,6 +1,7 @@
 /**
  * Member profiles (MongoDB-backed): one profile per user, view tracking, basic edit.
  */
+import crypto from "node:crypto";
 import { ObjectId } from "mongodb";
 import {
   getDb,
@@ -836,9 +837,22 @@ export async function getTrendingProfiles(limit = 10): Promise<
       .toArray(),
     db
       .collection(COLLECTIONS.profileViews)
-      .aggregate<{ _id: ObjectId; count: number }>([
+      .aggregate<{ _id: ObjectId; uniqueCount: number }>([
         { $match: { viewedAt: { $gte: weekAgo } } },
-        { $group: { _id: "$profileId", count: { $sum: 1 } } },
+        {
+          $group: {
+            _id: {
+              profileId: "$profileId",
+              visitorKey: {
+                $ifNull: [
+                  "$visitorKey",
+                  { $concat: ["$visitorIp", "|", { $ifNull: ["$userAgent", ""] }] },
+                ],
+              },
+            },
+          },
+        },
+        { $group: { _id: "$_id.profileId", uniqueCount: { $sum: 1 } } },
       ])
       .toArray(),
   ]);
@@ -846,11 +860,11 @@ export async function getTrendingProfiles(limit = 10): Promise<
   const scoreMap = new Map<string, number>();
   for (const row of vouchesResult) {
     const id = (row._id as ObjectId).toString();
-    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.count * 5);
+    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.count * 100);
   }
   for (const row of viewsResult) {
     const id = (row._id as ObjectId).toString();
-    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.count);
+    scoreMap.set(id, (scoreMap.get(id) ?? 0) + row.uniqueCount);
   }
 
   const sorted = [...scoreMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
@@ -945,6 +959,12 @@ export async function hasUserVouched(profileId: string, userId: string): Promise
   return Boolean(doc);
 }
 
+/** Computes a stable key to identify a unique visitor (IP + User-Agent). */
+function computeVisitorKey(visitorIp: string, userAgent?: string | null): string {
+  const raw = `${visitorIp}|${userAgent ?? ""}`;
+  return crypto.createHash("sha256").update(raw).digest("hex").slice(0, 32);
+}
+
 export async function recordProfileView(
   profileId: string,
   visitorIp: string,
@@ -958,15 +978,18 @@ export async function recordProfileView(
   } catch {
     return;
   }
+  const visitorKey = computeVisitorKey(visitorIp, userAgent);
   await client.db(dbName).collection(COLLECTIONS.profileViews).insertOne({
     _id: new ObjectId(),
     profileId: oid,
     visitorIp,
     userAgent: userAgent ?? null,
+    visitorKey,
     viewedAt: new Date(),
   });
 }
 
+/** Unique view count: distinct visitors (by visitorKey or IP+UA for legacy records). */
 export async function getProfileViewCount(profileId: string): Promise<number> {
   const client = await getDb();
   const dbName = await getDbName();
@@ -976,7 +999,25 @@ export async function getProfileViewCount(profileId: string): Promise<number> {
   } catch {
     return 0;
   }
-  return client.db(dbName).collection(COLLECTIONS.profileViews).countDocuments({ profileId: oid });
+  const result = await client
+    .db(dbName)
+    .collection(COLLECTIONS.profileViews)
+    .aggregate<{ uniqueCount: number }>([
+      { $match: { profileId: oid } },
+      {
+        $group: {
+          _id: {
+            $ifNull: [
+              "$visitorKey",
+              { $concat: ["$visitorIp", "|", { $ifNull: ["$userAgent", ""] }] },
+            ],
+          },
+        },
+      },
+      { $count: "uniqueCount" },
+    ])
+    .toArray();
+  return result[0]?.uniqueCount ?? 0;
 }
 
 export async function getProfileViews(
@@ -991,20 +1032,49 @@ export async function getProfileViews(
   } catch {
     return { viewCount: 0, recentViews: [] };
   }
-  const all = await client
-    .db(dbName)
-    .collection(COLLECTIONS.profileViews)
-    .find({ profileId: oid })
-    .sort({ viewedAt: -1 })
-    .toArray();
-  const viewCount = all.length;
-  const recentViews = all.slice(0, recentLimit).map((v) => ({
-    id: v._id.toString(),
-    profileId: v.profileId.toString(),
-    visitorIp: v.visitorIp,
-    userAgent: v.userAgent ?? null,
-    viewedAt: v.viewedAt,
-  }));
+  const [uniqueResult, allViews] = await Promise.all([
+    client
+      .db(dbName)
+      .collection(COLLECTIONS.profileViews)
+      .aggregate<{ uniqueCount: number }>([
+        { $match: { profileId: oid } },
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$visitorKey",
+                { $concat: ["$visitorIp", "|", { $ifNull: ["$userAgent", ""] }] },
+              ],
+            },
+          },
+        },
+        { $count: "uniqueCount" },
+      ])
+      .toArray(),
+    client
+      .db(dbName)
+      .collection(COLLECTIONS.profileViews)
+      .find({ profileId: oid })
+      .sort({ viewedAt: -1 })
+      .toArray(),
+  ]);
+  const viewCount = uniqueResult[0]?.uniqueCount ?? 0;
+  // Dedupe by visitor (most recent view per unique visitor)
+  const seen = new Set<string>();
+  const recentViews: ProfileViewRow[] = [];
+  for (const v of allViews) {
+    const key = (v as { visitorKey?: string }).visitorKey ?? `${v.visitorIp}|${v.userAgent ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    recentViews.push({
+      id: v._id.toString(),
+      profileId: v.profileId.toString(),
+      visitorIp: v.visitorIp,
+      userAgent: v.userAgent ?? null,
+      viewedAt: v.viewedAt,
+    });
+    if (recentViews.length >= recentLimit) break;
+  }
   return { viewCount, recentViews };
 }
 
