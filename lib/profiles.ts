@@ -41,10 +41,14 @@ export interface Profile {
   quote?: string;
   /** Custom OG/social image URL (member profiles only). */
   ogImageUrl?: string;
-  /** When set, show "Last updated …" on the profile (member profiles only). */
+  /** @deprecated No longer shown. Kept for type compatibility. */
   updatedAt?: string;
-  /** Accent/theme color preset (member profiles only): cyan, green, purple, orange, rose, amber, blue, indigo, teal, sky. */
+  /** Accent/theme color preset (member profiles only): cyan, green, purple, orange, rose, amber, blue, indigo, teal, sky. Or custom hex (e.g. #ff00ff). */
   accentColor?: string;
+  /** Custom text/foreground color (hex). Overrides theme default. */
+  customTextColor?: string;
+  /** Custom background color (hex). Overrides theme default for page background. */
+  customBackgroundColor?: string;
   /** Terminal prompt character(s) (e.g. $, >, λ, ❯). */
   terminalPrompt?: string;
   /** Short greeting before name (e.g. "hi i'm", "aka"). */
@@ -55,6 +59,8 @@ export interface Profile {
   pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark";
   /** Box opacity (50–100). Controls profile card transparency. */
   cardOpacity?: number;
+  /** Backdrop blur: none, sm, md, lg. Controls profile card blur. */
+  cardBlur?: "none" | "sm" | "md" | "lg";
   /** Pronouns (e.g. they/them). */
   pronouns?: string;
   /** Location or "Based in" (e.g. NYC, Berlin). */
@@ -89,6 +95,10 @@ export interface Profile {
   cursorImageUrl?: string;
   /** Animation preset: none, fade-in, slide-up, scale-in, glow, shimmer. */
   animationPreset?: string;
+  /** Per-field animations: none, typewriter, fade-in, slide-up, slide-in-left, blur-in. */
+  nameAnimation?: string;
+  taglineAnimation?: string;
+  descriptionAnimation?: string;
   /** Background type: none, image, video (visual only; audio is separate). */
   backgroundType?: string;
   /** Background URL (image or video). */

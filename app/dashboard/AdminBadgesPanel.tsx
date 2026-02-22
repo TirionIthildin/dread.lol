@@ -7,7 +7,8 @@ import {
   updateBadgeAction,
   deleteBadgeAction,
 } from "@/app/dashboard/actions";
-import { BADGE_ICON_OPTIONS, getBadgeIcon } from "@/lib/badge-icons";
+import { BADGE_ICON_OPTIONS } from "@/lib/badge-icons";
+import BadgeIconClient from "@/app/components/BadgeIconClient";
 import { toast } from "sonner";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import SearchableSelect from "@/app/components/SearchableSelect";
@@ -381,16 +382,8 @@ export default function AdminBadgesPanel() {
                   searchPlaceholder="Search icon…"
                 />
                 <p className="text-xs text-[var(--muted)]">
-                  <a
-                    href="https://phosphoricons.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[var(--accent)] hover:underline"
-                  >
-                    Search all icons at phosphoricons.com
-                  </a>
-                  {" — add new icons to "}
-                  <code className="text-[10px] bg-[var(--surface)] px-1 rounded">lib/badge-icons.tsx</code>
+                  All 1,500+ Phosphor icons are searchable. Names use PascalCase (e.g.{" "}
+                  <code className="text-[10px] bg-[var(--surface)] px-1 rounded">RocketLaunch</code>).
                 </p>
               </div>
             )}
@@ -447,7 +440,7 @@ export default function AdminBadgesPanel() {
                     {b.imageUrl && (b.imageUrl.startsWith("/") || b.imageUrl.startsWith("http")) ? (
                       <NextImage src={b.imageUrl} alt="" width={14} height={14} className="shrink-0 object-contain" unoptimized />
                     ) : b.iconName ? (
-                      getBadgeIcon(b.iconName)
+                      <BadgeIconClient iconName={b.iconName} />
                     ) : null}
                     {b.label}
                   </span>

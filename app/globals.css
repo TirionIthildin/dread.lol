@@ -181,6 +181,16 @@
   background: #050505 !important;
 }
 
+/* User custom background color overrides theme defaults */
+.profile-custom-bg .profile-bg-grid,
+.profile-custom-bg .profile-bg-gradient,
+.profile-custom-bg .profile-bg-dither {
+  background-color: var(--bg) !important;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.15) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+}
+
 [data-page-theme="minimalist-light"] .profile-bg-dither::after,
 [data-page-theme="minimalist-dark"] .profile-bg-dither::after {
   display: none !important;
@@ -850,6 +860,12 @@
       0 0 0 1px var(--border);
   }
 
+  /* User-controlled blur: overrides glass style when cardBlur is "none" */
+  .profile-card-blur-none {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   /* Light themes: override dark-oriented card styles */
   [data-page-theme="classic-light"] .profile-card-glass,
   [data-page-theme="minimalist-light"] .profile-card-glass {
@@ -1127,6 +1143,19 @@
     }
   }
 
+  /* Per-field text animations (name, tagline, description) */
+  .profile-field-fade-in {
+    animation: profile-fade-in 0.5s ease-out both;
+  }
+  .profile-field-slide-up {
+    animation: profile-slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-field-slide-in-left {
+    animation: profile-slide-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .profile-field-blur-in {
+    animation: profile-blur-in 0.5s ease-out both;
+  }
   @media (prefers-reduced-motion: reduce) {
     .profile-animate-fade-in,
     .profile-animate-slide-up,
@@ -1145,6 +1174,12 @@
     .profile-animate-stagger .profile-content-inner > * {
       animation: profile-fade-in 0.2s ease-out both;
       animation-delay: 0ms !important;
+    }
+    .profile-field-fade-in,
+    .profile-field-slide-up,
+    .profile-field-slide-in-left,
+    .profile-field-blur-in {
+      animation: profile-fade-in 0.2s ease-out both;
     }
   }
 

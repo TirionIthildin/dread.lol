@@ -95,15 +95,42 @@ export const GRADIENT_BANNER_STYLES = [
 /** Default accent hex (cyan) when no theme is set. */
 export const DEFAULT_ACCENT = ACCENT_COLORS.cyan;
 
-/** Returns the profile-theme-{name} class when accentColor is valid, else "". */
+/** Returns the profile-theme-{name} class when accentColor is a preset, else "". Custom hex uses inline style instead. */
 export function getThemeClass(accentColor: string | undefined): string {
   if (
     accentColor &&
+    !accentColor.startsWith("#") &&
     ACCENT_THEMES.includes(accentColor as AccentTheme)
   ) {
     return `profile-theme-${accentColor}`;
   }
   return "";
+}
+
+/** CSS variables for custom colors. Apply to profile wrapper when set. */
+export function getCustomColorVars(profile: {
+  accentColor?: string | null;
+  customTextColor?: string | null;
+  customBackgroundColor?: string | null;
+}): Record<string, string> {
+  const vars: Record<string, string> = {};
+  if (isValidHexColor(profile.accentColor ?? undefined)) {
+    const hex = (profile.accentColor ?? "").trim();
+    vars["--accent"] = hex;
+    vars["--accent-dim"] = hex;
+    vars["--terminal"] = hex;
+  }
+  if (isValidHexColor(profile.customTextColor ?? undefined)) {
+    const text = (profile.customTextColor ?? "").trim();
+    vars["--text"] = text;
+    vars["--foreground"] = text;
+  }
+  if (isValidHexColor(profile.customBackgroundColor ?? undefined)) {
+    const bg = (profile.customBackgroundColor ?? "").trim();
+    vars["--bg"] = bg;
+    vars["--bg-grid"] = bg;
+  }
+  return vars;
 }
 
 /** Returns true if accentColor is a valid theme key. */
@@ -113,10 +140,20 @@ export function isAccentTheme(accentColor: string | undefined): accentColor is A
   );
 }
 
-/** Returns hex for the accent, or DEFAULT_ACCENT if invalid. */
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** Returns true if value is a valid 6-digit hex color. */
+export function isValidHexColor(value: string | undefined): value is string {
+  return Boolean(value?.trim() && HEX_RE.test(value.trim()));
+}
+
+/** Returns hex for the accent, or DEFAULT_ACCENT if invalid. Supports preset keys and custom hex. */
 export function getAccentHex(accentColor: string | undefined): string {
   if (isAccentTheme(accentColor)) {
     return ACCENT_COLORS[accentColor];
+  }
+  if (isValidHexColor(accentColor)) {
+    return accentColor.trim();
   }
   return DEFAULT_ACCENT;
 }

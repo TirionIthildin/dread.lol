@@ -1,71 +1,34 @@
 /**
- * Curated Phosphor icons for custom badges. Admins pick by name in the Badges panel.
- * Keeps bundle small while offering badge-appropriate icons.
- * Uses SSR export for server component compatibility (ProfileContent).
- *
- * To add new icons: search at https://phosphoricons.com (site uses kebab-case, e.g. rocket-launch).
- * Import the component (PascalCase: RocketLaunch) and add to BADGE_ICONS and BADGE_ICON_OPTIONS.
+ * Phosphor icons for custom badges. Admins pick by name in the Badges panel.
+ * Uses the full Phosphor icon set for search.
  */
 import type { IconProps } from "@phosphor-icons/react";
-import {
-  ShieldCheck,
-  Shield,
-  Star,
-  Crown,
-  Heart,
-  Fire,
-  Lightning,
-  SealCheck,
-  Sparkle,
-  Trophy,
-  Medal,
-  Flag,
-  Gift,
-  RocketLaunch,
-} from "@phosphor-icons/react/dist/ssr";
+import * as PhosphorIconsSSR from "@phosphor-icons/react/ssr";
+import { BADGE_ICON_OPTIONS } from "./phosphor-icon-names";
 
 const iconProps: IconProps = { size: 14, weight: "fill" };
 
-export const BADGE_ICONS: Record<string, React.ComponentType<IconProps>> = {
-  ShieldCheck,
-  Shield,
-  Star,
-  Award: Medal, // Award not in @phosphor-icons; use Medal as alias
-  Crown,
-  Heart,
-  Fire,
-  Lightning,
-  SealCheck,
-  Sparkle,
-  Trophy,
-  Medal,
-  Flag,
-  Gift,
-  RocketLaunch,
-};
+export { BADGE_ICON_OPTIONS };
 
-/** Display labels for the icon picker dropdown. */
-export const BADGE_ICON_OPTIONS = [
-  { value: "", label: "None (text only)" },
-  { value: "ShieldCheck", label: "Shield check" },
-  { value: "Shield", label: "Shield" },
-  { value: "Star", label: "Star" },
-  { value: "Award", label: "Award" },
-  { value: "Crown", label: "Crown" },
-  { value: "Heart", label: "Heart" },
-  { value: "Fire", label: "Fire" },
-  { value: "Lightning", label: "Lightning" },
-  { value: "SealCheck", label: "Seal check" },
-  { value: "Sparkle", label: "Sparkle" },
-  { value: "Trophy", label: "Trophy" },
-  { value: "Medal", label: "Medal" },
-  { value: "Flag", label: "Flag" },
-  { value: "Gift", label: "Gift" },
-  { value: "RocketLaunch", label: "Rocket launch" },
-];
+const icons = PhosphorIconsSSR as unknown as Record<string, React.ComponentType<IconProps>>;
 
+/** Sync render for any Phosphor icon. Use BadgeIconServer in RSC for proper SSR. */
 export function getBadgeIcon(iconName: string | null | undefined) {
   if (!iconName) return null;
-  const Icon = BADGE_ICONS[iconName];
+  const resolved = iconName === "Award" ? "Medal" : iconName;
+  const Icon = icons[resolved];
   return Icon ? <Icon {...iconProps} className="shrink-0" /> : null;
+}
+
+/** Server component: renders any Phosphor icon. */
+export function BadgeIconServer({
+  iconName,
+}: {
+  iconName: string | null | undefined;
+}) {
+  if (!iconName) return null;
+  const resolved = iconName === "Award" ? "Medal" : iconName;
+  const Icon = icons[resolved];
+  if (!Icon) return null;
+  return <Icon {...iconProps} className="shrink-0" />;
 }

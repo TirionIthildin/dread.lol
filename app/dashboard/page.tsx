@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
-import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
 import { hasRobloxLinked } from "@/lib/roblox-widgets";
@@ -68,9 +68,11 @@ async function MemberProfileSection({
       ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
       ...getPremiumBadgeKeys(discordBadgeData.premiumType),
     ];
+    const baseProfileForPreview = memberProfileToProfile(profile, undefined, discordBadgeData);
     return (
       <DashboardMyProfile
         profile={profile}
+        baseProfileForPreview={baseProfileForPreview}
         shortLinks={shortLinks}
         versions={versions}
         discordAvatarUrl={session.picture ?? undefined}

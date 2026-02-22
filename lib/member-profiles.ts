@@ -1478,12 +1478,18 @@ export function memberProfileToProfile(
     easterEggLink,
     links,
     ogImageUrl: row.ogImageUrl ?? undefined,
-    updatedAt: row.showUpdatedAt && row.updatedAt ? formatUpdatedAt(row.updatedAt) : undefined,
+    updatedAt: undefined,
     accentColor: row.accentColor ?? undefined,
+    customTextColor: (row as { customTextColor?: string | null }).customTextColor ?? undefined,
+    customBackgroundColor: (row as { customBackgroundColor?: string | null }).customBackgroundColor ?? undefined,
     terminalPrompt: row.terminalPrompt ?? undefined,
     nameGreeting: row.nameGreeting ?? undefined,
     cardStyle: row.cardStyle ?? undefined,
     cardOpacity: row.cardOpacity ?? undefined,
+    cardBlur: (() => {
+      const b = (row as { cardBlur?: string | null }).cardBlur;
+      return b && ["none", "sm", "md", "lg"].includes(b) ? (b as "none" | "sm" | "md" | "lg") : undefined;
+    })(),
     pageTheme: (() => {
       const t = (row.pageTheme ?? "") as string;
       if (t === "classic") return "classic-dark" as const;
@@ -1508,6 +1514,9 @@ export function memberProfileToProfile(
     cursorStyle: row.cursorStyle ?? undefined,
     cursorImageUrl: row.cursorImageUrl ?? undefined,
     animationPreset: row.animationPreset ?? undefined,
+    nameAnimation: (row as { nameAnimation?: string | null }).nameAnimation ?? undefined,
+    taglineAnimation: (row as { taglineAnimation?: string | null }).taglineAnimation ?? undefined,
+    descriptionAnimation: (row as { descriptionAnimation?: string | null }).descriptionAnimation ?? undefined,
     backgroundType: (() => {
       const t = row.backgroundType ?? undefined;
       if (t === "audio") return undefined;

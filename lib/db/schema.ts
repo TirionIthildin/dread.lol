@@ -51,10 +51,14 @@ export interface ProfileDoc {
   ogImageUrl?: string | null;
   showUpdatedAt?: boolean;
   accentColor?: string | null;
+  customTextColor?: string | null;
+  customBackgroundColor?: string | null;
   terminalPrompt?: string | null;
   nameGreeting?: string | null;
   cardStyle?: string | null;
   cardOpacity?: number | null;
+  /** Backdrop blur: none, sm, md, lg. */
+  cardBlur?: "none" | "sm" | "md" | "lg" | null;
   displayStatus?: string | null;
   pronouns?: string | null;
   location?: string | null;
@@ -82,6 +86,9 @@ export interface ProfileDoc {
   cursorStyle?: string | null;
   cursorImageUrl?: string | null;
   animationPreset?: string | null;
+  nameAnimation?: string | null;
+  taglineAnimation?: string | null;
+  descriptionAnimation?: string | null;
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;

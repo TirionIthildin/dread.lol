@@ -11,6 +11,21 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Per-field animations",
+    description: "Set typewriter, fade-in, slide-up, and other animations for your name, tagline, and description.",
+  },
+  {
+    date: "2026-02",
+    title: "Custom profile colors",
+    description: "Set custom accent, text, and background colors with hex inputs and color pickers in the Look section.",
+  },
+  {
+    date: "2026-02",
+    title: "Card blur & opacity controls",
+    description: "Customize your profile card's backdrop blur and transparency in the Look section.",
+  },
+  {
+    date: "2026-02",
     title: "Bigger profile editor",
     description: "Full-viewport editor with side-by-side live preview, wider layout, sticky save bar, and ⌘/Ctrl+Enter shortcut.",
   },

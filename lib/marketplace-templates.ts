@@ -32,6 +32,9 @@ export interface TemplateData {
   nameGreeting?: string | null;
   cardStyle?: string | null;
   cardOpacity?: number | null;
+  cardBlur?: "none" | "sm" | "md" | "lg" | null;
+  customTextColor?: string | null;
+  customBackgroundColor?: string | null;
   pronouns?: string | null;
   location?: string | null;
   timezone?: string | null;
@@ -49,6 +52,9 @@ export interface TemplateData {
   cursorStyle?: string | null;
   cursorImageUrl?: string | null;
   animationPreset?: string | null;
+  nameAnimation?: string | null;
+  taglineAnimation?: string | null;
+  descriptionAnimation?: string | null;
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;
@@ -112,6 +118,13 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     nameGreeting: profile.nameGreeting ?? null,
     cardStyle: profile.cardStyle ?? null,
     cardOpacity: profile.cardOpacity ?? null,
+    cardBlur: (() => {
+      const b = (profile as { cardBlur?: string | null }).cardBlur;
+      if (b && ["none", "sm", "md", "lg"].includes(b)) return b as "none" | "sm" | "md" | "lg";
+      return null;
+    })(),
+    customTextColor: (profile as { customTextColor?: string | null }).customTextColor ?? null,
+    customBackgroundColor: (profile as { customBackgroundColor?: string | null }).customBackgroundColor ?? null,
     pronouns: profile.pronouns ?? null,
     location: profile.location ?? null,
     timezone: profile.timezone ?? null,
@@ -129,6 +142,9 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     cursorStyle: profile.cursorStyle ?? null,
     cursorImageUrl: profile.cursorImageUrl ?? null,
     animationPreset: profile.animationPreset ?? null,
+    nameAnimation: (profile as { nameAnimation?: string | null }).nameAnimation ?? null,
+    taglineAnimation: (profile as { taglineAnimation?: string | null }).taglineAnimation ?? null,
+    descriptionAnimation: (profile as { descriptionAnimation?: string | null }).descriptionAnimation ?? null,
     backgroundType: profile.backgroundType ?? null,
     backgroundUrl: profile.backgroundUrl ?? null,
     backgroundAudioUrl: profile.backgroundAudioUrl ?? null,
@@ -520,6 +536,9 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.nameGreeting !== undefined) update.nameGreeting = data.nameGreeting;
   if (data.cardStyle !== undefined) update.cardStyle = data.cardStyle;
   if (data.cardOpacity !== undefined) update.cardOpacity = data.cardOpacity;
+  if (data.cardBlur !== undefined) update.cardBlur = data.cardBlur;
+  if (data.customTextColor !== undefined) update.customTextColor = data.customTextColor;
+  if (data.customBackgroundColor !== undefined) update.customBackgroundColor = data.customBackgroundColor;
   if (data.pronouns !== undefined) update.pronouns = data.pronouns;
   if (data.location !== undefined) update.location = data.location;
   if (data.timezone !== undefined) update.timezone = data.timezone;
@@ -537,6 +556,9 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.cursorStyle !== undefined) update.cursorStyle = data.cursorStyle;
   if (data.cursorImageUrl !== undefined) update.cursorImageUrl = data.cursorImageUrl;
   if (data.animationPreset !== undefined) update.animationPreset = data.animationPreset;
+  if (data.nameAnimation !== undefined) update.nameAnimation = data.nameAnimation;
+  if (data.taglineAnimation !== undefined) update.taglineAnimation = data.taglineAnimation;
+  if (data.descriptionAnimation !== undefined) update.descriptionAnimation = data.descriptionAnimation;
   if (data.backgroundType !== undefined) update.backgroundType = data.backgroundType;
   if (data.backgroundUrl !== undefined) update.backgroundUrl = data.backgroundUrl;
   if (data.backgroundAudioUrl !== undefined) update.backgroundAudioUrl = data.backgroundAudioUrl;
@@ -625,6 +647,9 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     nameGreeting: d.nameGreeting ?? undefined,
     cardStyle: d.cardStyle ?? undefined,
     cardOpacity: d.cardOpacity ?? undefined,
+    cardBlur: d.cardBlur && ["none", "sm", "md", "lg"].includes(d.cardBlur) ? d.cardBlur : undefined,
+    customTextColor: d.customTextColor && /^#[0-9a-fA-F]{6}$/.test(d.customTextColor) ? d.customTextColor : undefined,
+    customBackgroundColor: d.customBackgroundColor && /^#[0-9a-fA-F]{6}$/.test(d.customBackgroundColor) ? d.customBackgroundColor : undefined,
     pronouns: d.pronouns ?? undefined,
     location: d.location ?? undefined,
     timezone: d.timezone ?? undefined,
@@ -642,6 +667,9 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     cursorStyle: d.cursorStyle ?? undefined,
     cursorImageUrl: d.cursorImageUrl ?? undefined,
     animationPreset: d.animationPreset ?? undefined,
+    nameAnimation: d.nameAnimation ?? undefined,
+    taglineAnimation: d.taglineAnimation ?? undefined,
+    descriptionAnimation: d.descriptionAnimation ?? undefined,
     backgroundType: d.backgroundType ?? undefined,
     backgroundUrl: d.backgroundUrl ?? undefined,
     backgroundAudioUrl: d.backgroundAudioUrl ?? undefined,

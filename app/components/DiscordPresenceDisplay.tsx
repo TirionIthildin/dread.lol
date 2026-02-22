@@ -58,7 +58,7 @@ function PillsVariant({ presence }: { presence: NonNullable<Profile["discordPres
   const activities = presence.activities?.slice(0, 2) ?? [];
 
   return (
-    <div className="flex flex-wrap items-center justify-start gap-2">
+    <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2">
       <span
         className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${statusColors.bg}`}
       >
@@ -118,7 +118,7 @@ function StackedVariant({ presence }: { presence: NonNullable<Profile["discordPr
   const activities = presence.activities ?? [];
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex w-full min-w-0 flex-col gap-2">
       <span
         className={`w-fit inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${statusColors.bg}`}
       >
@@ -126,11 +126,11 @@ function StackedVariant({ presence }: { presence: NonNullable<Profile["discordPr
         <span className="capitalize">{presence.status}</span>
       </span>
       {activities.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex w-full min-w-0 flex-col gap-1.5">
           {activities.slice(0, 3).map((a, i) => (
             <div
               key={i}
-              className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/40 px-3 py-2 text-xs"
+              className="w-full min-w-0 rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/40 px-3 py-2 text-xs"
               title={formatActivity(a)}
             >
               <span className="text-[var(--muted)] mr-1.5" aria-hidden>
@@ -177,7 +177,7 @@ function WidgetVariant({ presence }: { presence: NonNullable<Profile["discordPre
 
   return (
     <div
-      className="inline-flex min-w-0 max-w-full flex-col overflow-hidden rounded-xl border border-[var(--border)]/60 bg-[var(--bg)]/50 shadow-sm"
+      className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)]/60 bg-[var(--bg)]/50 shadow-sm"
       role="status"
       aria-label={`Discord: ${presence.status}${activities.length ? `, ${activities.map((a) => a.name).join(", ")}` : ""}`}
     >
@@ -187,11 +187,11 @@ function WidgetVariant({ presence }: { presence: NonNullable<Profile["discordPre
         <span className="text-[10px] text-[var(--muted)]">· Discord</span>
       </div>
       {activities.length > 0 ? (
-        <div className="flex flex-col divide-y divide-[var(--border)]/30">
+        <div className="flex w-full min-w-0 flex-col divide-y divide-[var(--border)]/30">
           {activities.map((a, i) => (
             <div
               key={i}
-              className="flex items-start gap-2 px-3 py-2 text-xs min-w-0"
+              className="flex w-full min-w-0 items-start gap-2 px-3 py-2 text-xs"
               title={formatActivity(a)}
             >
               <span className="shrink-0 text-[var(--muted)] mt-0.5" aria-hidden>

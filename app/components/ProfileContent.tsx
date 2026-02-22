@@ -5,12 +5,14 @@ import type { Profile } from "@/lib/profiles";
 
 const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
 import { getDiscordBadgeInfo } from "@/lib/discord-badges";
-import { getBadgeIcon } from "@/lib/badge-icons";
+import { BadgeIconServer } from "@/lib/badge-icons";
+import { Suspense } from "react";
 import ProfileLinks from "@/app/components/ProfileLinks";
 import ProfileDescription from "@/app/components/ProfileDescription";
 import ProfileTags from "@/app/components/ProfileTags";
 import ProfileQuote from "@/app/components/ProfileQuote";
 import TaglineWithEasterEgg from "@/app/components/TaglineWithEasterEgg";
+import TypewriterText, { AnimatedField } from "@/app/components/TypewriterText";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
 import ProfileReportButton from "@/app/components/ProfileReportButton";
@@ -22,7 +24,7 @@ import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
-import { formatLastSeen } from "@/lib/discord-lastseen";
+import { formatLastSeen } from "@/lib/format-last-seen";
 import { SITE_URL } from "@/lib/site";
 import {
   CUSTOM_BADGE_COLORS,
@@ -43,6 +45,7 @@ const CARD_STYLES = ["default", "sharp", "glass", "neon", "minimal", "elevated"]
 const CUSTOM_FONTS = ["jetbrains-mono", "fira-code", "space-mono"] as const;
 const AVATAR_SHAPES = ["circle", "rounded", "square", "soft", "hexagon"] as const;
 const LAYOUT_DENSITIES = ["default", "compact", "spacious"] as const;
+const FIELD_ANIMATIONS = ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"] as const;
 const ANIMATION_PRESETS = [
   "none",
   "fade-in",
@@ -189,6 +192,8 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
   const useTerminalLayout = Boolean(profile.useTerminalLayout && (profile.terminalCommands?.length || profile.terminalTitle != null));
   const cardOpacity = profile.cardOpacity != null ? Math.max(50, Math.min(100, profile.cardOpacity)) : 95;
   const isMinimalist = profile.pageTheme === "minimalist-light" || profile.pageTheme === "minimalist-dark";
+  const blurClass =
+    profile.cardBlur === "none" ? "profile-card-blur-none" : profile.cardBlur === "md" ? "backdrop-blur-md" : profile.cardBlur === "lg" ? "backdrop-blur-lg" : "backdrop-blur-sm";
 
   return (
     <>
@@ -203,7 +208,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
       className={`relative z-10 w-full min-w-0 max-w-2xl max-h-[calc(100vh-3rem)] overflow-auto shrink-0 ${themeClass} ${fontClass}`}
     >
       <article
-        className={`rounded-2xl border overflow-hidden transition-all duration-300 ${isMinimalist ? "profile-minimalist-card border-[var(--border)]/60 shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)]" : "rounded-xl border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]"} ${!isMinimalist ? cardClass : ""} ${densityClass} ${animationClass}`}
+        className={`rounded-2xl border overflow-hidden transition-all duration-300 ${isMinimalist ? "profile-minimalist-card border-[var(--border)]/60 shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)]" : `rounded-xl border-[var(--border)] shadow-2xl shadow-black/50 ${blurClass} hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]`} ${!isMinimalist ? cardClass : ""} ${densityClass} ${animationClass}`}
         style={{ backgroundColor: `color-mix(in srgb, var(--surface) ${cardOpacity}%, transparent)` }}
         aria-labelledby="profile-name"
       >
@@ -262,7 +267,26 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                 {profile.nameGreeting?.trim() && (
                   <span className="text-[var(--muted)] font-normal">{profile.nameGreeting.trim()} </span>
                 )}
-                {profile.name}
+                {(() => {
+                  const nameAnim = profile.nameAnimation && FIELD_ANIMATIONS.includes(profile.nameAnimation as (typeof FIELD_ANIMATIONS)[number]) ? profile.nameAnimation : "none";
+                  if (nameAnim === "typewriter") {
+                    return (
+                      <TypewriterText
+                        text={profile.name}
+                        speedMs={50}
+                        showCursor={true}
+                      />
+                    );
+                  }
+                  if (nameAnim !== "none") {
+                    return (
+                      <AnimatedField animation={nameAnim}>
+                        {profile.name}
+                      </AnimatedField>
+                    );
+                  }
+                  return profile.name;
+                })()}
                 {(profile.verified || profile.staff || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
                   <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
                     {profile.verified && (
@@ -292,7 +316,9 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                           {b.imageUrl && (b.imageUrl.startsWith("/") || b.imageUrl.startsWith("http")) ? (
                             <Image src={b.imageUrl} alt="" width={14} height={14} className="shrink-0 object-contain inline-block align-middle" unoptimized />
                           ) : b.iconName ? (
-                            getBadgeIcon(b.iconName)
+                            <Suspense fallback={null}>
+                              <BadgeIconServer iconName={b.iconName} />
+                            </Suspense>
                           ) : null}
                           {b.label}
                         </span>
@@ -322,6 +348,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                   tagline={profile.tagline}
                   easterEggTaglineWord={profile.easterEggTaglineWord}
                   easterEggLink={profile.easterEggLink}
+                  animation={profile.taglineAnimation}
                 />
               )}
               {((profile.location?.trim() || profile.timezone?.trim() || profile.timezoneRange?.trim() || profile.birthday?.trim() || profile.languages?.trim() || profile.availability?.trim()) && (
@@ -387,7 +414,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                 </p>
               )}
               {profile.discordPresence && (
-                <div className="mt-2.5">
+                <div className="mt-2.5 w-full min-w-0">
                   <DiscordPresenceDisplay
                     presence={profile.discordPresence}
                     style={
@@ -409,7 +436,10 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
             </div>
           </div>
           {profile.description && (
-            <ProfileDescription text={profile.description} />
+            <ProfileDescription
+              text={profile.description}
+              animation={profile.descriptionAnimation}
+            />
           )}
           {profile.tags && profile.tags.length > 0 && (
             <ProfileTags tags={profile.tags} />
@@ -482,18 +512,12 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
               updatedAt={profile.updatedAt}
               viewCount={profile.showPageViews ? profile.viewCount ?? null : undefined}
             />
-          ) : (profile.updatedAt || (profile.showPageViews && profile.viewCount != null)) ? (
+          ) : profile.showPageViews && profile.viewCount != null ? (
             <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)] flex flex-wrap items-center gap-x-1 gap-y-1">
-              {profile.updatedAt && <span>Last updated {profile.updatedAt}</span>}
-              {profile.showPageViews && profile.viewCount != null && (
-                <>
-                  {profile.updatedAt && <span className="opacity-60">·</span>}
-                  <span className="inline-flex items-center gap-1">
-                    <Eye {...profileMetaIconProps} aria-hidden />
-                    {profile.viewCount} view{profile.viewCount !== 1 ? "s" : ""}
-                  </span>
-                </>
-              )}
+              <span className="inline-flex items-center gap-1">
+                <Eye {...profileMetaIconProps} aria-hidden />
+                {profile.viewCount} view{profile.viewCount !== 1 ? "s" : ""}
+              </span>
             </p>
           ) : null}
         </div>

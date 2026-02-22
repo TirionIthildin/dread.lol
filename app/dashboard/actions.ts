@@ -80,6 +80,40 @@ function parseLinksValue(linksRaw: string | null | undefined): string | null {
   return parsed.length > 0 ? JSON.stringify(parsed) : null;
 }
 
+/** Update only link-related profile fields (websiteUrl, discord, roblox, links). */
+export async function updateLinksAction(
+  _prevState: ProfileFormState,
+  formData: FormData
+): Promise<ProfileFormState> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const profileId = formData.get("profileId");
+  if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
+  const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
+  const websiteUrl = (() => {
+    const v = (formData.get("websiteUrl") as string)?.trim();
+    if (!v) return null;
+    return validateUrlOrEmpty(v) ?? null;
+  })();
+  try {
+    await updateMemberProfile(profileId, session.sub, {
+      websiteUrl,
+      discord: (formData.get("discord") as string)?.trim() || undefined,
+      roblox: (formData.get("roblox") as string)?.trim() || undefined,
+      links: linksJson,
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Update failed" };
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/links");
+  const slug = await getProfileSlugByUserId(session.sub);
+  if (slug) revalidatePath(`/${slug}`);
+  return { success: true, savedAt: new Date().toISOString() };
+}
+
 export async function updateProfileAction(
   _prevState: ProfileFormState,
   formData: FormData
@@ -92,7 +126,8 @@ export async function updateProfileAction(
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
   const slug = rawSlug ? normalizeSlug(rawSlug) : undefined;
-  const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
+  // Link-related fields only updated when present (i.e. from Links page). Main profile form omits them.
+  const linksJson = formData.has("links") ? parseLinksValue((formData.get("links") as string) ?? undefined) : undefined;
 
   const avatarUrl = validateUrlOrEmpty(formData.get("avatarUrl") as string);
   // Banner is ASCII art text, not a URL
@@ -127,8 +162,11 @@ export async function updateProfileAction(
             .map((s) => s.trim())
             .filter(Boolean)
         : undefined,
-      discord: (formData.get("discord") as string)?.trim() || undefined,
-      roblox: (formData.get("roblox") as string)?.trim() || undefined,
+      ...(formData.has("links") && {
+        discord: (formData.get("discord") as string)?.trim() || undefined,
+        roblox: (formData.get("roblox") as string)?.trim() || undefined,
+        links: linksJson,
+      }),
       banner,
       bannerSmall: formData.get("bannerSmall") === "on",
       bannerAnimatedFire: formData.get("bannerAnimatedFire") === "on",
@@ -136,9 +174,20 @@ export async function updateProfileAction(
       useTerminalLayout: formData.get("useTerminalLayout") === "on",
       terminalTitle: (formData.get("terminalTitle") as string)?.trim() || undefined,
       terminalCommands: (formData.get("terminalCommands") as string)?.trim() || null,
-      links: linksJson,
-      showUpdatedAt: formData.get("showUpdatedAt") === "on",
-      accentColor: (formData.get("accentColor") as string)?.trim() || undefined,
+      accentColor: (() => {
+        const custom = (formData.get("accentColorCustom") as string)?.trim();
+        if (custom && /^#[0-9a-fA-F]{6}$/.test(custom)) return custom;
+        const preset = (formData.get("accentColor") as string)?.trim();
+        return preset ? preset : undefined;
+      })(),
+      customTextColor: (() => {
+        const v = (formData.get("customTextColor") as string)?.trim();
+        return v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
+      })(),
+      customBackgroundColor: (() => {
+        const v = (formData.get("customBackgroundColor") as string)?.trim();
+        return v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
+      })(),
       terminalPrompt: (formData.get("terminalPrompt") as string)?.trim() || undefined,
       nameGreeting: (formData.get("nameGreeting") as string)?.trim() || undefined,
       cardStyle: (formData.get("cardStyle") as string)?.trim() || undefined,
@@ -153,6 +202,10 @@ export async function updateProfileAction(
         if (Number.isNaN(n)) return undefined;
         return Math.max(50, Math.min(100, n));
       })(),
+      cardBlur: (() => {
+        const b = (formData.get("cardBlur") as string)?.trim();
+        return b && ["none", "sm", "md", "lg"].includes(b) ? (b as "none" | "sm" | "md" | "lg") : undefined;
+      })(),
       pronouns: ((formData.get("pronouns") as string)?.trim() || undefined)?.slice(0, 40),
       location: ((formData.get("location") as string)?.trim() || undefined)?.slice(0, 80),
       timezone: ((formData.get("timezone") as string)?.trim() || undefined)?.slice(0, 64),
@@ -166,11 +219,13 @@ export async function updateProfileAction(
         if (m < 1 || m > 12 || d < 1 || d > 31) return null;
         return `${mm}-${dd}`;
       })(),
-      websiteUrl: (() => {
-        const v = (formData.get("websiteUrl") as string)?.trim();
-        if (!v) return null;
-        return validateUrlOrEmpty(v) ?? null;
-      })(),
+      ...(formData.has("websiteUrl") && {
+        websiteUrl: (() => {
+          const v = (formData.get("websiteUrl") as string)?.trim();
+          if (!v) return null;
+          return validateUrlOrEmpty(v) ?? null;
+        })(),
+      }),
       skills: (() => {
         const raw = (formData.get("skills") as string)?.trim();
         if (!raw) return null;
@@ -203,7 +258,7 @@ export async function updateProfileAction(
         if (formData.get("showDiscordWidgetJoined") === "on") widgets.push("joined");
         if (formData.get("showDiscordWidgetServerCount") === "on") widgets.push("serverCount");
         if (formData.get("showDiscordWidgetServerInvite") === "on") widgets.push("serverInvite");
-        return widgets.slice(0, 3).length > 0 ? widgets.slice(0, 3).join(",") : null;
+        return widgets.slice(0, 4).length > 0 ? widgets.slice(0, 4).join(",") : null;
       })(),
       ...(formData.get("showDiscordWidgetServerInvite") === "on" && {
         discordInviteUrl: (() => {
@@ -241,6 +296,18 @@ export async function updateProfileAction(
         ? (validateBackgroundUrl((formData.get("cursorImageUrl") as string)?.trim()) ?? null)
         : null,
       animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
+      nameAnimation: (() => {
+        const v = (formData.get("nameAnimation") as string)?.trim();
+        return v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+      })(),
+      taglineAnimation: (() => {
+        const v = (formData.get("taglineAnimation") as string)?.trim();
+        return v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+      })(),
+      descriptionAnimation: (() => {
+        const v = (formData.get("descriptionAnimation") as string)?.trim();
+        return v && ["none", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+      })(),
       backgroundType: usesVisualBackground ? bgType : null,
       backgroundUrl: usesCustomMedia ? backgroundUrl : null,
       backgroundAudioUrl: backgroundAudioUrl || null,
@@ -362,6 +429,7 @@ export async function addShortLinkAction(
     const url = requireSafeUrl(data.url.trim(), "URL");
     const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url });
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/links");
     const slug = await getProfileSlugByUserId(session.sub);
     if (slug) revalidatePath(`/${slug}`);
     return { id: link.id, slug: link.slug, url: link.url };
@@ -379,6 +447,7 @@ export async function deleteShortLinkAction(linkId: string): Promise<{ error?: s
   try {
     await deleteShortLink(linkId, session.sub);
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/links");
     const slug = await getProfileSlugByUserId(session.sub);
     if (slug) revalidatePath(`/${slug}`);
     return {};

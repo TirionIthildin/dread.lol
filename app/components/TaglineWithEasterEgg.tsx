@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import DonutAnimation from "@/app/components/DonutAnimation";
+import TypewriterText, { AnimatedField } from "@/app/components/TypewriterText";
 
 const SLIDES = [
   "There is no sanity here.",
@@ -48,18 +49,23 @@ function getTriggerKind(
   return null;
 }
 
+const TAGLINE_ANIMATIONS = ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"] as const;
+
 interface TaglineWithEasterEggProps {
   tagline: string;
   /** Word in tagline that triggers the scary overlay (e.g. "sanity"). */
   easterEggTaglineWord?: string;
   /** Word in tagline that opens a link or donut popup. */
   easterEggLink?: { triggerWord: string; url: string; popupUrl?: string };
+  /** Per-field animation: none, typewriter, fade-in, slide-up, etc. */
+  animation?: string | null;
 }
 
 export default function TaglineWithEasterEgg({
   tagline,
   easterEggTaglineWord,
   easterEggLink,
+  animation,
 }: TaglineWithEasterEggProps) {
   const [showOverlay, setShowOverlay] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -104,17 +110,29 @@ export default function TaglineWithEasterEgg({
     window.open(url, "_blank", "noopener,noreferrer");
   }, []);
 
+  const taglineAnim = animation && TAGLINE_ANIMATIONS.includes(animation as (typeof TAGLINE_ANIMATIONS)[number]) ? animation : "none";
   const triggerRegex = buildTriggerRegex(easterEggTaglineWord, easterEggLink?.triggerWord);
   const parts = tagline.split(triggerRegex);
+
   if (parts.length <= 1) {
-    return <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">{tagline}</p>;
+    return (
+      <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">
+        {taglineAnim === "typewriter" ? (
+          <TypewriterText text={tagline} speedMs={35} showCursor={true} />
+        ) : taglineAnim !== "none" ? (
+          <AnimatedField animation={taglineAnim}>{tagline}</AnimatedField>
+        ) : (
+          tagline
+        )}
+      </p>
+    );
   }
+
   const buttonClass =
     "cursor-pointer underline decoration-dashed decoration-[var(--accent)]/60 underline-offset-3 hover:text-[var(--foreground)] hover:decoration-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] rounded transition-colors";
 
-  return (
-    <>
-      <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">
+  const taglineP = (
+    <p className="mt-1.5 text-sm text-[var(--accent)]/90 tracking-wide">
         {parts.map((part, i) => {
           const kind = getTriggerKind(part, easterEggTaglineWord, easterEggLink);
           if (kind === "overlay") {
@@ -158,7 +176,18 @@ export default function TaglineWithEasterEgg({
           }
           return <span key={i}>{part}</span>;
         })}
-      </p>
+    </p>
+  );
+
+  return (
+    <>
+      {taglineAnim !== "none" && taglineAnim !== "typewriter" ? (
+        <AnimatedField animation={taglineAnim} as="div">
+          {taglineP}
+        </AnimatedField>
+      ) : (
+        taglineP
+      )}
 
       {showPopup && (
         <div
