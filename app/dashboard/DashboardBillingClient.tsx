@@ -147,7 +147,7 @@ export default function DashboardBillingClient({
           </div>
           {hasPremiumAccess && hasActiveSubscription && (
             <Link
-              href="/api/polar/customer-portal"
+              href="https://dread.lol/api/polar/customer-portal"
               prefetch={false}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/15 px-5 py-3 text-sm font-medium text-[var(--accent)] transition-all hover:bg-[var(--accent)]/25 hover:border-[var(--accent)]/70"
             >
@@ -176,7 +176,7 @@ export default function DashboardBillingClient({
                 period="/month"
                 description="Cancel anytime. Full access to all features."
                 cta="Subscribe"
-                href="/api/polar/checkout-redirect?prefer=recurring"
+                href="https://dread.lol/api/polar/checkout-redirect?prefer=recurring"
                 icon={<Plus size={20} weight="regular" />}
                 featured
               />
@@ -189,7 +189,7 @@ export default function DashboardBillingClient({
                 period="one-time"
                 description="Pay once, keep forever. No recurring charges."
                 cta="Buy lifetime"
-                href="/api/polar/checkout-redirect?prefer=one_time"
+                href="https://dread.lol/api/polar/checkout-redirect?prefer=one_time"
                 icon={<CreditCard size={20} weight="regular" />}
               />
             ))}
@@ -200,7 +200,7 @@ export default function DashboardBillingClient({
                 period={null}
                 description="Get started"
                 cta="Get Premium"
-                href="/api/polar/checkout-redirect"
+                href="https://dread.lol/api/polar/checkout-redirect"
                 icon={<Plus size={20} weight="regular" />}
                 featured
               />
