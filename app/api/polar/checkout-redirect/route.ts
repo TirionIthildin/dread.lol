@@ -14,8 +14,28 @@ import {
   pickProductForCheckout,
 } from "@/lib/polar-products";
 
+const DEBUG = process.env.DEBUG_CHECKOUT === "1";
+
 export async function GET(request: NextRequest) {
   const origin = getCanonicalOrigin();
+  if (DEBUG) {
+    const h = request.headers;
+    console.log("[checkout-redirect] DEBUG", {
+      origin,
+      redirectTarget: `${origin}/api/polar/checkout`,
+      env: {
+        SITE_URL: process.env.SITE_URL ? "(set)" : "(unset)",
+        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ? "(set)" : "(unset)",
+        NODE_ENV: process.env.NODE_ENV,
+      },
+      headers: {
+        host: h.get("host"),
+        "x-forwarded-host": h.get("x-forwarded-host"),
+        "x-original-host": h.get("x-original-host"),
+        "x-forwarded-proto": h.get("x-forwarded-proto"),
+      },
+    });
+  }
   const billing = await getBillingSettings();
   if (!billing.enabled) {
     return NextResponse.redirect(`${origin}/dashboard?error=checkout_unavailable`, 302);
@@ -57,6 +77,9 @@ export async function GET(request: NextRequest) {
   const url = new URL("/api/polar/checkout", origin);
   url.searchParams.set("products", productId);
   url.searchParams.set("customerExternalId", session.sub);
-
-  return NextResponse.redirect(url.toString(), 302);
+  const redirectTo = url.toString();
+  if (DEBUG) {
+    console.log("[checkout-redirect] Redirecting to", redirectTo);
+  }
+  return NextResponse.redirect(redirectTo, 302);
 }

@@ -8,8 +8,28 @@ import { Checkout } from "@polar-sh/nextjs";
 import { getBillingSettings } from "@/lib/settings";
 import { getCanonicalOrigin } from "@/lib/site";
 
+const DEBUG = process.env.DEBUG_CHECKOUT === "1";
+
 export async function GET(request: NextRequest) {
   const origin = getCanonicalOrigin();
+  if (DEBUG) {
+    const h = request.headers;
+    console.log("[checkout] DEBUG", {
+      origin,
+      successUrl: `${origin}/dashboard?polar=success&checkout_id={CHECKOUT_ID}`,
+      returnUrl: origin,
+      env: {
+        SITE_URL: process.env.SITE_URL ? "(set)" : "(unset)",
+        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ? "(set)" : "(unset)",
+        NODE_ENV: process.env.NODE_ENV,
+      },
+      headers: {
+        host: h.get("host"),
+        "x-forwarded-host": h.get("x-forwarded-host"),
+        "x-original-host": h.get("x-original-host"),
+      },
+    });
+  }
   const billing = await getBillingSettings();
   const products = request.nextUrl.searchParams.get("products") ?? "";
   const isBasicCheckout = billing.basicEnabled && billing.basicProductIds.length > 0 && billing.basicProductIds.includes(products);

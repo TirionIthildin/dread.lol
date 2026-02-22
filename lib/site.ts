@@ -33,8 +33,16 @@ function isUsableOrigin(origin: string): boolean {
  */
 export function getCanonicalOrigin(): string {
   const url = resolveSiteUrl();
-  if (isUsableOrigin(url)) return url;
-  return CANONICAL_ORIGIN;
+  const result = isUsableOrigin(url) ? url : CANONICAL_ORIGIN;
+  if (process.env.DEBUG_CHECKOUT === "1") {
+    console.log("[getCanonicalOrigin]", {
+      result,
+      resolved: url,
+      usable: isUsableOrigin(url),
+      envSource: process.env.SITE_URL ? "SITE_URL" : process.env.NEXT_PUBLIC_SITE_URL ? "NEXT_PUBLIC_SITE_URL" : process.env.NEXT_PUBLIC_HOME_URL ? "NEXT_PUBLIC_HOME_URL" : "fallback",
+    });
+  }
+  return result;
 }
 
 /** Origin from request. Use getCanonicalOrigin() for Polar/auth redirects instead. */
