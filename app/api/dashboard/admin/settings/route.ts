@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/app/dashboard/actions";
 import { getBillingSettings, setSetting } from "@/lib/settings";
+import { getProductsWithTypes, formatPrice } from "@/lib/polar-products";
 
 export async function GET() {
   const err = await requireAdmin();
@@ -8,6 +9,17 @@ export async function GET() {
     return NextResponse.json({ error: err }, { status: err === "Not signed in" ? 401 : 403 });
   }
   const billing = await getBillingSettings();
+
+  let basicPriceFormatted: string | null = null;
+  if (billing.basicProductIds.length > 0) {
+    const basicMap = await getProductsWithTypes(billing.basicProductIds, {
+      sandbox: billing.sandbox,
+    });
+    const first = billing.basicProductIds[0];
+    const info = first ? basicMap.get(first) : null;
+    basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
+  }
+
   return NextResponse.json({
     billing: {
       enabled: billing.enabled,
@@ -19,6 +31,7 @@ export async function GET() {
       basicProductIds: billing.basicProductIds,
       basicTierName: billing.basicTierName,
       basicPriceCents: billing.basicPriceCents,
+      basicPriceFormatted,
     },
   });
 }
@@ -72,12 +85,18 @@ export async function PATCH(request: NextRequest) {
     if (billing.basicTierName !== undefined && typeof billing.basicTierName === "string") {
       await setSetting("billing.basicTierName", billing.basicTierName.trim() || "Basic");
     }
-    if (billing.basicPriceCents !== undefined && typeof billing.basicPriceCents === "number") {
-      await setSetting("billing.basicPriceCents", Math.max(0, Math.round(billing.basicPriceCents)));
-    }
   }
 
   const updated = await getBillingSettings();
+  let basicPriceFormatted: string | null = null;
+  if (updated.basicProductIds.length > 0) {
+    const basicMap = await getProductsWithTypes(updated.basicProductIds, {
+      sandbox: updated.sandbox,
+    });
+    const first = updated.basicProductIds[0];
+    const info = first ? basicMap.get(first) : null;
+    basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
+  }
   return NextResponse.json({
     billing: {
       enabled: updated.enabled,
@@ -89,6 +108,7 @@ export async function PATCH(request: NextRequest) {
       basicProductIds: updated.basicProductIds,
       basicTierName: updated.basicTierName,
       basicPriceCents: updated.basicPriceCents,
+      basicPriceFormatted,
     },
   });
 }

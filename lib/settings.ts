@@ -86,7 +86,7 @@ export async function getBillingSettings(): Promise<BillingSettings> {
     basicEnabledFromDb !== undefined && basicEnabledFromDb !== null
       ? Boolean(basicEnabledFromDb)
       : false;
-  const basicProductIds = parseProductIds(basicProductIdsFromDb, basicProductIdFromDb, process.env.POLAR_BASIC_PRODUCT_ID);
+  const basicProductIds = parseProductIds(basicProductIdsFromDb, basicProductIdFromDb);
   const basicTierName =
     basicTierNameFromDb !== undefined && basicTierNameFromDb !== null && String(basicTierNameFromDb).trim()
       ? String(basicTierNameFromDb).trim()
@@ -100,7 +100,7 @@ export async function getBillingSettings(): Promise<BillingSettings> {
     enabledFromDb !== undefined && enabledFromDb !== null
       ? Boolean(enabledFromDb)
       : false;
-  const productIds = parseProductIds(productIdsFromDb, productIdFromDb, process.env.POLAR_PRODUCT_ID);
+  const productIds = parseProductIds(productIdsFromDb, productIdFromDb);
   const sandbox =
     sandboxFromDb !== undefined && sandboxFromDb !== null
       ? Boolean(sandboxFromDb)
@@ -121,8 +121,7 @@ export async function getBillingSettings(): Promise<BillingSettings> {
 
 function parseProductIds(
   fromDb: string[] | string | null | undefined,
-  legacy: string | null | undefined,
-  envFallback?: string
+  legacy: string | null | undefined
 ): string[] {
   if (Array.isArray(fromDb) && fromDb.length > 0) {
     return fromDb.map((id) => String(id).trim()).filter(Boolean);
@@ -131,7 +130,5 @@ function parseProductIds(
     return fromDb.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
   }
   const legacyVal = legacy && typeof legacy === "string" ? legacy.trim() : null;
-  const envVal = envFallback?.trim();
-  const combined = [legacyVal, envVal].filter(Boolean) as string[];
-  return [...new Set(combined)];
+  return legacyVal ? [legacyVal] : [];
 }

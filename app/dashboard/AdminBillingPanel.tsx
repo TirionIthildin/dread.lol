@@ -13,7 +13,7 @@ export type BillingSettingsState = {
   basicEnabled: boolean;
   basicProductIds: string[];
   basicTierName: string;
-  basicPriceCents: number;
+  basicPriceFormatted: string | null;
 };
 
 export default function AdminBillingPanel() {
@@ -28,7 +28,6 @@ export default function AdminBillingPanel() {
   const [formBasicEnabled, setFormBasicEnabled] = useState(false);
   const [formBasicProductIds, setFormBasicProductIds] = useState("");
   const [formBasicTierName, setFormBasicTierName] = useState("Basic");
-  const [formBasicPriceCents, setFormBasicPriceCents] = useState(400);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -47,7 +46,7 @@ export default function AdminBillingPanel() {
         basicEnabled: !!b.basicEnabled,
         basicProductIds: basicIds,
         basicTierName: b.basicTierName ?? "Basic",
-        basicPriceCents: typeof b.basicPriceCents === "number" ? b.basicPriceCents : 400,
+        basicPriceFormatted: b.basicPriceFormatted ?? null,
       });
       setFormEnabled(!!b.enabled);
       setFormTierName(b.tierName ?? "Premium");
@@ -75,7 +74,6 @@ export default function AdminBillingPanel() {
       setFormBasicEnabled(settings.basicEnabled);
       setFormBasicProductIds(settings.basicProductIds.join("\n"));
       setFormBasicTierName(settings.basicTierName ?? "Basic");
-      setFormBasicPriceCents(settings.basicPriceCents ?? 400);
     }
   }, [settings]);
 
@@ -95,7 +93,6 @@ export default function AdminBillingPanel() {
               basicEnabled: formBasicEnabled,
               basicProductIds: formBasicProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               basicTierName: formBasicTierName.trim() || "Basic",
-              basicPriceCents: formBasicPriceCents,
             },
           }),
         });
@@ -115,7 +112,7 @@ export default function AdminBillingPanel() {
           basicEnabled: data.billing.basicEnabled,
           basicProductIds: bIds,
           basicTierName: data.billing.basicTierName,
-          basicPriceCents: data.billing.basicPriceCents,
+          basicPriceFormatted: data.billing.basicPriceFormatted ?? null,
         });
         toast.success("Billing settings saved");
       } catch {
@@ -276,23 +273,19 @@ export default function AdminBillingPanel() {
                     className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
                   />
                 </div>
-                <div>
-                  <label htmlFor="billing-basic-price" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Price (cents, for display)
-                  </label>
-                  <input
-                    id="billing-basic-price"
-                    type="number"
-                    min={0}
-                    step={100}
-                    value={formBasicPriceCents}
-                    onChange={(e) => setFormBasicPriceCents(parseInt(e.target.value, 10) || 0)}
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-                  />
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    e.g. 400 = $4. Shown as &quot;Pay $4 for Basic&quot;. Actual price is set in Polar.
-                  </p>
-                </div>
+                {(settings?.basicProductIds?.length ?? 0) > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)] mb-1">
+                      Price (from Polar)
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">
+                      {settings?.basicPriceFormatted ?? "—"}
+                    </p>
+                    <p className="text-xs text-[var(--muted)] mt-1">
+                      Auto-fetched and cached. Shown as &quot;Pay {settings?.basicPriceFormatted ?? "$4"} for {formBasicTierName || "Basic"}&quot;.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

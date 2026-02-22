@@ -34,12 +34,8 @@ export async function GET(request: NextRequest) {
       productId = pickProductForCheckout(billing.productIds, productMap, prefer);
     }
     if (!productId) {
-      productId = billing.productIds[0] ?? process.env.POLAR_PRODUCT_ID ?? null;
+      productId = billing.productIds[0] ?? null;
     }
-  }
-
-  if (!productId) {
-    productId = process.env.POLAR_PRODUCT_ID ?? null;
   }
 
   if (!productId) {
