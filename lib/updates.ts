@@ -11,6 +11,16 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Admin billing config",
+    description: "Configure Polar products, sandbox mode, and enable billing from Admin → Billing.",
+  },
+  {
+    date: "2026-02",
+    title: "Polar payments",
+    description: "Integrated Polar for subscriptions, one-time purchases, and entitlements.",
+  },
+  {
+    date: "2026-02",
     title: "Background effects",
     description: "Add snow, rain, blur, or retro-computer overlay effects to your profile background.",
   },

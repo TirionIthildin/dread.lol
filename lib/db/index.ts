@@ -38,6 +38,10 @@ export const COLLECTIONS = {
   profileVersions: "profile_versions",
   blogPosts: "blog_posts",
   userRoblox: "user_roblox",
+  polarCheckouts: "polar_checkouts",
+  polarSubscriptions: "polar_subscriptions",
+  polarOrders: "polar_orders",
+  settings: "settings",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

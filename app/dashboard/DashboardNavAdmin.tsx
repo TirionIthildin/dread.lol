@@ -5,13 +5,14 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { GearSix, X, Users, Shield, GridFour, Star, CaretRight } from "@phosphor-icons/react";
+import { GearSix, X, Users, Shield, GridFour, Star, CaretRight, CreditCard } from "@phosphor-icons/react";
 import AdminUserModal, { type AdminUser } from "@/app/dashboard/AdminUserModal";
 import AdminBadgesPanel from "@/app/dashboard/AdminBadgesPanel";
 import AdminTemplatesPanel from "@/app/dashboard/AdminTemplatesPanel";
+import AdminBillingPanel from "@/app/dashboard/AdminBillingPanel";
 import { approveUserAction } from "@/app/dashboard/actions";
 
-type AdminPanel = "users" | "improvement" | "badges" | "templates";
+type AdminPanel = "users" | "improvement" | "badges" | "templates" | "billing";
 
 export type AdminPendingUser = {
   id: string;
@@ -249,6 +250,18 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                 </button>
                 <button
                   type="button"
+                  onClick={() => setActivePanel("billing")}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                    activePanel === "billing"
+                      ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
+                      : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
+                  }`}
+                >
+                  <CreditCard size={16} weight="regular" className="shrink-0" aria-hidden />
+                  Billing
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActivePanel("improvement")}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                     activePanel === "improvement"
@@ -411,6 +424,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                 )}
                 {activePanel === "badges" && <AdminBadgesPanel />}
                 {activePanel === "templates" && <AdminTemplatesPanel />}
+                {activePanel === "billing" && <AdminBillingPanel />}
                 {activePanel === "improvement" && (
                   <div className="flex-1 overflow-y-auto p-4">
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-6 text-center">

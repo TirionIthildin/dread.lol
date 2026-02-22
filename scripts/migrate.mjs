@@ -77,6 +77,16 @@ try {
 
   await db.collection("blog_posts").createIndex({ profileId: 1, createdAt: -1 });
 
+  await db.collection("polar_checkouts").createIndex({ checkoutId: 1 }, { unique: true });
+
+  await db.collection("polar_subscriptions").createIndex({ polarSubscriptionId: 1 }, { unique: true });
+  await db.collection("polar_subscriptions").createIndex({ userId: 1, status: 1 });
+
+  await db.collection("polar_orders").createIndex({ polarOrderId: 1 }, { unique: true });
+  await db.collection("polar_orders").createIndex({ userId: 1, status: 1 });
+
+  await db.collection("settings").createIndex({ key: 1 }, { unique: true });
+
   console.log("MongoDB indexes created.");
 } catch (err) {
   console.error("Migration failed:", err.message);

@@ -223,5 +223,45 @@ export interface BlogPostRow {
   updatedAt: Date;
 }
 
+/** Polar subscription synced from webhooks or Customer State API fallback. */
+export interface PolarSubscriptionDoc {
+  _id?: ObjectId;
+  polarSubscriptionId: string;
+  polarCustomerId: string;
+  userId: string; // Discord user ID (Polar external_id)
+  productId: string;
+  productName?: string | null;
+  status: "incomplete" | "incomplete_expired" | "trialing" | "active" | "past_due" | "canceled" | "unpaid";
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd?: Date | null;
+  cancelAtPeriodEnd?: boolean;
+  canceledAt?: Date | null;
+  endedAt?: Date | null;
+  trialStart?: Date | null;
+  trialEnd?: Date | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Polar order synced from webhooks or Orders API fallback. */
+export interface PolarOrderDoc {
+  _id?: ObjectId;
+  polarOrderId: string;
+  polarCustomerId: string;
+  userId: string; // Discord user ID (Polar external_id)
+  productId: string;
+  productName?: string | null;
+  amount: number; // cents
+  currency: string;
+  status: "pending" | "paid" | "refunded" | "canceled";
+  paidAt?: Date | null;
+  refundedAt?: Date | null;
+  canceledAt?: Date | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export type User = UserDoc;
 export type NewUser = Omit<UserDoc, "createdAt" | "updatedAt">;
