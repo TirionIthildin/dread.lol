@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { CreditCard, CheckCircle, Plus } from "@phosphor-icons/react";
+import type { PremiumSource } from "@/lib/premium-permissions";
 
 type Props = {
   billingEnabled: boolean;
+  tierName: string;
+  premiumProductId: string | null;
   hasActiveSubscription: boolean;
   activeSubscription: {
     polarSubscriptionId: string;
@@ -13,20 +16,26 @@ type Props = {
     status: string;
   } | null;
   ownedProductIds: string[];
+  hasPremiumAccess: boolean;
+  premiumSource: PremiumSource;
 };
 
 export default function DashboardBillingClient({
   billingEnabled,
+  tierName,
+  premiumProductId,
   hasActiveSubscription,
   activeSubscription,
   ownedProductIds,
+  hasPremiumAccess,
+  premiumSource,
 }: Props) {
   if (!billingEnabled) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-6 text-center">
         <CreditCard size={32} weight="regular" className="mx-auto text-[var(--muted)] mb-3" />
         <p className="text-sm text-[var(--muted)]">
-          Billing is not configured. Admins can enable it in Admin → Billing.
+          Premium is not configured. Admins can enable it in Admin → Billing.
         </p>
       </div>
     );
@@ -34,6 +43,20 @@ export default function DashboardBillingClient({
 
   return (
     <div className="space-y-4">
+      {premiumSource === "granted" && (
+        <div className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={20} weight="fill" className="text-[var(--accent)] shrink-0" />
+            <span className="text-sm font-medium text-[var(--foreground)]">
+              {tierName} (complimentary)
+            </span>
+          </div>
+          <p className="text-xs text-[var(--muted)] mt-1">
+            You have free Premium access granted by an admin.
+          </p>
+        </div>
+      )}
+
       {hasActiveSubscription && activeSubscription && (
         <div className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -43,7 +66,9 @@ export default function DashboardBillingClient({
             </span>
           </div>
           <p className="text-xs text-[var(--muted)] mb-4">
-            {activeSubscription.productName ?? activeSubscription.productId}
+            {premiumProductId && activeSubscription.productId === premiumProductId
+              ? tierName
+              : activeSubscription.productName ?? activeSubscription.productId}
           </p>
           <Link
             href="/api/polar/customer-portal"
@@ -55,30 +80,51 @@ export default function DashboardBillingClient({
         </div>
       )}
 
-      {!hasActiveSubscription && (
+      {!hasActiveSubscription && premiumSource !== "granted" && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-4">
-          <p className="text-sm text-[var(--muted)] mb-4">
-            You don&apos;t have an active subscription.
-          </p>
-          <Link
-            href="/api/polar/checkout-redirect"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-          >
-            <Plus size={18} weight="regular" />
-            Subscribe
-          </Link>
+          {ownedProductIds.length > 0 &&
+          premiumProductId &&
+          ownedProductIds.includes(premiumProductId) ? (
+            <>
+              <p className="text-sm text-[var(--muted)] mb-4">
+                You have {tierName} (one-time purchase). Subscribe for recurring access.
+              </p>
+              <Link
+                href="/api/polar/checkout-redirect"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+              >
+                <Plus size={18} weight="regular" />
+                Subscribe
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-[var(--muted)] mb-4">
+                You don&apos;t have {tierName} yet.
+              </p>
+              <Link
+                href="/api/polar/checkout-redirect"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+              >
+                <Plus size={18} weight="regular" />
+                Subscribe to {tierName}
+              </Link>
+            </>
+          )}
         </div>
       )}
 
       {ownedProductIds.length > 0 && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/30 p-4">
           <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
-            Owned products
+            Owned
           </p>
           <ul className="text-sm text-[var(--foreground)] space-y-1">
             {ownedProductIds.map((id) => (
               <li key={id}>
-                <code className="rounded bg-[var(--surface)] px-1.5 py-0.5 text-xs">{id}</code>
+                <span className="rounded bg-[var(--surface)] px-1.5 py-0.5 text-xs">
+                  {premiumProductId && id === premiumProductId ? tierName : id}
+                </span>
               </li>
             ))}
           </ul>

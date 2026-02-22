@@ -1,6 +1,6 @@
 /**
- * Redirects authenticated user to Polar checkout with customerExternalId = userId.
- * Uses admin billing settings for product ID. Used by "Subscribe" / "Buy" buttons.
+ * Redirects authenticated user to Polar checkout for Basic product ($4 one-time).
+ * Used by unapproved users to pay for account creation.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
@@ -10,25 +10,16 @@ import { getOriginFromRequest } from "@/lib/site";
 export async function GET(request: NextRequest) {
   const origin = getOriginFromRequest(request);
   const billing = await getBillingSettings();
-  if (!billing.enabled) {
-    return NextResponse.redirect(`${origin}/dashboard?error=checkout_unavailable`, 302);
-  }
-
-  const productId =
-    billing.productId ??
-    request.nextUrl.searchParams.get("product") ??
-    process.env.POLAR_PRODUCT_ID;
-
-  if (!productId) {
+  if (!billing.basicEnabled || !billing.basicProductId) {
     return NextResponse.redirect(
-      `${origin}/dashboard?error=checkout_unavailable&reason=no_product`,
+      `${origin}/dashboard?error=checkout_unavailable&reason=basic_not_configured`,
       302
     );
   }
 
   const session = await getSession();
   if (!session) {
-    const returnPath = encodeURIComponent("/api/polar/checkout-redirect");
+    const returnPath = encodeURIComponent("/api/polar/checkout-basic");
     return NextResponse.redirect(
       `${origin}/dashboard?auth=required&return=${returnPath}`,
       302
@@ -36,7 +27,7 @@ export async function GET(request: NextRequest) {
   }
 
   const url = new URL("/api/polar/checkout", origin);
-  url.searchParams.set("products", productId);
+  url.searchParams.set("products", billing.basicProductId);
   url.searchParams.set("customerExternalId", session.sub);
 
   return NextResponse.redirect(url.toString(), 302);

@@ -6,21 +6,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Checkout } from "@polar-sh/nextjs";
 import { getBillingSettings } from "@/lib/settings";
-import { SITE_URL } from "@/lib/site";
-
-const successUrl = `${SITE_URL}/dashboard?polar=success&checkout_id={CHECKOUT_ID}`;
-const returnUrl = SITE_URL;
+import { getOriginFromRequest } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
+  const origin = getOriginFromRequest(request);
   const billing = await getBillingSettings();
-  if (!billing.enabled) {
-    return NextResponse.redirect(`${SITE_URL}/dashboard?error=checkout_unavailable`, 302);
+  const products = request.nextUrl.searchParams.get("products") ?? "";
+  const isBasicCheckout = billing.basicEnabled && billing.basicProductId && products === billing.basicProductId;
+  const checkoutAllowed = billing.enabled || isBasicCheckout;
+  if (!checkoutAllowed) {
+    return NextResponse.redirect(`${origin}/dashboard?error=checkout_unavailable`, 302);
   }
 
   const polarCheckoutHandler = Checkout({
     accessToken: process.env.POLAR_ACCESS_TOKEN!,
-    successUrl,
-    returnUrl,
+    successUrl: `${origin}/dashboard?polar=success&checkout_id={CHECKOUT_ID}`,
+    returnUrl: origin,
     server: billing.sandbox ? "sandbox" : "production",
   });
   return polarCheckoutHandler(request);

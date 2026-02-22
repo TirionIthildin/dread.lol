@@ -6,6 +6,19 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_HOME_URL ||
   "https://dread.lol";
 
+/** Origin from request (e.g. http://localhost:3000 when dev). Use for redirects so users stay on current host. */
+export function getOriginFromRequest(request: { nextUrl?: { origin: string }; headers?: Headers }): string {
+  const origin = request.nextUrl?.origin;
+  if (origin) return origin;
+  const host = request.headers?.get("host");
+  const forwarded = request.headers?.get("x-forwarded-proto");
+  if (host) {
+    const proto = forwarded === "https" ? "https" : forwarded === "http" ? "http" : "http";
+    return `${proto}://${host}`;
+  }
+  return SITE_URL;
+}
+
 /** Base domain (e.g. "dread.lol"). Used for subdomain detection and cookie domain. */
 export function getBaseDomain(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_DOMAIN?.trim();

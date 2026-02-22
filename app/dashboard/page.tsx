@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
+import { getBillingSettings } from "@/lib/settings";
 import { PolarSuccessHandler } from "@/app/dashboard/PolarSuccessHandler";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
@@ -22,6 +23,7 @@ export default async function DashboardPage() {
   const session = await getSession();
   const user = session ? await getOrCreateUser(session) : null;
   const canUseDashboard = user && (user.approved || user.isAdmin);
+  const billing = await getBillingSettings();
 
   return (
     <div className="space-y-6">
@@ -30,7 +32,11 @@ export default async function DashboardPage() {
       </Suspense>
       {session && !canUseDashboard && (
         <div className="animate-fade-in-up animate-delay-100">
-          <UnapprovedMessage />
+          <UnapprovedMessage
+            basicEnabled={billing.basicEnabled}
+            basicTierName={billing.basicTierName}
+            basicPriceCents={billing.basicPriceCents}
+          />
         </div>
       )}
 

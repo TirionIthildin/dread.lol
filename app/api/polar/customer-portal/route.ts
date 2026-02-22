@@ -5,12 +5,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
-import { SITE_URL } from "@/lib/site";
+import { getOriginFromRequest } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
+  const origin = getOriginFromRequest(request);
   const billing = await getBillingSettings();
   if (!billing.enabled) {
-    return NextResponse.redirect(`${SITE_URL}/dashboard?error=portal_unavailable`, 302);
+    return NextResponse.redirect(`${origin}/dashboard?error=portal_unavailable`, 302);
   }
 
   const apiBase = billing.sandbox ? "https://sandbox-api.polar.sh" : "https://api.polar.sh";
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   if (!session?.sub) {
     const returnPath = encodeURIComponent("/api/polar/customer-portal");
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard?auth=required&return=${returnPath}`,
+      `${origin}/dashboard?auth=required&return=${returnPath}`,
       302
     );
   }
@@ -33,18 +34,18 @@ export async function GET(request: NextRequest) {
     },
     body: JSON.stringify({
       external_customer_id: session.sub,
-      return_url: `${SITE_URL}/dashboard`,
+      return_url: `${origin}/dashboard`,
     }),
   });
 
   if (!res.ok) {
-    return NextResponse.redirect(`${SITE_URL}/dashboard?error=portal_unavailable`, 302);
+    return NextResponse.redirect(`${origin}/dashboard?error=portal_unavailable`, 302);
   }
 
   const data = (await res.json()) as { customer_portal_url?: string };
   const portalUrl = data?.customer_portal_url;
   if (!portalUrl || typeof portalUrl !== "string") {
-    return NextResponse.redirect(`${SITE_URL}/dashboard?error=portal_unavailable`, 302);
+    return NextResponse.redirect(`${origin}/dashboard?error=portal_unavailable`, 302);
   }
 
   return NextResponse.redirect(portalUrl, 302);

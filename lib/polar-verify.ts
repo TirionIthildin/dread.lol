@@ -4,6 +4,8 @@
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { getPolarClient } from "@/lib/polar";
+import { getBillingSettings } from "@/lib/settings";
+import type { UserDoc } from "@/lib/db/schema";
 
 export interface VerifyResult {
   ok: boolean;
@@ -12,8 +14,29 @@ export interface VerifyResult {
 }
 
 /**
+ * Approve user when they paid for Basic (account creation). Called from verify and webhook.
+ */
+export async function approveUserIfBasicProduct(
+  userId: string,
+  productId: string
+): Promise<boolean> {
+  const billing = await getBillingSettings();
+  if (!billing.basicEnabled || !billing.basicProductId || productId !== billing.basicProductId) {
+    return false;
+  }
+  const client = await getDb();
+  const dbName = await getDbName();
+  const now = new Date();
+  const result = await client
+    .db(dbName)
+    .collection<UserDoc>(COLLECTIONS.users)
+    .updateOne({ _id: userId }, { $set: { approved: true, updatedAt: now } });
+  return result.modifiedCount > 0;
+}
+
+/**
  * Verify a checkout by ID with Polar API. If succeeded and not already processed,
- * records it in DB and runs grant logic. Idempotent.
+ * records it in DB and runs grant logic (e.g. Basic → approve user). Idempotent.
  */
 export async function verifyCheckout(
   checkoutId: string,
@@ -45,8 +68,8 @@ export async function verifyCheckout(
       };
     }
 
-    const checkoutData = checkout as unknown as { order?: { id?: string } };
-    const orderId = checkoutData.order?.id ?? null;
+    const checkoutData = checkout as unknown as { order?: { id?: string }; order_id?: string };
+    const orderId = checkoutData.order?.id ?? checkoutData.order_id ?? null;
 
     await coll.insertOne({
       checkoutId,
@@ -55,8 +78,19 @@ export async function verifyCheckout(
       processedAt: new Date(),
     });
 
-    // TODO: Grant benefits based on checkout.order or checkout.product (e.g. update user badges, entitlements)
-    // Example: await grantPolarBenefits(userId, checkout);
+    // Basic tier: if order is for Basic product, approve user (immediate feedback when webhook is delayed)
+    if (userId && orderId) {
+      try {
+        const order = await polar.orders.get({ id: orderId });
+        const orderData = order as unknown as { productId?: string; product_id?: string };
+        const productId = orderData.productId ?? orderData.product_id ?? null;
+        if (productId) {
+          await approveUserIfBasicProduct(userId, productId);
+        }
+      } catch {
+        // Ignore: webhook will handle approve when it arrives
+      }
+    }
 
     return { ok: true };
   } catch (err) {

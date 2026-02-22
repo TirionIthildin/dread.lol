@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Webhooks } from "@polar-sh/nextjs";
 import { getDb, getDbName, COLLECTIONS, type UserDoc } from "@/lib/db";
+import { getBillingSettings } from "@/lib/settings";
 
 function getExternalId(obj: unknown): string | null {
   if (!obj || typeof obj !== "object") return null;
@@ -121,6 +122,17 @@ async function syncOrder(data: unknown) {
     },
     { upsert: true }
   );
+
+  // Basic tier: approve user when they pay for account creation
+  if (status === "paid") {
+    const billing = await getBillingSettings();
+    if (billing.basicEnabled && billing.basicProductId && productId === billing.basicProductId) {
+      await db.collection<UserDoc>(COLLECTIONS.users).updateOne(
+        { _id: externalId },
+        { $set: { approved: true, updatedAt: now } }
+      );
+    }
+  }
 }
 
 const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;

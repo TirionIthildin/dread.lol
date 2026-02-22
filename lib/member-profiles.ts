@@ -299,11 +299,12 @@ export async function getUserDiscordFlags(userId: string): Promise<number | null
 
 export async function setUserBadges(
   userId: string,
-  badgeFlags: { verified?: boolean; staff?: boolean }
+  badgeFlags: { verified?: boolean; staff?: boolean; premiumGranted?: boolean }
 ): Promise<boolean> {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof badgeFlags.verified === "boolean") updates.verified = badgeFlags.verified;
   if (typeof badgeFlags.staff === "boolean") updates.staff = badgeFlags.staff;
+  if (typeof badgeFlags.premiumGranted === "boolean") updates.premiumGranted = badgeFlags.premiumGranted;
   if (Object.keys(updates).length <= 1) return true;
 
   const client = await getDb();
@@ -476,6 +477,7 @@ export type AdminUserRow = {
   approved: boolean;
   verified: boolean;
   staff: boolean;
+  premiumGranted: boolean;
   createdAt: Date;
 };
 
@@ -487,7 +489,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
     .collection<UserDoc>(COLLECTIONS.users)
     .findOne(
       { _id: userId },
-      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, createdAt: 1 } }
+      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, createdAt: 1 } }
     );
   return doc
     ? {
@@ -498,6 +500,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
         approved: doc.approved ?? false,
         verified: doc.verified ?? false,
         staff: doc.staff ?? false,
+        premiumGranted: doc.premiumGranted ?? false,
         createdAt: doc.createdAt,
       }
     : null;
@@ -510,7 +513,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find()
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -521,6 +524,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     approved: d.approved ?? false,
     verified: d.verified ?? false,
     staff: d.staff ?? false,
+    premiumGranted: d.premiumGranted ?? false,
     createdAt: d.createdAt,
   }));
 }
@@ -543,7 +547,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find(filter)
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -554,6 +558,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     approved: d.approved ?? false,
     verified: d.verified ?? false,
     staff: d.staff ?? false,
+    premiumGranted: d.premiumGranted ?? false,
     createdAt: d.createdAt,
   }));
 }

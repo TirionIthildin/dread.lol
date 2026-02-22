@@ -11,6 +11,16 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Basic tier ($4 account creation)",
+    description: "One-time $4 payment to create an account. Enable in Admin → Billing, create a $4 product in Polar, and set the product ID.",
+  },
+  {
+    date: "2026-02",
+    title: "Premium permissions & admin grant",
+    description: "Admins can grant free Premium to any user from the Admin panel. Use hasPremiumAccess() to gate features.",
+  },
+  {
+    date: "2026-02",
     title: "Admin billing config",
     description: "Configure Polar products, sandbox mode, and enable billing from Admin → Billing.",
   },

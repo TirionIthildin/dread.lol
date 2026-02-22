@@ -486,7 +486,7 @@ export async function approveUserAction(userId: string): Promise<{ error?: strin
 
 export async function setUserBadgesAction(
   userId: string,
-  badges: { verified?: boolean; staff?: boolean }
+  badges: { verified?: boolean; staff?: boolean; premiumGranted?: boolean }
 ): Promise<{ error?: string }> {
   const err = await requireAdmin();
   if (err) return { error: err };

@@ -15,6 +15,7 @@ export type AdminUser = {
   approved: boolean;
   verified: boolean;
   staff: boolean;
+  premiumGranted: boolean;
   createdAt: string;
 };
 
@@ -28,6 +29,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [, setApproved] = useState(user.approved);
   const [verified, setVerified] = useState(user.verified);
   const [staff, setStaff] = useState(user.staff);
+  const [premiumGranted, setPremiumGranted] = useState(user.premiumGranted);
   const [customBadges, setCustomBadges] = useState<CustomBadge[]>([]);
   const [userBadgeIds, setUserBadgeIds] = useState<string[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
@@ -38,7 +40,8 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     setApproved(user.approved);
     setVerified(user.verified);
     setStaff(user.staff);
-  }, [user.id, user.approved, user.verified, user.staff]);
+    setPremiumGranted(user.premiumGranted);
+  }, [user.id, user.approved, user.verified, user.staff, user.premiumGranted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,16 +75,19 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     });
   }
 
-  function handleBadge(badge: "verified" | "staff", value: boolean) {
+  function handleBadge(badge: "verified" | "staff" | "premiumGranted", value: boolean) {
     setError(null);
     if (badge === "verified") setVerified(value);
-    else setStaff(value);
+    else if (badge === "staff") setStaff(value);
+    else setPremiumGranted(value);
     startTransition(async () => {
-      const result = await setUserBadgesAction(user.id, { [badge]: value });
+      const key = badge === "premiumGranted" ? "premiumGranted" : badge;
+      const result = await setUserBadgesAction(user.id, { [key]: value });
       if (result.error) {
         setError(result.error);
         if (badge === "verified") setVerified(!value);
-        else setStaff(!value);
+        else if (badge === "staff") setStaff(!value);
+        else setPremiumGranted(!value);
       } else {
         onUpdate({ ...user, [badge]: value });
       }
@@ -208,6 +214,16 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
                   className="rounded border-[var(--border)] text-amber-500 focus:ring-amber-500"
                 />
                 <span className="text-[var(--foreground)]">Staff</span>
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm disabled:opacity-50">
+                <input
+                  type="checkbox"
+                  checked={premiumGranted}
+                  disabled={isPending}
+                  onChange={(e) => handleBadge("premiumGranted", e.target.checked)}
+                  className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                />
+                <span className="text-[var(--foreground)]">Premium (free)</span>
               </label>
             </div>
             {customBadges.length > 0 && (

@@ -15,10 +15,11 @@ export default function AdminBadgesList({ users, onUpdate }: Props) {
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  function handleToggle(userId: string, badge: "verified" | "staff", value: boolean) {
+  function handleToggle(userId: string, badge: "verified" | "staff" | "premiumGranted", value: boolean) {
     setUpdatingId(userId);
     startTransition(async () => {
-      const result = await setUserBadgesAction(userId, { [badge]: value });
+      const key = badge === "premiumGranted" ? "premiumGranted" : badge;
+      const result = await setUserBadgesAction(userId, { [key]: value });
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -80,6 +81,16 @@ export default function AdminBadgesList({ users, onUpdate }: Props) {
                   className="rounded border-[var(--border)] text-amber-500 focus:ring-amber-500"
                 />
                 <span className="text-[var(--muted)]">Staff</span>
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50">
+                <input
+                  type="checkbox"
+                  checked={u.premiumGranted}
+                  disabled={busy}
+                  onChange={(e) => handleToggle(u.id, "premiumGranted", e.target.checked)}
+                  className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                />
+                <span className="text-[var(--muted)]">Premium</span>
               </label>
             </div>
           </li>

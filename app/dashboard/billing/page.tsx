@@ -4,11 +4,12 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { getBillingSettings } from "@/lib/settings";
 import { getUserPolarState } from "@/lib/polar-subscription";
+import { getPremiumAccess } from "@/lib/premium-permissions";
 import DashboardBillingClient from "@/app/dashboard/DashboardBillingClient";
 
 export const metadata: Metadata = {
-  title: "Billing",
-  description: `Manage your subscription for ${SITE_NAME}`,
+  title: "Premium",
+  description: `Manage your Premium subscription for ${SITE_NAME}`,
   robots: "noindex, nofollow",
 };
 
@@ -27,15 +28,16 @@ export default async function BillingPage() {
     );
   }
 
-  const [billing, polarState] = await Promise.all([
+  const [billing, polarState, premiumAccess] = await Promise.all([
     getBillingSettings(),
     getUserPolarState(session.sub),
+    getPremiumAccess(session.sub),
   ]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Billing</h1>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Premium</h1>
         <p className="text-sm text-[var(--muted)] mt-1">
           Manage your subscription and payment methods.
         </p>
@@ -43,9 +45,13 @@ export default async function BillingPage() {
 
       <DashboardBillingClient
         billingEnabled={billing.enabled}
+        tierName={billing.tierName}
+        premiumProductId={billing.productId}
         hasActiveSubscription={polarState.hasActiveSubscription}
         activeSubscription={polarState.activeSubscription ?? null}
         ownedProductIds={polarState.ownedProductIds}
+        hasPremiumAccess={premiumAccess.hasAccess}
+        premiumSource={premiumAccess.source}
       />
     </div>
   );

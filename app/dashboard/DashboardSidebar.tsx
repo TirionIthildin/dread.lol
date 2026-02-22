@@ -39,7 +39,7 @@ const mainNavItems = [
   },
   {
     href: "/dashboard/billing",
-    label: "Billing",
+    label: "Premium",
     icon: <CreditCard size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
 ] as const;

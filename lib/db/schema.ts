@@ -15,6 +15,8 @@ export interface UserDoc {
   isAdmin: boolean;
   verified: boolean;
   staff: boolean;
+  /** Admin-granted free Premium (bypasses Polar payment). */
+  premiumGranted?: boolean;
   discordPublicFlags?: number | null;
   /** 0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic */
   discordPremiumType?: number | null;
