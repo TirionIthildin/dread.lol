@@ -18,6 +18,9 @@ export async function GET() {
     const first = billing.basicProductIds[0];
     const info = first ? basicMap.get(first) : null;
     basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
+    if (basicPriceFormatted === "Pay what you want" || !basicPriceFormatted) {
+      basicPriceFormatted = `$${(billing.basicPriceCents / 100).toFixed(0)}`;
+    }
   }
 
   return NextResponse.json({
@@ -116,6 +119,9 @@ export async function PATCH(request: NextRequest) {
     const first = updated.basicProductIds[0];
     const info = first ? basicMap.get(first) : null;
     basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
+    if (basicPriceFormatted === "Pay what you want" || !basicPriceFormatted) {
+      basicPriceFormatted = `$${(updated.basicPriceCents / 100).toFixed(0)}`;
+    }
   }
   return NextResponse.json({
     billing: {

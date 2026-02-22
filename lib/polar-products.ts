@@ -76,6 +76,14 @@ export async function getProductInfo(
   }
 }
 
+function getNum(obj: Record<string, unknown>, ...keys: string[]): number | null {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "number" && !Number.isNaN(v)) return Math.round(v);
+  }
+  return null;
+}
+
 function parsePrices(
   raw?: unknown
 ): PolarProductPrice[] {
@@ -84,24 +92,17 @@ function parsePrices(
   for (const p of raw) {
     const pr = p as Record<string, unknown>;
     if (pr.is_archived === true) continue;
-    const amountType = String(pr.amount_type ?? "fixed");
-    const currency = (String(pr.price_currency ?? "usd")).toUpperCase();
+    const amountType = String(pr.amount_type ?? pr.amountType ?? "fixed");
+    const currency = (String(pr.price_currency ?? pr.priceCurrency ?? "usd")).toUpperCase();
     const recurringInterval =
-      pr.recurring_interval != null ? String(pr.recurring_interval) : null;
+      pr.recurring_interval != null ? String(pr.recurring_interval) : pr.recurringInterval != null ? String(pr.recurringInterval) : null;
     let amountCents: number | null = null;
-    if (amountType === "fixed" && typeof pr.price_amount === "number") {
-      amountCents = Math.round(pr.price_amount);
+    if (amountType === "fixed") {
+      amountCents = getNum(pr, "price_amount", "priceAmount");
     } else if (amountType === "free") {
       amountCents = 0;
     } else if (amountType === "custom") {
-      const preset = pr.preset_amount;
-      const min = pr.minimum_amount;
-      amountCents =
-        typeof preset === "number"
-          ? Math.round(preset)
-          : typeof min === "number"
-            ? Math.round(min)
-            : null;
+      amountCents = getNum(pr, "preset_amount", "presetAmount", "minimum_amount", "minimumAmount");
     }
     result.push({
       amountCents,

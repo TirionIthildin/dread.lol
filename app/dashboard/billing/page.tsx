@@ -48,9 +48,9 @@ export default async function BillingPage() {
     const firstBasic = billing.basicProductIds[0];
     const info = firstBasic ? basicMap.get(firstBasic) : null;
     basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
-  }
-  if (!basicPriceFormatted && billing.basicEnabled) {
-    basicPriceFormatted = `$${(billing.basicPriceCents / 100).toFixed(0)}`;
+    if (basicPriceFormatted === "Pay what you want" || !basicPriceFormatted) {
+      basicPriceFormatted = `$${(billing.basicPriceCents / 100).toFixed(0)}`;
+    }
   }
 
   const productMap =
