@@ -33,7 +33,10 @@ function isUsableOrigin(origin: string): boolean {
  */
 export function getCanonicalOrigin(): string {
   const url = resolveSiteUrl();
-  const result = isUsableOrigin(url) ? url : CANONICAL_ORIGIN;
+  let result = isUsableOrigin(url) ? url : CANONICAL_ORIGIN;
+  if (result.includes("0.0.0.0") || result.includes("127.0.0.1")) {
+    result = CANONICAL_ORIGIN;
+  }
   if (process.env.DEBUG_CHECKOUT === "1") {
     console.log("[getCanonicalOrigin]", {
       result,

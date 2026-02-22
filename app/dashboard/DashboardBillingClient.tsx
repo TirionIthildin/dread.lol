@@ -125,6 +125,7 @@ export default function DashboardBillingClient({
           {hasPremiumAccess && hasActiveSubscription && (
             <Link
               href="/api/polar/customer-portal"
+              prefetch={false}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-5 py-2.5 text-sm font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
             >
               <CreditCard size={18} weight="regular" />
@@ -274,6 +275,7 @@ function PlanCard({
       </div>
       <Link
         href={href}
+        prefetch={false}
         className={`mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
           featured
             ? "border-2 border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)] hover:bg-[var(--accent)]/30"
