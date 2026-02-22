@@ -18,6 +18,9 @@ RUN if [ -f package-lock.json ]; then \
 FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 WORKDIR /app
 
+ARG NEXT_PUBLIC_SITE_URL=https://dread.lol
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public
