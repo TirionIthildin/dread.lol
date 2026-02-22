@@ -7,11 +7,11 @@ import { toast } from "sonner";
 export type BillingSettingsState = {
   enabled: boolean;
   tierName: string;
-  productId: string | null;
+  productIds: string[];
   sandbox: boolean;
   polarConfigured: boolean;
   basicEnabled: boolean;
-  basicProductId: string | null;
+  basicProductIds: string[];
   basicTierName: string;
   basicPriceCents: number;
 };
@@ -23,10 +23,10 @@ export default function AdminBillingPanel() {
   const [isPending, startTransition] = useTransition();
   const [formEnabled, setFormEnabled] = useState(false);
   const [formTierName, setFormTierName] = useState("Premium");
-  const [formProductId, setFormProductId] = useState("");
+  const [formProductIds, setFormProductIds] = useState("");
   const [formSandbox, setFormSandbox] = useState(false);
   const [formBasicEnabled, setFormBasicEnabled] = useState(false);
-  const [formBasicProductId, setFormBasicProductId] = useState("");
+  const [formBasicProductIds, setFormBasicProductIds] = useState("");
   const [formBasicTierName, setFormBasicTierName] = useState("Basic");
   const [formBasicPriceCents, setFormBasicPriceCents] = useState(400);
 
@@ -36,20 +36,22 @@ export default function AdminBillingPanel() {
       if (!res.ok) return;
       const data = await res.json();
       const b = data.billing ?? {};
+      const prodIds = Array.isArray(b.productIds) ? b.productIds : (b.productId ? [b.productId] : []);
+      const basicIds = Array.isArray(b.basicProductIds) ? b.basicProductIds : (b.basicProductId ? [b.basicProductId] : []);
       setSettings({
         enabled: !!b.enabled,
         tierName: b.tierName ?? "Premium",
-        productId: b.productId ?? null,
+        productIds: prodIds,
         sandbox: !!b.sandbox,
         polarConfigured: !!b.polarConfigured,
         basicEnabled: !!b.basicEnabled,
-        basicProductId: b.basicProductId ?? null,
+        basicProductIds: basicIds,
         basicTierName: b.basicTierName ?? "Basic",
         basicPriceCents: typeof b.basicPriceCents === "number" ? b.basicPriceCents : 400,
       });
       setFormEnabled(!!b.enabled);
       setFormTierName(b.tierName ?? "Premium");
-      setFormProductId(b.productId ?? "");
+      setFormProductIds(prodIds.join("\n"));
       setFormSandbox(!!b.sandbox);
       setError(null);
     } catch {
@@ -68,10 +70,10 @@ export default function AdminBillingPanel() {
     if (settings) {
       setFormEnabled(settings.enabled);
       setFormTierName(settings.tierName);
-      setFormProductId(settings.productId ?? "");
+      setFormProductIds(settings.productIds.join("\n"));
       setFormSandbox(settings.sandbox);
       setFormBasicEnabled(settings.basicEnabled);
-      setFormBasicProductId(settings.basicProductId ?? "");
+      setFormBasicProductIds(settings.basicProductIds.join("\n"));
       setFormBasicTierName(settings.basicTierName ?? "Basic");
       setFormBasicPriceCents(settings.basicPriceCents ?? 400);
     }
@@ -88,10 +90,10 @@ export default function AdminBillingPanel() {
             billing: {
               enabled: formEnabled,
               tierName: formTierName.trim() || "Premium",
-              productId: formProductId.trim() || null,
+              productIds: formProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               sandbox: formSandbox,
               basicEnabled: formBasicEnabled,
-              basicProductId: formBasicProductId.trim() || null,
+              basicProductIds: formBasicProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               basicTierName: formBasicTierName.trim() || "Basic",
               basicPriceCents: formBasicPriceCents,
             },
@@ -102,14 +104,16 @@ export default function AdminBillingPanel() {
           toast.error(data.error);
           return;
         }
+        const pIds = Array.isArray(data.billing.productIds) ? data.billing.productIds : [];
+        const bIds = Array.isArray(data.billing.basicProductIds) ? data.billing.basicProductIds : [];
         setSettings({
           enabled: data.billing.enabled,
           tierName: data.billing.tierName,
-          productId: data.billing.productId,
+          productIds: pIds,
           sandbox: data.billing.sandbox,
           polarConfigured: data.billing.polarConfigured,
           basicEnabled: data.billing.basicEnabled,
-          basicProductId: data.billing.basicProductId,
+          basicProductIds: bIds,
           basicTierName: data.billing.basicTierName,
           basicPriceCents: data.billing.basicPriceCents,
         });
@@ -194,19 +198,19 @@ export default function AdminBillingPanel() {
             </div>
 
             <div>
-              <label htmlFor="billing-product-id" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
-                Premium product ID
+              <label htmlFor="billing-product-ids" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
+                Premium product IDs
               </label>
-              <input
-                id="billing-product-id"
-                type="text"
-                value={formProductId}
-                onChange={(e) => setFormProductId(e.target.value)}
-                placeholder="prod_xxx (optional, fallback: POLAR_PRODUCT_ID)"
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              <textarea
+                id="billing-product-ids"
+                rows={3}
+                value={formProductIds}
+                onChange={(e) => setFormProductIds(e.target.value)}
+                placeholder="prod_xxx&#10;prod_yyy (one per line)"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] font-mono"
               />
               <p className="text-xs text-[var(--muted)] mt-1">
-                Polar product ID for the Premium tier. Used by checkout-redirect.
+                Polar product IDs that grant Premium. Subscription vs one-time is auto-detected from Polar. Subscribe/Buy buttons route to the right product.
               </p>
             </div>
 
@@ -244,19 +248,19 @@ export default function AdminBillingPanel() {
               </label>
               <div className="space-y-3 mb-4">
                 <div>
-                  <label htmlFor="billing-basic-product-id" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Basic product ID
+                  <label htmlFor="billing-basic-product-ids" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Basic product IDs
                   </label>
-                  <input
-                    id="billing-basic-product-id"
-                    type="text"
-                    value={formBasicProductId}
-                    onChange={(e) => setFormBasicProductId(e.target.value)}
-                    placeholder="prod_xxx (fallback: POLAR_BASIC_PRODUCT_ID)"
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  <textarea
+                    id="billing-basic-product-ids"
+                    rows={2}
+                    value={formBasicProductIds}
+                    onChange={(e) => setFormBasicProductIds(e.target.value)}
+                    placeholder="prod_xxx&#10;prod_yyy (one per line)"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
                   />
                   <p className="text-xs text-[var(--muted)] mt-1">
-                    Polar one-time product (e.g. $4). Create in Polar dashboard.
+                    Polar one-time products that grant account creation (e.g. $4). One per line. First = default for checkout.
                   </p>
                 </div>
                 <div>

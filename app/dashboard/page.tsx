@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
+import { getProductsWithTypes, formatPrice } from "@/lib/polar-products";
 import { PolarSuccessHandler } from "@/app/dashboard/PolarSuccessHandler";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
@@ -25,6 +26,19 @@ export default async function DashboardPage() {
   const canUseDashboard = user && (user.approved || user.isAdmin);
   const billing = await getBillingSettings();
 
+  let basicPriceFormatted: string | null = null;
+  if (billing.basicEnabled && billing.basicProductIds.length > 0) {
+    const basicMap = await getProductsWithTypes(billing.basicProductIds, {
+      sandbox: billing.sandbox,
+    });
+    const firstBasic = billing.basicProductIds[0];
+    const info = firstBasic ? basicMap.get(firstBasic) : null;
+    basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
+  }
+  if (!basicPriceFormatted && billing.basicEnabled) {
+    basicPriceFormatted = `$${(billing.basicPriceCents / 100).toFixed(0)}`;
+  }
+
   return (
     <div className="space-y-6">
       <Suspense fallback={null}>
@@ -35,7 +49,7 @@ export default async function DashboardPage() {
           <UnapprovedMessage
             basicEnabled={billing.basicEnabled}
             basicTierName={billing.basicTierName}
-            basicPriceCents={billing.basicPriceCents}
+            basicPriceFormatted={basicPriceFormatted}
           />
         </div>
       )}

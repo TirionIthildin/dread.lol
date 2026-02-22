@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const origin = getOriginFromRequest(request);
   const billing = await getBillingSettings();
   const products = request.nextUrl.searchParams.get("products") ?? "";
-  const isBasicCheckout = billing.basicEnabled && billing.basicProductId && products === billing.basicProductId;
+  const isBasicCheckout = billing.basicEnabled && billing.basicProductIds.length > 0 && billing.basicProductIds.includes(products);
   const checkoutAllowed = billing.enabled || isBasicCheckout;
   if (!checkoutAllowed) {
     return NextResponse.redirect(`${origin}/dashboard?error=checkout_unavailable`, 302);

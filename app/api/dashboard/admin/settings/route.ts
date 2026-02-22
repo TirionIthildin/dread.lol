@@ -12,11 +12,11 @@ export async function GET() {
     billing: {
       enabled: billing.enabled,
       tierName: billing.tierName,
-      productId: billing.productId,
+      productIds: billing.productIds,
       sandbox: billing.sandbox,
       polarConfigured: billing.polarConfigured,
       basicEnabled: billing.basicEnabled,
-      basicProductId: billing.basicProductId,
+      basicProductIds: billing.basicProductIds,
       basicTierName: billing.basicTierName,
       basicPriceCents: billing.basicPriceCents,
     },
@@ -33,10 +33,10 @@ export async function PATCH(request: NextRequest) {
     billing?: {
       enabled?: boolean;
       tierName?: string;
-      productId?: string | null;
+      productIds?: string[];
       sandbox?: boolean;
       basicEnabled?: boolean;
-      basicProductId?: string | null;
+      basicProductIds?: string[];
       basicTierName?: string;
       basicPriceCents?: number;
     };
@@ -55,11 +55,9 @@ export async function PATCH(request: NextRequest) {
     if (billing.tierName !== undefined && typeof billing.tierName === "string") {
       await setSetting("billing.tierName", billing.tierName.trim() || "Premium");
     }
-    if (billing.productId !== undefined) {
-      await setSetting(
-        "billing.productId",
-        typeof billing.productId === "string" ? billing.productId.trim() || null : null
-      );
+    if (billing.productIds !== undefined && Array.isArray(billing.productIds)) {
+      const ids = billing.productIds.map((id) => String(id).trim()).filter(Boolean);
+      await setSetting("billing.productIds", ids);
     }
     if (typeof billing.sandbox === "boolean") {
       await setSetting("billing.sandbox", billing.sandbox);
@@ -67,11 +65,9 @@ export async function PATCH(request: NextRequest) {
     if (typeof billing.basicEnabled === "boolean") {
       await setSetting("billing.basicEnabled", billing.basicEnabled);
     }
-    if (billing.basicProductId !== undefined) {
-      await setSetting(
-        "billing.basicProductId",
-        typeof billing.basicProductId === "string" ? billing.basicProductId.trim() || null : null
-      );
+    if (billing.basicProductIds !== undefined && Array.isArray(billing.basicProductIds)) {
+      const ids = billing.basicProductIds.map((id) => String(id).trim()).filter(Boolean);
+      await setSetting("billing.basicProductIds", ids);
     }
     if (billing.basicTierName !== undefined && typeof billing.basicTierName === "string") {
       await setSetting("billing.basicTierName", billing.basicTierName.trim() || "Basic");
@@ -86,11 +82,11 @@ export async function PATCH(request: NextRequest) {
     billing: {
       enabled: updated.enabled,
       tierName: updated.tierName,
-      productId: updated.productId,
+      productIds: updated.productIds,
       sandbox: updated.sandbox,
       polarConfigured: updated.polarConfigured,
       basicEnabled: updated.basicEnabled,
-      basicProductId: updated.basicProductId,
+      basicProductIds: updated.basicProductIds,
       basicTierName: updated.basicTierName,
       basicPriceCents: updated.basicPriceCents,
     },

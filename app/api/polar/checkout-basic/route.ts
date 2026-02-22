@@ -10,7 +10,7 @@ import { getOriginFromRequest } from "@/lib/site";
 export async function GET(request: NextRequest) {
   const origin = getOriginFromRequest(request);
   const billing = await getBillingSettings();
-  if (!billing.basicEnabled || !billing.basicProductId) {
+  if (!billing.basicEnabled || billing.basicProductIds.length === 0) {
     return NextResponse.redirect(
       `${origin}/dashboard?error=checkout_unavailable&reason=basic_not_configured`,
       302
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   }
 
   const url = new URL("/api/polar/checkout", origin);
-  url.searchParams.set("products", billing.basicProductId);
+  url.searchParams.set("products", billing.basicProductIds[0]!);
   url.searchParams.set("customerExternalId", session.sub);
 
   return NextResponse.redirect(url.toString(), 302);

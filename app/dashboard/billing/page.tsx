@@ -5,6 +5,7 @@ import { getOrCreateUser } from "@/lib/member-profiles";
 import { getBillingSettings } from "@/lib/settings";
 import { getUserPolarState } from "@/lib/polar-subscription";
 import { getPremiumAccess } from "@/lib/premium-permissions";
+import { getProductsWithTypes, formatPrice, type PolarProductPrice } from "@/lib/polar-products";
 import DashboardBillingClient from "@/app/dashboard/DashboardBillingClient";
 
 export const metadata: Metadata = {
@@ -34,6 +35,22 @@ export default async function BillingPage() {
     getPremiumAccess(session.sub),
   ]);
 
+  const productMap =
+    billing.productIds.length > 0
+      ? await getProductsWithTypes(billing.productIds, { sandbox: billing.sandbox })
+      : new Map();
+
+  const premiumProducts = billing.productIds.map((id) => {
+    const info = productMap.get(id);
+    return {
+      id,
+      name: info?.name ?? id,
+      isRecurring: info?.isRecurring ?? false,
+      priceFormatted: info?.price ? formatPrice(info.price) : null,
+      pricesFormatted: info?.prices?.map((p: PolarProductPrice) => formatPrice(p)).filter(Boolean) ?? [],
+    };
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -46,7 +63,7 @@ export default async function BillingPage() {
       <DashboardBillingClient
         billingEnabled={billing.enabled}
         tierName={billing.tierName}
-        premiumProductId={billing.productId}
+        premiumProducts={premiumProducts}
         hasActiveSubscription={polarState.hasActiveSubscription}
         activeSubscription={polarState.activeSubscription ?? null}
         ownedProductIds={polarState.ownedProductIds}

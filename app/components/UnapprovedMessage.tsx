@@ -5,18 +5,19 @@ import { DiscordLogo, CreditCard } from "@phosphor-icons/react";
 const DISCORD_INVITE = "https://discord.gg/sHN28UTbh6";
 
 type Props = {
-  /** When true, show Basic paywall ($4 one-time) instead of Discord message. */
+  /** When true, show Basic paywall instead of Discord message. */
   basicEnabled?: boolean;
   basicTierName?: string;
-  basicPriceCents?: number;
+  /** Formatted price from Polar (e.g. "$4", "Free"). Fallback from admin setting if fetch fails. */
+  basicPriceFormatted?: string | null;
 };
 
 export default function UnapprovedMessage({
   basicEnabled = false,
   basicTierName = "Basic",
-  basicPriceCents = 400,
+  basicPriceFormatted = null,
 }: Props) {
-  const priceDisplay = `$${(basicPriceCents / 100).toFixed(0)}`;
+  const priceDisplay = basicPriceFormatted ?? "$4";
 
   if (basicEnabled) {
     return (

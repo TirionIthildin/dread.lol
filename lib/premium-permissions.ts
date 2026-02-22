@@ -39,11 +39,11 @@ export async function getPremiumAccess(userId: string): Promise<PremiumAccess> {
     return { hasAccess: true, source: "granted" };
   }
 
-  const productId = billing.productId;
-  if (polarState.hasActiveSubscription && productId && polarState.activeSubscription?.productId === productId) {
+  const productIds = billing.productIds;
+  if (polarState.hasActiveSubscription && productIds.length > 0 && polarState.activeSubscription && productIds.includes(polarState.activeSubscription.productId)) {
     return { hasAccess: true, source: "subscription" };
   }
-  if (productId && polarState.ownedProductIds.includes(productId)) {
+  if (productIds.length > 0 && polarState.ownedProductIds.some((id) => productIds.includes(id))) {
     return { hasAccess: true, source: "product" };
   }
   return { hasAccess: false, source: null };

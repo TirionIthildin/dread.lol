@@ -126,7 +126,7 @@ async function syncOrder(data: unknown) {
   // Basic tier: approve user when they pay for account creation
   if (status === "paid") {
     const billing = await getBillingSettings();
-    if (billing.basicEnabled && billing.basicProductId && productId === billing.basicProductId) {
+    if (billing.basicEnabled && billing.basicProductIds.length > 0 && billing.basicProductIds.includes(productId)) {
       await db.collection<UserDoc>(COLLECTIONS.users).updateOne(
         { _id: externalId },
         { $set: { approved: true, updatedAt: now } }

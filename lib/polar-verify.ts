@@ -21,7 +21,7 @@ export async function approveUserIfBasicProduct(
   productId: string
 ): Promise<boolean> {
   const billing = await getBillingSettings();
-  if (!billing.basicEnabled || !billing.basicProductId || productId !== billing.basicProductId) {
+  if (!billing.basicEnabled || billing.basicProductIds.length === 0 || !billing.basicProductIds.includes(productId)) {
     return false;
   }
   const client = await getDb();

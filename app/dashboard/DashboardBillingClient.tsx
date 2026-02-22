@@ -4,10 +4,18 @@ import Link from "next/link";
 import { CreditCard, CheckCircle, Plus } from "@phosphor-icons/react";
 import type { PremiumSource } from "@/lib/premium-permissions";
 
+type PremiumProduct = {
+  id: string;
+  name: string;
+  isRecurring: boolean;
+  priceFormatted: string | null;
+  pricesFormatted: string[];
+};
+
 type Props = {
   billingEnabled: boolean;
   tierName: string;
-  premiumProductId: string | null;
+  premiumProducts: PremiumProduct[];
   hasActiveSubscription: boolean;
   activeSubscription: {
     polarSubscriptionId: string;
@@ -23,13 +31,16 @@ type Props = {
 export default function DashboardBillingClient({
   billingEnabled,
   tierName,
-  premiumProductId,
+  premiumProducts,
   hasActiveSubscription,
   activeSubscription,
   ownedProductIds,
   hasPremiumAccess,
   premiumSource,
 }: Props) {
+  const premiumProductIds = premiumProducts.map((p) => p.id);
+  const hasSubscriptionProducts = premiumProducts.some((p) => p.isRecurring);
+  const hasOneTimeProducts = premiumProducts.some((p) => !p.isRecurring);
   if (!billingEnabled) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-6 text-center">
@@ -66,9 +77,10 @@ export default function DashboardBillingClient({
             </span>
           </div>
           <p className="text-xs text-[var(--muted)] mb-4">
-            {premiumProductId && activeSubscription.productId === premiumProductId
-              ? tierName
-              : activeSubscription.productName ?? activeSubscription.productId}
+            {(() => {
+              const p = premiumProducts.find((x) => x.id === activeSubscription.productId);
+              return p ? (p.isRecurring ? tierName : p.name) : (activeSubscription.productName ?? activeSubscription.productId);
+            })()}
           </p>
           <Link
             href="/api/polar/customer-portal"
@@ -83,32 +95,68 @@ export default function DashboardBillingClient({
       {!hasActiveSubscription && premiumSource !== "granted" && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-4">
           {ownedProductIds.length > 0 &&
-          premiumProductId &&
-          ownedProductIds.includes(premiumProductId) ? (
+          premiumProductIds.length > 0 &&
+          ownedProductIds.some((id) => premiumProductIds.includes(id)) ? (
             <>
               <p className="text-sm text-[var(--muted)] mb-4">
-                You have {tierName} (one-time purchase). Subscribe for recurring access.
+                You have {tierName} (one-time purchase).{hasSubscriptionProducts && " Subscribe for recurring access."}
               </p>
-              <Link
-                href="/api/polar/checkout-redirect"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-              >
-                <Plus size={18} weight="regular" />
-                Subscribe
-              </Link>
+              {hasSubscriptionProducts && (() => {
+                const subProd = premiumProducts.find((p) => p.isRecurring);
+                const priceStr = subProd?.priceFormatted ?? subProd?.pricesFormatted[0];
+                return (
+                  <Link
+                    href="/api/polar/checkout-redirect?prefer=recurring"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+                  >
+                    <Plus size={18} weight="regular" />
+                    Subscribe{priceStr ? ` – ${priceStr}` : ""}
+                  </Link>
+                );
+              })()}
             </>
           ) : (
             <>
               <p className="text-sm text-[var(--muted)] mb-4">
                 You don&apos;t have {tierName} yet.
               </p>
-              <Link
-                href="/api/polar/checkout-redirect"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-              >
-                <Plus size={18} weight="regular" />
-                Subscribe to {tierName}
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                {hasSubscriptionProducts && (() => {
+                  const subProd = premiumProducts.find((p) => p.isRecurring);
+                  const priceStr = subProd?.priceFormatted ?? subProd?.pricesFormatted[0];
+                  return (
+                    <Link
+                      href="/api/polar/checkout-redirect?prefer=recurring"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+                    >
+                      <Plus size={18} weight="regular" />
+                      Subscribe to {tierName}{priceStr ? ` – ${priceStr}` : ""}
+                    </Link>
+                  );
+                })()}
+                {hasOneTimeProducts && (() => {
+                  const oneProd = premiumProducts.find((p) => !p.isRecurring);
+                  const priceStr = oneProd?.priceFormatted ?? oneProd?.pricesFormatted[0];
+                  return (
+                    <Link
+                      href="/api/polar/checkout-redirect?prefer=one_time"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors"
+                    >
+                      <CreditCard size={18} weight="regular" />
+                      Buy {tierName}{priceStr ? ` – ${priceStr}` : ""}
+                    </Link>
+                  );
+                })()}
+                {!hasSubscriptionProducts && !hasOneTimeProducts && (
+                  <Link
+                    href="/api/polar/checkout-redirect"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+                  >
+                    <Plus size={18} weight="regular" />
+                    Get {tierName}
+                  </Link>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -120,13 +168,21 @@ export default function DashboardBillingClient({
             Owned
           </p>
           <ul className="text-sm text-[var(--foreground)] space-y-1">
-            {ownedProductIds.map((id) => (
-              <li key={id}>
-                <span className="rounded bg-[var(--surface)] px-1.5 py-0.5 text-xs">
-                  {premiumProductId && id === premiumProductId ? tierName : id}
-                </span>
-              </li>
-            ))}
+            {ownedProductIds.map((id) => {
+              const prod = premiumProducts.find((p) => p.id === id);
+              const label = prod ? (prod.isRecurring ? tierName : prod.name) : id;
+              const priceStr = prod?.priceFormatted ?? prod?.pricesFormatted[0];
+              return (
+                <li key={id} className="flex items-center justify-between gap-2">
+                  <span className="rounded bg-[var(--surface)] px-1.5 py-0.5 text-xs">
+                    {label}
+                  </span>
+                  {priceStr && (
+                    <span className="text-xs text-[var(--muted)]">{priceStr}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -11,8 +11,23 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Auto-fetch prices from Polar",
+    description: "Prices are fetched from Polar API and shown on Subscribe/Buy buttons and the Basic paywall. No manual price config needed.",
+  },
+  {
+    date: "2026-02",
+    title: "Auto-detect product types",
+    description: "Subscription vs one-time is automatically determined from Polar API. Subscribe and Buy buttons route to the correct product.",
+  },
+  {
+    date: "2026-02",
+    title: "Multiple products per tier",
+    description: "Add multiple product IDs per tier (Premium, Basic). Support subscriptions, one-time purchases, and lifetime deals like $100 permanent Premium.",
+  },
+  {
+    date: "2026-02",
     title: "Basic tier ($4 account creation)",
-    description: "One-time $4 payment to create an account. Enable in Admin → Billing, create a $4 product in Polar, and set the product ID.",
+    description: "One-time $4 payment to create an account. Enable in Admin → Billing, create a $4 product in Polar, and set the product IDs.",
   },
   {
     date: "2026-02",
