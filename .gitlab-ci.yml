@@ -12,11 +12,13 @@ docker-build:
     DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: "1"
+    BUILDKIT_INLINE_CACHE: "1"
   before_script:
     - timeout 30 sh -c 'until docker info > /dev/null 2>&1; do sleep 1; done'
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   script:
-    - docker build --pull -t "$DOCKER_IMAGE_NAME" .
+    - docker build --pull --cache-from $CI_REGISTRY_IMAGE:latest -t "$DOCKER_IMAGE_NAME" .
     - docker push "$DOCKER_IMAGE_NAME"
     - |
       if [[ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]]; then
