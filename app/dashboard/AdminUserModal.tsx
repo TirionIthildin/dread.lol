@@ -4,7 +4,7 @@ import Image from "next/image";
 import { X } from "@phosphor-icons/react";
 import { useState, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { approveUserAction, setUserBadgesAction, setUserCustomBadgesAction } from "@/app/dashboard/actions";
+import { approveUserAction, setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction } from "@/app/dashboard/actions";
 import type { CustomBadge } from "@/app/dashboard/AdminBadgesPanel";
 
 export type AdminUser = {
@@ -16,6 +16,7 @@ export type AdminUser = {
   verified: boolean;
   staff: boolean;
   premiumGranted: boolean;
+  restricted?: boolean;
   createdAt: string;
 };
 
@@ -30,6 +31,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [verified, setVerified] = useState(user.verified);
   const [staff, setStaff] = useState(user.staff);
   const [premiumGranted, setPremiumGranted] = useState(user.premiumGranted);
+  const [restricted, setRestricted] = useState(user.restricted ?? false);
   const [customBadges, setCustomBadges] = useState<CustomBadge[]>([]);
   const [userBadgeIds, setUserBadgeIds] = useState<string[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(true);
@@ -41,7 +43,8 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     setVerified(user.verified);
     setStaff(user.staff);
     setPremiumGranted(user.premiumGranted);
-  }, [user.id, user.approved, user.verified, user.staff, user.premiumGranted]);
+    setRestricted(user.restricted ?? false);
+  }, [user.id, user.approved, user.verified, user.staff, user.premiumGranted, user.restricted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +74,20 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
       } else {
         setApproved(true);
         onUpdate({ ...user, approved: true });
+      }
+    });
+  }
+
+  function handleRestrictedToggle(value: boolean) {
+    setError(null);
+    setRestricted(value);
+    startTransition(async () => {
+      const result = await setUserRestrictedAction(user.id, value);
+      if (result.error) {
+        setError(result.error);
+        setRestricted(!value);
+      } else {
+        onUpdate({ ...user, restricted: value });
       }
     });
   }
@@ -191,6 +208,20 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
               </button>
             </div>
           )}
+
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/50 px-3 py-2">
+            <span className="text-sm text-[var(--muted)]">Restrict profile</span>
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm disabled:opacity-50">
+              <input
+                type="checkbox"
+                checked={restricted}
+                disabled={isPending}
+                onChange={(e) => handleRestrictedToggle(e.target.checked)}
+                className="rounded border-[var(--border)] text-amber-500 focus:ring-amber-500"
+              />
+              <span className="text-[var(--foreground)]">{restricted ? "Restricted" : "Active"}</span>
+            </label>
+          </div>
 
           <div className="space-y-2 pt-2 border-t border-[var(--border)]">
             <p className="text-xs font-medium text-[var(--muted)]">Badges</p>

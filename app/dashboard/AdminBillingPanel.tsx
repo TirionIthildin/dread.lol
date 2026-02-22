@@ -14,6 +14,10 @@ export type BillingSettingsState = {
   basicProductIds: string[];
   basicTierName: string;
   basicPriceFormatted: string | null;
+  basicTrialDays: number;
+  galleryMaxFree: number;
+  blogPremiumOnly: boolean;
+  pasteMaxFreePerMonth: number;
 };
 
 export default function AdminBillingPanel() {
@@ -28,6 +32,10 @@ export default function AdminBillingPanel() {
   const [formBasicEnabled, setFormBasicEnabled] = useState(false);
   const [formBasicProductIds, setFormBasicProductIds] = useState("");
   const [formBasicTierName, setFormBasicTierName] = useState("Basic");
+  const [formBasicTrialDays, setFormBasicTrialDays] = useState(14);
+  const [formGalleryMaxFree, setFormGalleryMaxFree] = useState(10);
+  const [formBlogPremiumOnly, setFormBlogPremiumOnly] = useState(true);
+  const [formPasteMaxFreePerMonth, setFormPasteMaxFreePerMonth] = useState(10);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -47,6 +55,10 @@ export default function AdminBillingPanel() {
         basicProductIds: basicIds,
         basicTierName: b.basicTierName ?? "Basic",
         basicPriceFormatted: b.basicPriceFormatted ?? null,
+        basicTrialDays: typeof b.basicTrialDays === "number" ? b.basicTrialDays : 14,
+        galleryMaxFree: typeof b.galleryMaxFree === "number" ? b.galleryMaxFree : 10,
+        blogPremiumOnly: typeof b.blogPremiumOnly === "boolean" ? b.blogPremiumOnly : true,
+        pasteMaxFreePerMonth: typeof b.pasteMaxFreePerMonth === "number" ? b.pasteMaxFreePerMonth : 10,
       });
       setFormEnabled(!!b.enabled);
       setFormTierName(b.tierName ?? "Premium");
@@ -74,6 +86,10 @@ export default function AdminBillingPanel() {
       setFormBasicEnabled(settings.basicEnabled);
       setFormBasicProductIds(settings.basicProductIds.join("\n"));
       setFormBasicTierName(settings.basicTierName ?? "Basic");
+      setFormBasicTrialDays(settings.basicTrialDays ?? 14);
+      setFormGalleryMaxFree(settings.galleryMaxFree ?? 10);
+      setFormBlogPremiumOnly(settings.blogPremiumOnly ?? true);
+      setFormPasteMaxFreePerMonth(settings.pasteMaxFreePerMonth ?? 10);
     }
   }, [settings]);
 
@@ -93,6 +109,10 @@ export default function AdminBillingPanel() {
               basicEnabled: formBasicEnabled,
               basicProductIds: formBasicProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               basicTierName: formBasicTierName.trim() || "Basic",
+              basicTrialDays: formBasicTrialDays,
+              galleryMaxFree: formGalleryMaxFree,
+              blogPremiumOnly: formBlogPremiumOnly,
+              pasteMaxFreePerMonth: formPasteMaxFreePerMonth,
             },
           }),
         });
@@ -113,6 +133,10 @@ export default function AdminBillingPanel() {
           basicProductIds: bIds,
           basicTierName: data.billing.basicTierName,
           basicPriceFormatted: data.billing.basicPriceFormatted ?? null,
+          basicTrialDays: data.billing.basicTrialDays ?? 14,
+          galleryMaxFree: data.billing.galleryMaxFree ?? 10,
+          blogPremiumOnly: data.billing.blogPremiumOnly ?? true,
+          pasteMaxFreePerMonth: data.billing.pasteMaxFreePerMonth ?? 10,
         });
         toast.success("Billing settings saved");
       } catch {
@@ -286,6 +310,77 @@ export default function AdminBillingPanel() {
                     </p>
                   </div>
                 )}
+                <div className="pt-4 mt-4 border-t border-[var(--border)]">
+                  <label htmlFor="billing-basic-trial-days" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Free trial (days)
+                  </label>
+                  <input
+                    id="billing-basic-trial-days"
+                    type="number"
+                    min={0}
+                    value={formBasicTrialDays}
+                    onChange={(e) => setFormBasicTrialDays(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-full max-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    Days new users can use the dashboard before paying for Basic. 0 = no trial.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6 mt-6 border-t border-[var(--border)]">
+              <h4 className="text-sm font-semibold text-[var(--foreground)] mb-3">Premium limits (configurable)</h4>
+              <p className="text-xs text-[var(--muted)] mb-4">
+                Free users hit these limits. Premium users have no limits.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="billing-gallery-max-free" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Gallery max (free)
+                  </label>
+                  <input
+                    id="billing-gallery-max-free"
+                    type="number"
+                    min={0}
+                    value={formGalleryMaxFree}
+                    onChange={(e) => setFormGalleryMaxFree(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-full max-w-[100px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    Max gallery images for free users. 0 = unlimited.
+                  </p>
+                </div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formBlogPremiumOnly}
+                    onChange={(e) => setFormBlogPremiumOnly(e.target.checked)}
+                    className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                  />
+                  <span className="text-sm font-medium text-[var(--foreground)]">
+                    Microblog requires Premium
+                  </span>
+                </label>
+                <p className="text-xs text-[var(--muted)] -mt-2">
+                  When on, only Premium users can create blog posts.
+                </p>
+                <div>
+                  <label htmlFor="billing-paste-max-free" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Pastes per month (free)
+                  </label>
+                  <input
+                    id="billing-paste-max-free"
+                    type="number"
+                    min={0}
+                    value={formPasteMaxFreePerMonth}
+                    onChange={(e) => setFormPasteMaxFreePerMonth(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-full max-w-[100px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    Max pastes per calendar month for free users. 0 = unlimited.
+                  </p>
+                </div>
               </div>
             </div>
 

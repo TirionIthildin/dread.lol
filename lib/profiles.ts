@@ -121,6 +121,8 @@ export interface Profile {
   verified?: boolean;
   /** Admin-granted staff badge (member profiles only). */
   staff?: boolean;
+  /** Dread Premium badge (subscription, one-time, or admin-granted). */
+  premium?: boolean;
   /** Custom badges (admin-created and assigned). */
   customBadges?: {
     id: string;

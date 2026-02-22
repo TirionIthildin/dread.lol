@@ -11,6 +11,21 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Configurable Premium limits & Basic trial",
+    description: "Gallery max, microblog Premium-only, paste limit, and Basic trial days are now configurable in Admin → Billing. Two-week Basic trial before payment required.",
+  },
+  {
+    date: "2026-02",
+    title: "Premium feature gates",
+    description: "Username effects (typewriter, sparkle), custom colors, background effects, profile analytics, and per-field animations now require Premium. Premium badge shown on profiles.",
+  },
+  {
+    date: "2026-02",
+    title: "Redesigned Premium page",
+    description: "Hero status, pricing cards, features grid, and clearer CTAs for Subscribe vs Buy.",
+  },
+  {
+    date: "2026-02",
     title: "Auto-fetch prices from Polar",
     description: "Prices are fetched from Polar API and shown on Subscribe/Buy buttons and the Basic paywall. No manual price config needed.",
   },

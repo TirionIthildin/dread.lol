@@ -7,6 +7,7 @@ import {
   getUserDiscordBadgeData,
   getCustomBadgesForUser,
 } from "@/lib/member-profiles";
+import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getAccentHex } from "@/lib/profile-themes";
 import { getDiscordBadgeInfo } from "@/lib/discord-badges";
 import { SITE_NAME } from "@/lib/site";
@@ -61,12 +62,13 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const [badgeFlags, customBadges, discordBadgeData] = await Promise.all([
+  const [badgeFlags, customBadges, discordBadgeData, premiumAccess] = await Promise.all([
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
+    getPremiumAccess(memberRow.userId),
   ]);
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges);
+  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
 
   // User has a custom OG image – redirect crawlers to it
   if (profile.ogImageUrl?.trim()) {

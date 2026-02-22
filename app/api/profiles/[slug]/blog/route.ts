@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getMemberProfileBySlug } from "@/lib/member-profiles";
-import {
-  getBlogPostsForProfile,
-  createBlogPost,
-} from "@/lib/blog";
+import { getBlogPostsForProfile, createBlogPost } from "@/lib/blog";
+import { getPremiumAccess } from "@/lib/premium-permissions";
+import { getBillingSettings } from "@/lib/settings";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -33,6 +32,13 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
     if (profile.userId !== session.sub) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+    const [billing, premiumAccess] = await Promise.all([
+      getBillingSettings(),
+      getPremiumAccess(session.sub),
+    ]);
+    if (billing.blogPremiumOnly && !premiumAccess.hasAccess) {
+      return NextResponse.json({ error: "Microblog requires Premium. Upgrade at /dashboard/billing" }, { status: 403 });
     }
     const body = await request.json();
     const title = typeof body.title === "string" ? body.title : "";

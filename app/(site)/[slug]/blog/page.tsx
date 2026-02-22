@@ -10,6 +10,7 @@ import {
   getCustomBadgesForUser,
   getUserDiscordBadgeData,
 } from "@/lib/member-profiles";
+import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getBlogPostsForProfile } from "@/lib/blog";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
@@ -52,14 +53,15 @@ export default async function ProfileBlogPage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
 
-  const [badgeFlags, customBadges, discordBadgeData, posts] = await Promise.all([
+  const [badgeFlags, customBadges, discordBadgeData, premiumAccess, posts] = await Promise.all([
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
+    getPremiumAccess(memberRow.userId),
     getBlogPostsForProfile(memberRow.id),
   ]);
 
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges);
+  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
   const themeClass = getThemeClass(profile.accentColor);
 
   return (

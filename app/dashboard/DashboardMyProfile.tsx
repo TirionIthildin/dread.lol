@@ -33,6 +33,8 @@ import {
   CalendarBlank,
   Buildings,
   ArrowSquareOut,
+  Lock,
+  Crown,
 } from "@phosphor-icons/react";
 import { useActionState, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useFormStatus } from "react-dom";
@@ -115,6 +117,8 @@ interface DashboardMyProfileProps {
   widgetPreviewData?: DiscordWidgetData | null;
   /** Whether the user has linked their Roblox account via OAuth. */
   robloxLinked?: boolean;
+  /** Whether the user has Premium (for gating effects, colors, analytics). */
+  hasPremiumAccess?: boolean;
 }
 
 /** Grouped IANA timezones for local time display. */
@@ -354,6 +358,7 @@ export default function DashboardMyProfile({
   availableDiscordBadges = [],
   widgetPreviewData = null,
   robloxLinked = false,
+  hasPremiumAccess = false,
 }: DashboardMyProfileProps) {
   const [tab, setTab] = useState<DashboardTab>("editor");
   const [state, formAction] = useActionState<ProfileFormState, FormData>(
@@ -1445,6 +1450,16 @@ export default function DashboardMyProfile({
                   />
                 </div>
               </label>
+              {!hasPremiumAccess && (
+                <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3 flex items-center gap-3">
+                  <Crown size={20} weight="fill" className="text-[var(--accent)] shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">Premium feature</p>
+                    <p className="text-xs text-[var(--muted)]">Custom colors require Premium. <Link href="/dashboard/billing" className="text-[var(--accent)] hover:underline">Upgrade</Link></p>
+                  </div>
+                </div>
+              )}
+              {hasPremiumAccess && (
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Accent color
                 <div className="mt-1 space-y-2">
@@ -1493,6 +1508,9 @@ export default function DashboardMyProfile({
                   <p className="text-[10px] text-[var(--muted)]">Or enter hex for custom accent (e.g. #ff00ff).</p>
                 </div>
               </label>
+              )}
+              {hasPremiumAccess && (
+              <>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Text color <span className="text-[var(--muted)]/70">(optional)</span>
                 <div className="mt-1 flex items-center gap-2">
@@ -1538,6 +1556,8 @@ export default function DashboardMyProfile({
                 </div>
                 <p className="mt-0.5 text-[10px] text-[var(--muted)]">Overrides page background. Clear to use theme default.</p>
               </label>
+              </>
+              )}
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Terminal prompt <span className="text-[var(--muted)]/70">(e.g. $, &gt;, λ, ❯)</span>
                 <input
@@ -1849,6 +1869,12 @@ export default function DashboardMyProfile({
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Field animations <span className="text-[var(--muted)]/70">(name, tagline, description)</span>
+                {!hasPremiumAccess && (
+                  <div className="mt-1 mb-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-2 flex items-center gap-2">
+                    <Lock size={16} weight="regular" className="text-[var(--accent)] shrink-0" />
+                    <p className="text-xs text-[var(--muted)]">Typewriter, sparkle, and tagline/description animations require <Link href="/dashboard/billing" className="text-[var(--accent)] hover:underline">Premium</Link>.</p>
+                  </div>
+                )}
                 <div className="mt-1 space-y-2">
                   <div>
                     <span className="text-[10px] text-[var(--muted)] block mb-0.5">Name</span>
@@ -1857,9 +1883,7 @@ export default function DashboardMyProfile({
                       defaultValue={(profile as { nameAnimation?: string }).nameAnimation ?? "none"}
                       options={[
                         { value: "none", label: "None" },
-                        { value: "typewriter", label: "Typewriter" },
-                        { value: "sparkle", label: "Sparkle" },
-                        { value: "sparkle-stars", label: "Sparkle stars" },
+                        ...(hasPremiumAccess ? [{ value: "typewriter", label: "Typewriter" }, { value: "sparkle", label: "Sparkle" }, { value: "sparkle-stars", label: "Sparkle stars" }] : []),
                         { value: "fade-in", label: "Fade in" },
                         { value: "slide-up", label: "Slide up" },
                         { value: "slide-in-left", label: "Slide in left" },
@@ -1871,14 +1895,13 @@ export default function DashboardMyProfile({
                     <span className="text-[10px] text-[var(--muted)] block mb-0.5">Tagline</span>
                     <SearchableSelect
                       name="taglineAnimation"
-                      defaultValue={(profile as { taglineAnimation?: string }).taglineAnimation ?? "none"}
+                      defaultValue={(() => {
+                        const v = (profile as { taglineAnimation?: string }).taglineAnimation ?? "none";
+                        return !hasPremiumAccess && v !== "none" ? "none" : v;
+                      })()}
                       options={[
                         { value: "none", label: "None" },
-                        { value: "typewriter", label: "Typewriter" },
-                        { value: "fade-in", label: "Fade in" },
-                        { value: "slide-up", label: "Slide up" },
-                        { value: "slide-in-left", label: "Slide in left" },
-                        { value: "blur-in", label: "Blur in" },
+                        ...(hasPremiumAccess ? [{ value: "typewriter", label: "Typewriter" }, { value: "fade-in", label: "Fade in" }, { value: "slide-up", label: "Slide up" }, { value: "slide-in-left", label: "Slide in left" }, { value: "blur-in", label: "Blur in" }] : []),
                       ]}
                     />
                   </div>
@@ -1886,13 +1909,13 @@ export default function DashboardMyProfile({
                     <span className="text-[10px] text-[var(--muted)] block mb-0.5">Description</span>
                     <SearchableSelect
                       name="descriptionAnimation"
-                      defaultValue={(profile as { descriptionAnimation?: string }).descriptionAnimation ?? "none"}
+                      defaultValue={(() => {
+                        const v = (profile as { descriptionAnimation?: string }).descriptionAnimation ?? "none";
+                        return !hasPremiumAccess && v !== "none" ? "none" : v;
+                      })()}
                       options={[
                         { value: "none", label: "None" },
-                        { value: "fade-in", label: "Fade in" },
-                        { value: "slide-up", label: "Slide up" },
-                        { value: "slide-in-left", label: "Slide in left" },
-                        { value: "blur-in", label: "Blur in" },
+                        ...(hasPremiumAccess ? [{ value: "fade-in", label: "Fade in" }, { value: "slide-up", label: "Slide up" }, { value: "slide-in-left", label: "Slide in left" }, { value: "blur-in", label: "Blur in" }] : []),
                       ]}
                     />
                   </div>
@@ -1944,14 +1967,20 @@ export default function DashboardMyProfile({
                     </div>
                     <label className="block">
                       <span className="text-[10px] text-[var(--muted)] block mb-1">Background effect</span>
+                      {!hasPremiumAccess && (
+                        <div className="mb-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-2 flex items-center gap-2">
+                          <Lock size={16} weight="regular" className="text-[var(--accent)] shrink-0" />
+                          <p className="text-xs text-[var(--muted)]">Snow, rain, blur, and retro effects require <Link href="/dashboard/billing" className="text-[var(--accent)] hover:underline">Premium</Link>.</p>
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-2">
-                        {BG_EFFECT_OPTIONS.map((opt) => (
+                        {(hasPremiumAccess ? BG_EFFECT_OPTIONS : ["none"]).map((opt) => (
                           <button
                             key={opt}
                             type="button"
-                            onClick={() => setBackgroundEffectValue(opt)}
+                            onClick={() => setBackgroundEffectValue(hasPremiumAccess ? opt : "none")}
                             className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                              backgroundEffectValue === opt
+                              (hasPremiumAccess ? backgroundEffectValue : "none") === opt
                                 ? "bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40"
                                 : "bg-[var(--bg)]/60 text-[var(--muted)] border border-transparent hover:border-[var(--border)] hover:text-[var(--foreground)]"
                             }`}
@@ -1965,7 +1994,7 @@ export default function DashboardMyProfile({
                           </button>
                         ))}
                       </div>
-                      <input type="hidden" name="backgroundEffect" value={backgroundEffectValue === "none" ? "" : backgroundEffectValue} />
+                      <input type="hidden" name="backgroundEffect" value={(hasPremiumAccess ? backgroundEffectValue : "none") === "none" ? "" : backgroundEffectValue} />
                     </label>
                     {(backgroundTypeValue === "image" || backgroundTypeValue === "video") && (
                       <>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile } from "@/lib/member-profiles";
+import { getBillingSettings } from "@/lib/settings";
+import { canUseDashboard } from "@/lib/dashboard-access";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardLinks from "@/app/dashboard/DashboardLinks";
 
@@ -17,8 +19,11 @@ export default async function LinksPage() {
   const session = await getSession();
   if (!session) redirect("/dashboard");
 
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) redirect("/dashboard");
+  const [user, billing] = await Promise.all([
+    getOrCreateUser(session),
+    getBillingSettings(),
+  ]);
+  if (!canUseDashboard(user, billing)) redirect("/dashboard");
 
   const slug = slugFromUsername(
     session.preferred_username ?? session.name ?? session.sub

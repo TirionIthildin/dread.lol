@@ -17,6 +17,9 @@ import {
   getSimilarProfiles,
   getMutualGuilds,
 } from "@/lib/member-profiles";
+import { getPremiumAccess } from "@/lib/premium-permissions";
+import { getProfileRestrictionStatus } from "@/lib/profile-restriction";
+import RestrictedProfileMessage from "@/app/components/RestrictedProfileMessage";
 import { getDiscordWidgetData, type DiscordWidgetType } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, type RobloxWidgetType } from "@/lib/roblox-widgets";
 import { getDiscordPresence } from "@/lib/discord-presence";
@@ -33,8 +36,16 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const memberRow = await getMemberProfileBySlug(slug);
-  const profile: Profile | null = memberRow ? memberProfileToProfile(memberRow) : null;
-  if (!profile) return { title: "Not found" };
+  if (!memberRow) return { title: "Not found" };
+  const restrictionStatus = await getProfileRestrictionStatus(memberRow.userId);
+  if (restrictionStatus.restricted) {
+    return {
+      title: "Profile restricted",
+      description: "This profile has been restricted due to either a billing issue or being terminated.",
+      robots: { index: false, follow: false },
+    };
+  }
+  const profile = memberProfileToProfile(memberRow);
   const title = profile.name;
   const description =
     profile.metaDescription?.trim() ||
@@ -90,7 +101,7 @@ export default async function ProfilePage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
   const showPageViews = memberRow.showPageViews ?? true;
-  const [ip, userAgent, referrer, countryCode, badgeFlags, customBadges, discordBadgeData, vouchesData, session, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
+  const [ip, userAgent, referrer, countryCode, badgeFlags, customBadges, discordBadgeData, premiumAccess, restrictionStatus, vouchesData, session, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getReferer(),
@@ -98,6 +109,8 @@ export default async function ProfilePage({ params }: Props) {
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
+    getPremiumAccess(memberRow.userId),
+    getProfileRestrictionStatus(memberRow.userId),
     getVouchesForProfile(memberRow.id),
     getSession(),
     (async () => {
@@ -156,7 +169,7 @@ export default async function ProfilePage({ params }: Props) {
   const mutualVouchers = session && canVouch
     ? await getMutualVouchers(session.sub, memberRow.id, memberRow.userId)
     : [];
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges);
+  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
   if (showPageViews) profile.viewCount = viewCount;
   if (discordWidgetData) profile.discordWidgets = discordWidgetData;
   if (robloxWidgetData) profile.robloxWidgets = robloxWidgetData;
@@ -184,6 +197,16 @@ export default async function ProfilePage({ params }: Props) {
     currentUserHasVouched,
     canVouch,
   };
+  if (restrictionStatus.restricted) {
+    return (
+      <div className="min-h-screen grid-bg">
+        <div className="content-container py-12">
+          <RestrictedProfileMessage />
+        </div>
+      </div>
+    );
+  }
+
   const needsCursorEffect = profile.cursorStyle === "glow" || profile.cursorStyle === "trail";
   const isAdmin = (currentUser as { isAdmin?: boolean } | null)?.isAdmin ?? false;
   const showAdminToolbar = isAdmin && session?.sub !== memberRow.userId;

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield, Crown } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 
 const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
@@ -295,8 +295,14 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                   }
                   return profile.name;
                 })()}
-                {(profile.verified || profile.staff || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
+                {(profile.verified || profile.staff || profile.premium || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
                   <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
+                    {profile.premium && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Dread Premium">
+                        <Crown size={14} weight="fill" className="shrink-0" aria-hidden />
+                        Premium
+                      </span>
+                    )}
                     {profile.verified && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member of the community">
                         <Check size={14} weight="bold" className="shrink-0" aria-hidden />

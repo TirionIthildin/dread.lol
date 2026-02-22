@@ -69,6 +69,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
       verified: false,
       staff: false,
       premiumGranted: false,
+      restricted: false,
       createdAt: u.createdAt,
     };
   }

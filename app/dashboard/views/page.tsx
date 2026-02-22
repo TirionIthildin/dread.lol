@@ -12,11 +12,14 @@ import {
   ArrowSquareOut,
 } from "@phosphor-icons/react/dist/ssr";
 import { getSession } from "@/lib/auth/session";
+import { getBillingSettings } from "@/lib/settings";
+import { canUseDashboard } from "@/lib/dashboard-access";
 import {
   getOrCreateUser,
   getOrCreateMemberProfile,
   getProfileAnalytics,
 } from "@/lib/member-profiles";
+import { getPremiumAccess } from "@/lib/premium-permissions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardViewsClient from "./DashboardViewsClient";
 
@@ -43,16 +46,43 @@ const iconProps = { size: 18, weight: "regular" as const, className: "shrink-0" 
 export default async function DashboardAnalyticsPage() {
   const session = await getSession();
   if (!session) redirect("/dashboard");
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) redirect("/dashboard");
+  const [user, billing] = await Promise.all([
+    getOrCreateUser(session),
+    getBillingSettings(),
+  ]);
+  if (!canUseDashboard(user, billing)) redirect("/dashboard");
 
-  const slug = slugFromUsername(session.preferred_username ?? session.name ?? session.sub);
-  const name = session.name ?? session.preferred_username ?? "Member";
-  const profile = await getOrCreateMemberProfile(user.id, {
-    name,
-    slug,
-    avatarUrl: session.picture ?? undefined,
-  });
+  const [profile, premiumAccess] = await Promise.all([
+    getOrCreateMemberProfile(user.id, {
+      name: session.name ?? session.preferred_username ?? "Member",
+      slug: slugFromUsername(session.preferred_username ?? session.name ?? session.sub),
+      avatarUrl: session.picture ?? undefined,
+    }),
+    getPremiumAccess(session.sub),
+  ]);
+
+  if (!premiumAccess.hasAccess) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Analytics</h1>
+        <div className="rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-8 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/20 mb-4">
+            <ChartLine size={32} weight="duotone" className="text-[var(--accent)]" />
+          </div>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Profile analytics require Premium</h2>
+          <p className="mt-2 text-sm text-[var(--muted)] max-w-md mx-auto">
+            See who viewed your profile, traffic sources, views over time, and more.
+          </p>
+          <Link
+            href="/dashboard/billing"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent)]/90"
+          >
+            Get Premium
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const showViews = profile.showPageViews ?? true;
   const analytics = showViews ? await getProfileAnalytics(profile.id) : null;

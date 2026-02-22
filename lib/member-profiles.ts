@@ -13,6 +13,11 @@ import {
 } from "@/lib/db";
 import type { Profile } from "@/lib/profiles";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
+import {
+  isPremiumNameAnimation,
+  isPremiumFieldAnimation,
+  isPremiumBackgroundEffect,
+} from "@/lib/premium-features";
 import type { SessionUser } from "@/lib/auth/session";
 import { escapeRegex } from "@/lib/regex";
 import { getBaseDomain } from "@/lib/site";
@@ -24,6 +29,8 @@ export interface MemberProfileWithViews {
 }
 
 export interface UserWithApproval {
+  /** Account creation date (for Basic trial). */
+  createdAt?: Date;
   id: string;
   approved: boolean;
   isAdmin: boolean;
@@ -78,6 +85,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
       id: existing._id,
       approved: existing.approved,
       isAdmin: existing.isAdmin || getAdminDiscordIds().includes(existing.discordUserId),
+      createdAt: existing.createdAt,
     };
   }
   const now = new Date();
@@ -106,12 +114,13 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
           id: existing._id,
           approved: existing.approved,
           isAdmin: existing.isAdmin || getAdminDiscordIds().includes(existing.discordUserId),
+          createdAt: existing.createdAt,
         };
       }
     }
     throw err;
   }
-  return { id, approved: false, isAdmin: getAdminDiscordIds().includes(session.sub) };
+  return { id, approved: false, isAdmin: getAdminDiscordIds().includes(session.sub), createdAt: now };
 }
 
 export type PendingUserRow = {
@@ -316,6 +325,16 @@ export async function setUserBadges(
   return result.matchedCount > 0;
 }
 
+export async function setUserRestricted(userId: string, restricted: boolean): Promise<boolean> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const result = await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).updateOne(
+    { _id: userId },
+    { $set: { restricted, updatedAt: new Date() } }
+  );
+  return result.matchedCount > 0;
+}
+
 export interface CustomBadge {
   id: string;
   key: string;
@@ -478,6 +497,7 @@ export type AdminUserRow = {
   verified: boolean;
   staff: boolean;
   premiumGranted: boolean;
+  restricted?: boolean;
   createdAt: Date;
 };
 
@@ -489,7 +509,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
     .collection<UserDoc>(COLLECTIONS.users)
     .findOne(
       { _id: userId },
-      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, createdAt: 1 } }
+      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, createdAt: 1 } }
     );
   return doc
     ? {
@@ -501,6 +521,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
         verified: doc.verified ?? false,
         staff: doc.staff ?? false,
         premiumGranted: doc.premiumGranted ?? false,
+        restricted: doc.restricted ?? false,
         createdAt: doc.createdAt,
       }
     : null;
@@ -513,7 +534,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find()
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -525,6 +546,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     verified: d.verified ?? false,
     staff: d.staff ?? false,
     premiumGranted: d.premiumGranted ?? false,
+    restricted: d.restricted ?? false,
     createdAt: d.createdAt,
   }));
 }
@@ -547,7 +569,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find(filter)
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -559,6 +581,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     verified: d.verified ?? false,
     staff: d.staff ?? false,
     premiumGranted: d.premiumGranted ?? false,
+    restricted: d.restricted ?? false,
     createdAt: d.createdAt,
   }));
 }
@@ -1450,8 +1473,14 @@ export function memberProfileToProfile(
   row: ProfileRow,
   badgeFlags?: { verified: boolean; staff: boolean },
   discordBadgeData?: DiscordBadgeData | null,
-  customBadgesList?: CustomBadge[]
+  customBadgesList?: CustomBadge[],
+  ownerHasPremium?: boolean
 ): Profile {
+  const nameAnim = (row as { nameAnimation?: string | null }).nameAnimation ?? undefined;
+  const taglineAnim = (row as { taglineAnimation?: string | null }).taglineAnimation ?? undefined;
+  const descAnim = (row as { descriptionAnimation?: string | null }).descriptionAnimation ?? undefined;
+  const bgEffect = (row as { backgroundEffect?: string | null }).backgroundEffect ?? undefined;
+  const stripPremium = ownerHasPremium === false;
   const links = parseLinks(row.links ?? null);
   const easterEggLink =
     row.easterEggLinkTrigger && row.easterEggLinkUrl
@@ -1484,9 +1513,9 @@ export function memberProfileToProfile(
     links,
     ogImageUrl: row.ogImageUrl ?? undefined,
     updatedAt: undefined,
-    accentColor: row.accentColor ?? undefined,
-    customTextColor: (row as { customTextColor?: string | null }).customTextColor ?? undefined,
-    customBackgroundColor: (row as { customBackgroundColor?: string | null }).customBackgroundColor ?? undefined,
+    accentColor: stripPremium ? undefined : (row.accentColor ?? undefined),
+    customTextColor: stripPremium ? undefined : ((row as { customTextColor?: string | null }).customTextColor ?? undefined),
+    customBackgroundColor: stripPremium ? undefined : ((row as { customBackgroundColor?: string | null }).customBackgroundColor ?? undefined),
     terminalPrompt: row.terminalPrompt ?? undefined,
     nameGreeting: row.nameGreeting ?? undefined,
     cardStyle: row.cardStyle ?? undefined,
@@ -1519,9 +1548,9 @@ export function memberProfileToProfile(
     cursorStyle: row.cursorStyle ?? undefined,
     cursorImageUrl: row.cursorImageUrl ?? undefined,
     animationPreset: row.animationPreset ?? undefined,
-    nameAnimation: (row as { nameAnimation?: string | null }).nameAnimation ?? undefined,
-    taglineAnimation: (row as { taglineAnimation?: string | null }).taglineAnimation ?? undefined,
-    descriptionAnimation: (row as { descriptionAnimation?: string | null }).descriptionAnimation ?? undefined,
+    nameAnimation: stripPremium && isPremiumNameAnimation(nameAnim) ? undefined : (nameAnim ?? undefined),
+    taglineAnimation: stripPremium && isPremiumFieldAnimation(taglineAnim) ? undefined : (taglineAnim ?? undefined),
+    descriptionAnimation: stripPremium && isPremiumFieldAnimation(descAnim) ? undefined : (descAnim ?? undefined),
     backgroundType: (() => {
       const t = row.backgroundType ?? undefined;
       if (t === "audio") return undefined;
@@ -1533,7 +1562,7 @@ export function memberProfileToProfile(
       return row.backgroundUrl ?? undefined;
     })(),
     backgroundAudioUrl: row.backgroundAudioUrl ?? (row.backgroundType === "audio" ? row.backgroundUrl ?? undefined : undefined),
-    backgroundEffect: (row as { backgroundEffect?: string | null }).backgroundEffect ?? undefined,
+    backgroundEffect: stripPremium && isPremiumBackgroundEffect(bgEffect) ? undefined : (bgEffect ?? undefined),
     widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
     unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,
     noindex: row.noindex ?? undefined,
@@ -1555,6 +1584,7 @@ export function memberProfileToProfile(
       verified: badgeFlags.verified || undefined,
       staff: badgeFlags.staff || undefined,
     }),
+    ...(ownerHasPremium === true && { premium: true }),
     ...(customBadgesList &&
       customBadgesList.length > 0 && {
         customBadges: customBadgesList.map((b) => ({

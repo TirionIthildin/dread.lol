@@ -17,6 +17,8 @@ export interface UserDoc {
   staff: boolean;
   /** Admin-granted free Premium (bypasses Polar payment). */
   premiumGranted?: boolean;
+  /** Profile restricted: billing issue or terminated. When true, profile shows restricted message. */
+  restricted?: boolean;
   discordPublicFlags?: number | null;
   /** 0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic */
   discordPremiumType?: number | null;

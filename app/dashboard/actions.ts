@@ -7,6 +7,7 @@ import {
   getOrCreateUser,
   approveUser,
   setUserBadges,
+  setUserRestricted,
   getProfileSlugByUserId,
   addGalleryItem,
   updateGalleryItem,
@@ -26,6 +27,14 @@ import {
 } from "@/lib/profile-versions";
 import { normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, requireSafeUrl, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
+import { getPremiumAccess } from "@/lib/premium-permissions";
+import {
+  isPremiumNameAnimation,
+  isPremiumFieldAnimation,
+  isPremiumBackgroundEffect,
+} from "@/lib/premium-features";
+import { getBillingSettings } from "@/lib/settings";
+import { canUseDashboard } from "@/lib/dashboard-access";
 
 function parseAudioTracksValue(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
@@ -87,8 +96,8 @@ export async function updateLinksAction(
 ): Promise<ProfileFormState> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
@@ -120,8 +129,8 @@ export async function updateProfileAction(
 ): Promise<ProfileFormState> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
@@ -147,6 +156,9 @@ export async function updateProfileAction(
   if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
   if (usesCustomMedia && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
   if (rawBackgroundAudioUrl && !backgroundAudioUrl) return { error: "Background audio URL must use https or http or a valid path" };
+
+  const premiumAccess = await getPremiumAccess(session.sub);
+  const hasPremium = premiumAccess.hasAccess;
 
   const widgetSelection = (() => {
     const order: Array<{ src: "discord" | "roblox"; val: string }> = [];
@@ -190,16 +202,19 @@ export async function updateProfileAction(
       terminalTitle: (formData.get("terminalTitle") as string)?.trim() || undefined,
       terminalCommands: (formData.get("terminalCommands") as string)?.trim() || null,
       accentColor: (() => {
+        if (!hasPremium) return null;
         const custom = (formData.get("accentColorCustom") as string)?.trim();
         if (custom && /^#[0-9a-fA-F]{6}$/.test(custom)) return custom;
         const preset = (formData.get("accentColor") as string)?.trim();
         return preset ? preset : undefined;
       })(),
       customTextColor: (() => {
+        if (!hasPremium) return null;
         const v = (formData.get("customTextColor") as string)?.trim();
         return v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
       })(),
       customBackgroundColor: (() => {
+        if (!hasPremium) return null;
         const v = (formData.get("customBackgroundColor") as string)?.trim();
         return v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
       })(),
@@ -302,20 +317,27 @@ export async function updateProfileAction(
       animationPreset: (formData.get("animationPreset") as string)?.trim() || undefined,
       nameAnimation: (() => {
         const v = (formData.get("nameAnimation") as string)?.trim();
-        return v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in", "sparkle", "sparkle-stars"].includes(v) ? v : undefined;
+        const val = v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in", "sparkle", "sparkle-stars"].includes(v) ? v : undefined;
+        if (!hasPremium && isPremiumNameAnimation(val)) return undefined;
+        return val;
       })(),
       taglineAnimation: (() => {
         const v = (formData.get("taglineAnimation") as string)?.trim();
-        return v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+        const val = v && ["none", "typewriter", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+        if (!hasPremium && isPremiumFieldAnimation(val)) return undefined;
+        return val;
       })(),
       descriptionAnimation: (() => {
         const v = (formData.get("descriptionAnimation") as string)?.trim();
-        return v && ["none", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+        const val = v && ["none", "fade-in", "slide-up", "slide-in-left", "blur-in"].includes(v) ? v : undefined;
+        if (!hasPremium && isPremiumFieldAnimation(val)) return undefined;
+        return val;
       })(),
       backgroundType: usesVisualBackground ? bgType : null,
       backgroundUrl: usesCustomMedia ? backgroundUrl : null,
       backgroundAudioUrl: backgroundAudioUrl || null,
       backgroundEffect: (() => {
+        if (!hasPremium) return null;
         const v = (formData.get("backgroundEffect") as string)?.trim();
         return v && ["snow", "rain", "blur", "retro-computer"].includes(v) ? v : null;
       })(),
@@ -348,8 +370,19 @@ export async function addGalleryItemAction(
 ): Promise<{ error?: string; id?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing, premiumAccess] = await Promise.all([
+    getOrCreateUser(session),
+    getBillingSettings(),
+    getPremiumAccess(session.sub),
+  ]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (billing.galleryMaxFree > 0 && !premiumAccess.hasAccess) {
+    const { getGalleryForProfile } = await import("@/lib/member-profiles");
+    const gallery = await getGalleryForProfile(profileId);
+    if (gallery.length >= billing.galleryMaxFree) {
+      return { error: `Free accounts are limited to ${billing.galleryMaxFree} gallery images. Upgrade to Premium for unlimited.` };
+    }
+  }
   if (!data.imageUrl?.trim()) return { error: "Image URL required" };
   try {
     const imageUrl = requireSafeUrl(data.imageUrl.trim(), "Image URL");
@@ -374,8 +407,8 @@ export async function updateGalleryItemAction(
 ): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   try {
     await updateGalleryItem(itemId, session.sub, {
       title: data.title !== undefined ? (data.title?.trim() || null) : undefined,
@@ -394,8 +427,8 @@ export async function updateGalleryItemAction(
 export async function deleteGalleryItemAction(itemId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   try {
     await deleteGalleryItem(itemId, session.sub);
     revalidatePath("/dashboard");
@@ -411,8 +444,8 @@ export async function deleteGalleryItemAction(itemId: string): Promise<{ error?:
 export async function setGalleryOrderAction(profileId: string, orderedIds: string[]): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   try {
     await setGalleryOrder(profileId, session.sub, orderedIds);
     revalidatePath("/dashboard");
@@ -431,8 +464,8 @@ export async function addShortLinkAction(
 ): Promise<{ error?: string; id?: string; slug?: string; url?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   try {
     const url = requireSafeUrl(data.url.trim(), "URL");
     const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url });
@@ -450,8 +483,8 @@ export async function addShortLinkAction(
 export async function deleteShortLinkAction(linkId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   try {
     await deleteShortLink(linkId, session.sub);
     revalidatePath("/dashboard");
@@ -493,6 +526,20 @@ export async function setUserBadgesAction(
   const id = userId?.trim();
   if (!id) return { error: "Missing user" };
   const ok = await setUserBadges(id, badges);
+  if (!ok) return { error: "User not found" };
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard");
+  const slug = await getProfileSlugByUserId(id);
+  if (slug) revalidatePath(`/${slug}`);
+  return {};
+}
+
+export async function setUserRestrictedAction(userId: string, restricted: boolean): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const id = userId?.trim();
+  if (!id) return { error: "Missing user" };
+  const ok = await setUserRestricted(id, restricted);
   if (!ok) return { error: "User not found" };
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard");
@@ -570,8 +617,8 @@ export async function saveProfileVersionAction(
 ): Promise<{ id?: string; error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   const trimmed = name?.trim().slice(0, 80);
   if (!trimmed) return { error: "Name is required" };
   const result = await saveProfileVersion(session.sub, profileId, trimmed);
@@ -586,8 +633,8 @@ export async function saveProfileVersionAction(
 export async function restoreProfileVersionAction(versionId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   const result = await restoreProfileVersion(session.sub, versionId);
   if (result.error) return result;
   revalidatePath("/dashboard");
@@ -600,8 +647,8 @@ export async function restoreProfileVersionAction(versionId: string): Promise<{ 
 export async function deleteProfileVersionAction(versionId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
   const result = await deleteProfileVersion(session.sub, versionId);
   if (result.error) return result;
   revalidatePath("/dashboard");

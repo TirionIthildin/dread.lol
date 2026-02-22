@@ -19,10 +19,13 @@ type Props = {
   profileId: string;
   profileSlug: string;
   initialGallery: GalleryItem[];
+  galleryMaxFree?: number;
+  hasPremiumAccess?: boolean;
 };
 
-export default function DashboardGallery({ profileId, profileSlug, initialGallery }: Props) {
+export default function DashboardGallery({ profileId, profileSlug, initialGallery, galleryMaxFree = 0, hasPremiumAccess = false }: Props) {
   const [gallery, setGallery] = useState<GalleryItem[]>(initialGallery);
+  const atGalleryLimit = galleryMaxFree > 0 && !hasPremiumAccess && gallery.length >= galleryMaxFree;
   const [galleryAddUrl, setGalleryAddUrl] = useState("");
   const [galleryAddTitle, setGalleryAddTitle] = useState("");
   const [galleryAddDescription, setGalleryAddDescription] = useState("");
@@ -153,15 +156,22 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
           </ul>
         )}
         <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-4 space-y-4">
-          <p className="text-sm font-medium text-[var(--foreground)]">Add image</p>
+          {atGalleryLimit && (
+            <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3 text-sm text-[var(--muted)]">
+              Free accounts are limited to {galleryMaxFree} images. <Link href="/dashboard/billing" className="text-[var(--accent)] hover:underline">Upgrade to Premium</Link> for unlimited.
+            </div>
+          )}
+          <p className="text-sm font-medium text-[var(--foreground)]">
+            Add image {galleryMaxFree > 0 && !hasPremiumAccess && `(${gallery.length}/${galleryMaxFree})`}
+          </p>
           {galleryAddError && <p className="text-xs text-[var(--warning)]">{galleryAddError}</p>}
-          <label className="block text-xs font-medium text-[var(--muted)]">
+            <label className={`block text-xs font-medium text-[var(--muted)] ${atGalleryLimit ? "opacity-60 pointer-events-none" : ""}`}>
             Upload (JPEG, PNG, GIF, WebP, SVG, max 5 MiB)
             <input
               type="file"
+              disabled={atGalleryLimit || galleryUploading}
               accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
               className="mt-1 block w-full text-sm text-[var(--muted)] file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--accent)]/20 file:px-3 file:py-1.5 file:text-xs file:text-[var(--accent)] file:font-medium"
-              disabled={galleryUploading}
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -228,7 +238,7 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
           </div>
           <button
             type="button"
-            disabled={!galleryAddUrl.trim() || galleryUploading}
+            disabled={!galleryAddUrl.trim() || galleryUploading || atGalleryLimit}
             onClick={async () => {
               setGalleryAddError(null);
               const result = await addGalleryItemAction(profileId, {

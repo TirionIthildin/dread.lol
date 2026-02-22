@@ -12,6 +12,8 @@ const dashIcon = { size: 14, weight: "regular" as const, className: "shrink-0" }
 type Props = {
   profileSlug: string;
   initialPosts: BlogPostRow[];
+  blogPremiumOnly?: boolean;
+  hasPremiumAccess?: boolean;
 };
 
 function formatDate(d: Date): string {
@@ -22,7 +24,8 @@ function formatDate(d: Date): string {
   }).format(new Date(d));
 }
 
-export default function DashboardBlog({ profileSlug, initialPosts }: Props) {
+export default function DashboardBlog({ profileSlug, initialPosts, blogPremiumOnly = true, hasPremiumAccess = false }: Props) {
+  const canCreatePost = !blogPremiumOnly || hasPremiumAccess;
   const [posts, setPosts] = useState<BlogPostRow[]>(initialPosts);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -138,6 +141,12 @@ export default function DashboardBlog({ profileSlug, initialPosts }: Props) {
       <div className="p-4 space-y-4">
         {/* New post form */}
         <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-4 space-y-4">
+          {!canCreatePost ? (
+            <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3 text-sm text-[var(--muted)]">
+              Microblog requires Premium. <Link href="/dashboard/billing" className="text-[var(--accent)] hover:underline">Upgrade</Link> to create posts.
+            </div>
+          ) : (
+          <>
           <p className="text-sm font-medium text-[var(--foreground)]">New post</p>
           {error && <p className="text-xs text-[var(--warning)]">{error}</p>}
           <label className="block text-xs font-medium text-[var(--muted)]">
@@ -169,6 +178,8 @@ export default function DashboardBlog({ profileSlug, initialPosts }: Props) {
           >
             {submitting ? "Publishing…" : "Publish"}
           </button>
+          </>
+          )}
         </div>
 
         {/* Post list */}

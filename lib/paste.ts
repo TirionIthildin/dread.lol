@@ -109,6 +109,20 @@ export interface PasteListItem {
   createdAt: Date;
 }
 
+/** Count pastes created by user in the current calendar month. */
+export async function countPastesByUserIdThisMonth(userId: string): Promise<number> {
+  if (!userId) return 0;
+  const client = await getDb();
+  const dbName = await getDbName();
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const result = await client
+    .db(dbName)
+    .collection<PasteDoc>(COLLECTIONS.pastes)
+    .countDocuments({ userId, createdAt: { $gte: startOfMonth } });
+  return result;
+}
+
 export async function listPastesByUserId(userId: string): Promise<PasteListItem[]> {
   if (!userId) return [];
 

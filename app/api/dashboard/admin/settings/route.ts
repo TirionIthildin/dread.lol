@@ -32,6 +32,10 @@ export async function GET() {
       basicTierName: billing.basicTierName,
       basicPriceCents: billing.basicPriceCents,
       basicPriceFormatted,
+      basicTrialDays: billing.basicTrialDays,
+      galleryMaxFree: billing.galleryMaxFree,
+      blogPremiumOnly: billing.blogPremiumOnly,
+      pasteMaxFreePerMonth: billing.pasteMaxFreePerMonth,
     },
   });
 }
@@ -52,6 +56,10 @@ export async function PATCH(request: NextRequest) {
       basicProductIds?: string[];
       basicTierName?: string;
       basicPriceCents?: number;
+      basicTrialDays?: number;
+      galleryMaxFree?: number;
+      blogPremiumOnly?: boolean;
+      pasteMaxFreePerMonth?: number;
     };
   } = {};
   try {
@@ -84,6 +92,18 @@ export async function PATCH(request: NextRequest) {
     }
     if (billing.basicTierName !== undefined && typeof billing.basicTierName === "string") {
       await setSetting("billing.basicTierName", billing.basicTierName.trim() || "Basic");
+    }
+    if (billing.basicTrialDays !== undefined && typeof billing.basicTrialDays === "number") {
+      await setSetting("billing.basicTrialDays", Math.max(0, Math.round(billing.basicTrialDays)));
+    }
+    if (billing.galleryMaxFree !== undefined && typeof billing.galleryMaxFree === "number") {
+      await setSetting("billing.galleryMaxFree", Math.max(0, Math.round(billing.galleryMaxFree)));
+    }
+    if (typeof billing.blogPremiumOnly === "boolean") {
+      await setSetting("billing.blogPremiumOnly", billing.blogPremiumOnly);
+    }
+    if (billing.pasteMaxFreePerMonth !== undefined && typeof billing.pasteMaxFreePerMonth === "number") {
+      await setSetting("billing.pasteMaxFreePerMonth", Math.max(0, Math.round(billing.pasteMaxFreePerMonth)));
     }
   }
 

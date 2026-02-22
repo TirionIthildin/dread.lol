@@ -6,6 +6,7 @@ import { getBillingSettings } from "@/lib/settings";
 import { getProductsWithTypes, formatPrice } from "@/lib/polar-products";
 import { PolarSuccessHandler } from "@/app/dashboard/PolarSuccessHandler";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
+import { getPremiumAccess } from "@/lib/premium-permissions";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
@@ -20,11 +21,13 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
+import { canUseDashboard as checkDashboardAccess } from "@/lib/dashboard-access";
+
 export default async function DashboardPage() {
   const session = await getSession();
   const user = session ? await getOrCreateUser(session) : null;
-  const canUseDashboard = user && (user.approved || user.isAdmin);
   const billing = await getBillingSettings();
+  const canUseDashboard = checkDashboardAccess(user, billing);
 
   let basicPriceFormatted: string | null = null;
   if (billing.basicEnabled && billing.basicProductIds.length > 0) {
@@ -77,8 +80,9 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [discordBadgeData, widgetPreviewData, shortLinks, versions, robloxLinked, robloxWidgetData] = await Promise.all([
+    const [discordBadgeData, premiumAccess, widgetPreviewData, shortLinks, versions, robloxLinked, robloxWidgetData] = await Promise.all([
       getUserDiscordBadgeData(userId),
+      getPremiumAccess(userId),
       getDiscordWidgetData(
         profile.userId,
         ["accountAge", "joined", "serverCount", "serverInvite"],
@@ -94,7 +98,7 @@ async function MemberProfileSection({
       ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
       ...getPremiumBadgeKeys(discordBadgeData.premiumType),
     ];
-    const baseProfileForPreview = memberProfileToProfile(profile, undefined, discordBadgeData);
+    const baseProfileForPreview = memberProfileToProfile(profile, undefined, discordBadgeData, undefined, premiumAccess.hasAccess);
     if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
     return (
       <DashboardMyProfile
@@ -106,6 +110,7 @@ async function MemberProfileSection({
         availableDiscordBadges={availableDiscordBadges}
         widgetPreviewData={widgetPreviewData}
         robloxLinked={robloxLinked}
+        hasPremiumAccess={premiumAccess.hasAccess}
       />
     );
   } catch (err) {

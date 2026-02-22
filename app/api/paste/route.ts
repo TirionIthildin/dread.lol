@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createPaste, listPastesByUserId } from "@/lib/paste";
+import { createPaste, listPastesByUserId, countPastesByUserIdThisMonth } from "@/lib/paste";
+import { getPremiumAccess } from "@/lib/premium-permissions";
+import { getBillingSettings } from "@/lib/settings";
 import { getSession } from "@/lib/auth/session";
 import { getProfileSlugByUserId } from "@/lib/member-profiles";
 
@@ -22,6 +24,20 @@ export async function POST(request: Request) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Log in to create a paste" }, { status: 401 });
+    }
+
+    const [billing, premiumAccess] = await Promise.all([
+      getBillingSettings(),
+      getPremiumAccess(session.sub),
+    ]);
+    if (billing.pasteMaxFreePerMonth > 0 && !premiumAccess.hasAccess) {
+      const count = await countPastesByUserIdThisMonth(session.sub);
+      if (count >= billing.pasteMaxFreePerMonth) {
+        return NextResponse.json(
+          { error: `Free accounts are limited to ${billing.pasteMaxFreePerMonth} pastes per month. Upgrade to Premium for unlimited.` },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();

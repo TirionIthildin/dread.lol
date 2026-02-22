@@ -6,16 +6,41 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_HOME_URL ||
   "https://dread.lol";
 
+const INTERNAL_HOSTS = ["0.0.0.0", "127.0.0.1", "localhost", "::1"];
+
+function isInternalHost(host: string): boolean {
+  const h = host.split(":")[0]?.toLowerCase().trim() ?? "";
+  return INTERNAL_HOSTS.includes(h) || h.startsWith("127.");
+}
+
 /** Origin from request (e.g. http://localhost:3000 when dev). Use for redirects so users stay on current host. */
 export function getOriginFromRequest(request: { nextUrl?: { origin: string }; headers?: Headers }): string {
-  const origin = request.nextUrl?.origin;
-  if (origin) return origin;
-  const host = request.headers?.get("host");
-  const forwarded = request.headers?.get("x-forwarded-proto");
-  if (host) {
-    const proto = forwarded === "https" ? "https" : forwarded === "http" ? "http" : "http";
-    return `${proto}://${host}`;
+  const h = request.headers;
+  if (!h) return SITE_URL;
+
+  // Prefer proxy headers (Coolify/Traefik/Cloudflare set these for the real client host)
+  const raw =
+    h.get("x-original-host") || h.get("x-forwarded-host") || h.get("host") || h.get("x-real-host") || "";
+  const first = raw.split(",")[0]?.trim() ?? "";
+  const [hostname, port] = first ? first.split(":") : ["", ""];
+  const proto = h.get("x-forwarded-proto") === "https" ? "https" : h.get("x-forwarded-proto") === "http" ? "http" : "https";
+
+  if (hostname && !isInternalHost(hostname)) {
+    const hostPart = port && !["80", "443"].includes(port) ? `${hostname}:${port}` : hostname;
+    return `${proto}://${hostPart}`;
   }
+
+  // Fallback: nextUrl.origin only if it's not internal
+  const nextOrigin = request.nextUrl?.origin;
+  if (nextOrigin) {
+    try {
+      const u = new URL(nextOrigin);
+      if (!isInternalHost(u.hostname)) return nextOrigin;
+    } catch {
+      /* ignore */
+    }
+  }
+
   return SITE_URL;
 }
 

@@ -57,6 +57,14 @@ export interface BillingSettings {
   basicTierName: string;
   /** Price in cents for display (e.g. 400 = $4). */
   basicPriceCents: number;
+  /** Days of free trial before Basic payment required. 0 = no trial. */
+  basicTrialDays: number;
+  /** Max gallery images for free users. Premium users have no limit. 0 = unlimited. */
+  galleryMaxFree: number;
+  /** When true, only Premium users can create blog posts. */
+  blogPremiumOnly: boolean;
+  /** Max pastes per month for free users. Premium unlimited. 0 = unlimited. */
+  pasteMaxFreePerMonth: number;
 }
 
 /**
@@ -96,6 +104,27 @@ export async function getBillingSettings(): Promise<BillingSettings> {
       ? Math.max(0, Math.round(basicPriceCentsFromDb))
       : 400;
 
+  const basicTrialDaysFromDb = await getSetting<number>("billing.basicTrialDays");
+  const basicTrialDays =
+    basicTrialDaysFromDb !== undefined && basicTrialDaysFromDb !== null && typeof basicTrialDaysFromDb === "number"
+      ? Math.max(0, Math.round(basicTrialDaysFromDb))
+      : 14;
+
+  const galleryMaxFreeFromDb = await getSetting<number>("billing.galleryMaxFree");
+  const galleryMaxFree =
+    galleryMaxFreeFromDb !== undefined && galleryMaxFreeFromDb !== null && typeof galleryMaxFreeFromDb === "number"
+      ? Math.max(0, Math.round(galleryMaxFreeFromDb))
+      : 10;
+
+  const blogPremiumOnlyFromDb = await getSetting<boolean>("billing.blogPremiumOnly");
+  const blogPremiumOnly = blogPremiumOnlyFromDb !== undefined && blogPremiumOnlyFromDb !== null ? Boolean(blogPremiumOnlyFromDb) : true;
+
+  const pasteMaxFreePerMonthFromDb = await getSetting<number>("billing.pasteMaxFreePerMonth");
+  const pasteMaxFreePerMonth =
+    pasteMaxFreePerMonthFromDb !== undefined && pasteMaxFreePerMonthFromDb !== null && typeof pasteMaxFreePerMonthFromDb === "number"
+      ? Math.max(0, Math.round(pasteMaxFreePerMonthFromDb))
+      : 10;
+
   const enabled =
     enabledFromDb !== undefined && enabledFromDb !== null
       ? Boolean(enabledFromDb)
@@ -116,6 +145,10 @@ export async function getBillingSettings(): Promise<BillingSettings> {
     basicProductIds,
     basicTierName,
     basicPriceCents,
+    basicTrialDays,
+    galleryMaxFree,
+    blogPremiumOnly,
+    pasteMaxFreePerMonth,
   };
 }
 
