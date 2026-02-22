@@ -13,29 +13,43 @@ function isInternalHost(host: string): boolean {
   return INTERNAL_HOSTS.includes(h) || h.startsWith("127.");
 }
 
-/** Origin from request (e.g. http://localhost:3000 when dev). Use for redirects so users stay on current host. */
+/** Host looks like a public domain (e.g. dread.lol), not internal (dread, 0.0.0.0). */
+function looksLikePublicHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().trim();
+  if (!h) return false;
+  // Allow localhost/127.0.0.1 for local dev
+  if (h === "localhost" || h.startsWith("127.")) return true;
+  if (h === "0.0.0.0" || h === "::1") return false;
+  // Single-word hostnames are typically Docker/service names (dread, mongodb, etc.)
+  if (!h.includes(".")) return false;
+  return true;
+}
+
+const isTesting = process.env.NODE_ENV !== "production";
+
+/** Origin from request. In production, use SITE_URL (dread.lol) by default. In dev/testing, derive from request. */
 export function getOriginFromRequest(request: { nextUrl?: { origin: string }; headers?: Headers }): string {
+  if (!isTesting) return SITE_URL;
+
   const h = request.headers;
   if (!h) return SITE_URL;
 
-  // Prefer proxy headers (Coolify/Traefik/Cloudflare set these for the real client host)
   const raw =
     h.get("x-original-host") || h.get("x-forwarded-host") || h.get("host") || h.get("x-real-host") || "";
   const first = raw.split(",")[0]?.trim() ?? "";
   const [hostname, port] = first ? first.split(":") : ["", ""];
-  const proto = h.get("x-forwarded-proto") === "https" ? "https" : h.get("x-forwarded-proto") === "http" ? "http" : "https";
+  const proto = h.get("x-forwarded-proto") === "https" ? "https" : h.get("x-forwarded-proto") === "http" ? "http" : "http";
 
-  if (hostname && !isInternalHost(hostname)) {
+  if (hostname && looksLikePublicHost(hostname)) {
     const hostPart = port && !["80", "443"].includes(port) ? `${hostname}:${port}` : hostname;
     return `${proto}://${hostPart}`;
   }
 
-  // Fallback: nextUrl.origin only if it's not internal
   const nextOrigin = request.nextUrl?.origin;
   if (nextOrigin) {
     try {
       const u = new URL(nextOrigin);
-      if (!isInternalHost(u.hostname)) return nextOrigin;
+      if (looksLikePublicHost(u.hostname)) return nextOrigin;
     } catch {
       /* ignore */
     }
