@@ -90,6 +90,10 @@ export default function ProfileAudioPlayer({
   }, [playing, resolvedUrl]);
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent("dread:profile-audio-playing", { detail: { playing } }));
+  }, [playing]);
+
+  useEffect(() => {
     if (!style) return;
     const audio = audioRef.current;
     const canvas = canvasRef.current;

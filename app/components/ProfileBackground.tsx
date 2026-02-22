@@ -1,8 +1,24 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { Profile } from "@/lib/profiles";
 import { getThemeClass, getProfileCursorProps } from "@/lib/profile-themes";
+
+const FADE_MS = 350;
+
+function fadeAudio(audio: HTMLAudioElement, toVolume: number, onDone?: () => void): void {
+  const start = audio.volume;
+  const diff = toVolume - start;
+  const startTime = performance.now();
+  const step = (now: number) => {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / FADE_MS);
+    audio.volume = start + diff * (1 - (1 - t) ** 2);
+    if (t < 1) requestAnimationFrame(step);
+    else onDone?.();
+  };
+  requestAnimationFrame(step);
+}
 
 /** Resolve URL for media (handles relative paths). */
 function resolveMediaUrl(url: string): string {
@@ -55,6 +71,24 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     }
     setUnlocked(true);
   }, [customBgType, backgroundAudioUrl]);
+
+  useEffect(() => {
+    if (!backgroundAudioUrl) return;
+    const handler = (e: Event) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const playing = (e as CustomEvent<{ playing: boolean }>).detail?.playing;
+      if (playing) {
+        fadeAudio(audio, 0, () => audio.pause());
+      } else if (playing === false && unlocked && audio.paused) {
+        audio.volume = 0;
+        audio.play().catch(() => {});
+        fadeAudio(audio, 1);
+      }
+    };
+    window.addEventListener("dread:profile-audio-playing", handler as EventListener);
+    return () => window.removeEventListener("dread:profile-audio-playing", handler as EventListener);
+  }, [backgroundAudioUrl, unlocked]);
 
   const content = (
     <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center">

@@ -1513,3 +1513,41 @@ export async function deleteShortLink(linkId: string, userId: string): Promise<v
   await ensureProfileOwnership(link.profileId.toString(), userId);
   await db.collection(COLLECTIONS.profileShortLinks).deleteOne({ _id: oid });
 }
+
+/** Replace all short links for a profile. Deletes existing and adds new ones. */
+export async function replaceShortLinks(
+  profileId: string,
+  userId: string,
+  links: { slug: string; url: string }[]
+): Promise<void> {
+  await ensureProfileOwnership(profileId, userId);
+
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    throw new Error("Invalid profile");
+  }
+
+  await client.db(dbName).collection(COLLECTIONS.profileShortLinks).deleteMany({ profileId: oid });
+  for (const link of links) {
+    const slug = normalizeShortLinkSlug(link.slug);
+    const url = link.url?.trim();
+    if (!slug || !url?.startsWith("http")) continue;
+    try {
+      await client.db(dbName).collection(COLLECTIONS.profileShortLinks).insertOne({
+        _id: new ObjectId(),
+        profileId: oid,
+        slug,
+        url: url.slice(0, 2048),
+      });
+    } catch (err) {
+      if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 11000) {
+        continue;
+      }
+      throw err;
+    }
+  }
+}

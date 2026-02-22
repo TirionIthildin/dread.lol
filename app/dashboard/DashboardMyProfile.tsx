@@ -22,28 +22,36 @@ import {
   GridFour,
   Sparkle,
   SquaresFour,
+  ClockCounterClockwise,
+  ArrowCounterClockwise,
+  FloppyDisk,
 } from "@phosphor-icons/react";
 import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import SearchableSelect from "@/app/components/SearchableSelect";
 import type { ProfileRow } from "@/lib/db/schema";
 import {
   updateProfileAction,
   addShortLinkAction,
   deleteShortLinkAction,
+  saveProfileVersionAction,
+  restoreProfileVersionAction,
+  deleteProfileVersionAction,
   type ProfileFormState,
 } from "@/app/dashboard/actions";
 import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
 import type { ProfileShortLink } from "@/lib/member-profiles";
+import type { ProfileVersionRow } from "@/lib/profile-versions";
 import { ACCENT_COLOR_OPTIONS, BANNER_STYLE_OPTIONS } from "@/lib/profile-themes";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
-type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "audio";
+type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "audio" | "versions";
 const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNode }[] = [
   { id: "basics", label: "Basics", icon: <Notebook {...dashIcon} aria-hidden /> },
   { id: "links", label: "Links", icon: <LinkIcon {...dashIcon} aria-hidden /> },
@@ -52,6 +60,7 @@ const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNo
   { id: "display", label: "Display & SEO", icon: <Palette {...dashIcon} aria-hidden /> },
   { id: "fun", label: "Styling", icon: <SlidersHorizontal {...dashIcon} aria-hidden /> },
   { id: "audio", label: "Audio Manager", icon: <MusicNotes {...dashIcon} aria-hidden /> },
+  { id: "versions", label: "Versions", icon: <ClockCounterClockwise {...dashIcon} aria-hidden /> },
 ];
 
 
@@ -76,6 +85,8 @@ const BACKGROUND_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/webm", "video
 interface DashboardMyProfileProps {
   profile: ProfileRow;
   shortLinks?: ProfileShortLink[];
+  /** Saved profile versions (up to 5). */
+  versions?: ProfileVersionRow[];
   /** Current user's Discord avatar URL (from session), for "Use Discord avatar" button. */
   discordAvatarUrl?: string | null;
 }
@@ -117,6 +128,11 @@ const TIMEZONE_GROUPS: { label: string; zones: string[] }[] = [
   { label: "Europe", zones: ["Europe/London", "Europe/Berlin", "Europe/Paris", "Europe/Amsterdam", "Europe/Dublin", "Europe/Madrid", "Europe/Rome", "Europe/Stockholm", "Europe/Copenhagen", "Europe/Warsaw", "Europe/Prague", "Europe/Vienna", "Europe/Zurich", "Europe/Athens", "Europe/Helsinki", "Europe/Istanbul"] },
   { label: "Asia / Pacific", zones: ["Asia/Tokyo", "Asia/Seoul", "Asia/Shanghai", "Asia/Hong_Kong", "Asia/Singapore", "Asia/Bangkok", "Asia/Kolkata", "Asia/Dubai", "Australia/Sydney", "Australia/Melbourne", "Pacific/Auckland"] },
 ];
+
+const TIMEZONE_SELECT_GROUPS = TIMEZONE_GROUPS.map((g) => ({
+  label: g.label,
+  options: g.zones.map((tz) => ({ value: tz, label: tz.replace(/_/g, " ") })),
+}));
 
 type LinkType = (typeof LINK_TYPES)[number]["value"];
 
@@ -235,11 +251,175 @@ function TabButton({
   );
 }
 
+function ProfileVersionsPanel({
+  profileId,
+  versions,
+  onSaved,
+  onRestored,
+  onDeleted,
+}: {
+  profileId: string;
+  versions: ProfileVersionRow[];
+  onSaved: () => void;
+  onRestored: () => void;
+  onDeleted: () => void;
+}) {
+  const [saveName, setSaveName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [restoreId, setRestoreId] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleSave = useCallback(async () => {
+    const name = saveName.trim();
+    if (!name) {
+      setSaveError("Enter a name for this version");
+      return;
+    }
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const result = await saveProfileVersionAction(profileId, name);
+      if (result.error) {
+        setSaveError(result.error);
+      } else {
+        setSaveName("");
+        toast.success("Version saved");
+        onSaved();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [profileId, saveName, onSaved]);
+
+  const handleRestore = useCallback(async () => {
+    if (!restoreId) return;
+    setRestoring(true);
+    try {
+      const result = await restoreProfileVersionAction(restoreId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Profile restored");
+        setRestoreId(null);
+        onRestored();
+      }
+    } finally {
+      setRestoring(false);
+    }
+  }, [restoreId, onRestored]);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const result = await deleteProfileVersionAction(deleteId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Version deleted");
+        setDeleteId(null);
+        onDeleted();
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteId, onDeleted]);
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={saveName}
+          onChange={(e) => setSaveName(e.target.value.slice(0, 80))}
+          placeholder="e.g. Summer 2025"
+          maxLength={80}
+          className="flex-1 min-w-[12rem] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          <FloppyDisk size={16} weight="regular" />
+          {saving ? "Saving…" : "Save current"}
+        </button>
+      </div>
+      {saveError && <p className="text-xs text-[var(--warning)]">{saveError}</p>}
+      {versions.length > 0 ? (
+        <ul className="space-y-2">
+          {versions.map((v) => (
+            <li
+              key={v.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 px-3 py-2.5"
+            >
+              <div className="min-w-0 flex-1">
+                <span className="text-sm font-medium text-[var(--foreground)] truncate block">{v.name}</span>
+                <span className="text-[10px] text-[var(--muted)]">
+                  {new Date(v.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setRestoreId(v.id)}
+                  className="rounded p-2 text-[var(--muted)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] transition-colors"
+                  title="Restore"
+                  aria-label={`Restore ${v.name}`}
+                >
+                  <ArrowCounterClockwise size={16} weight="regular" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteId(v.id)}
+                  className="rounded p-2 text-[var(--muted)] hover:bg-[var(--warning)]/15 hover:text-[var(--warning)] transition-colors"
+                  title="Delete"
+                  aria-label={`Delete ${v.name}`}
+                >
+                  <Trash size={16} weight="regular" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-[var(--muted)]">No saved versions yet. Save your current profile above.</p>
+      )}
+
+      <ConfirmDialog
+        open={restoreId !== null}
+        title="Restore this version?"
+        message="Your current profile will be replaced. Make sure to save any unsaved changes in the Editor first."
+        confirmLabel="Restore"
+        variant="default"
+        loading={restoring}
+        onConfirm={handleRestore}
+        onCancel={() => setRestoreId(null)}
+      />
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete this version?"
+        message="This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+    </>
+  );
+}
+
 type DashboardTab = "editor" | "preview";
 
 export default function DashboardMyProfile({
   profile,
   shortLinks: initialShortLinks = [],
+  versions: initialVersions = [],
   discordAvatarUrl,
 }: DashboardMyProfileProps) {
   const [tab, setTab] = useState<DashboardTab>("editor");
@@ -627,20 +807,19 @@ export default function DashboardMyProfile({
             </label>
             <label className="block text-xs font-medium text-[var(--muted)]">
               Local time <span className="text-[var(--muted)]/70">(timezone — your current time is shown on profile)</span>
-              <select
-                name="timezone"
-                defaultValue={(profile as { timezone?: string }).timezone ?? ""}
-                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              >
-                <option value="">None</option>
-                {TIMEZONE_GROUPS.map((group) => (
-                  <optgroup key={group.label} label={group.label}>
-                    {group.zones.map((tz) => (
-                      <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <div className="mt-1">
+                <SearchableSelect
+                  name="timezone"
+                  defaultValue={(profile as { timezone?: string }).timezone ?? ""}
+                  groups={[
+                    { label: "", options: [{ value: "", label: "None" }] },
+                    ...TIMEZONE_SELECT_GROUPS,
+                  ]}
+                  placeholder="None"
+                  searchPlaceholder="Search timezone…"
+                  ariaLabel="Timezone"
+                />
+              </div>
             </label>
             <label className="block text-xs font-medium text-[var(--muted)]">
               When you&apos;re usually online <span className="text-[var(--muted)]/70">(e.g. Usually 6pm–12am EST)</span>
@@ -656,36 +835,43 @@ export default function DashboardMyProfile({
             <label className="block text-xs font-medium text-[var(--muted)]">
               Birthday <span className="text-[var(--muted)]/70">(month & day only — shown as countdown on profile)</span>
               <div className="mt-1 flex gap-2">
-                <select
-                  name="birthdayMonth"
-                  defaultValue={(() => {
-                    const b = (profile as { birthday?: string }).birthday;
-                    if (!b || !/^\d{2}-\d{2}$/.test(b)) return "";
-                    return b.slice(0, 2);
-                  })()}
-                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">Month</option>
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const mm = String(i + 1).padStart(2, "0");
-                    const name = new Date(2000, i, 1).toLocaleString("default", { month: "long" });
-                    return <option key={mm} value={mm}>{name}</option>;
-                  })}
-                </select>
-                <select
-                  name="birthdayDay"
-                  defaultValue={(() => {
-                    const b = (profile as { birthday?: string }).birthday;
-                    if (!b || !/^\d{2}-\d{2}$/.test(b)) return "";
-                    return b.slice(3, 5);
-                  })()}
-                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">Day</option>
-                  {Array.from({ length: 31 }, (_, i) => (
-                    <option key={i + 1} value={String(i + 1).padStart(2, "0")}>{i + 1}</option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <SearchableSelect
+                    name="birthdayMonth"
+                    defaultValue={(() => {
+                      const b = (profile as { birthday?: string }).birthday;
+                      if (!b || !/^\d{2}-\d{2}$/.test(b)) return "";
+                      return b.slice(0, 2);
+                    })()}
+                    options={[
+                      { value: "", label: "Month" },
+                      ...Array.from({ length: 12 }, (_, i) => {
+                        const mm = String(i + 1).padStart(2, "0");
+                        const monthName = new Date(2000, i, 1).toLocaleString("default", { month: "long" });
+                        return { value: mm, label: monthName };
+                      }),
+                    ]}
+                    searchPlaceholder="Search month…"
+                  />
+                </div>
+                <div className="flex-1">
+                  <SearchableSelect
+                    name="birthdayDay"
+                    defaultValue={(() => {
+                      const b = (profile as { birthday?: string }).birthday;
+                      if (!b || !/^\d{2}-\d{2}$/.test(b)) return "";
+                      return b.slice(3, 5);
+                    })()}
+                    options={[
+                      { value: "", label: "Day" },
+                      ...Array.from({ length: 31 }, (_, i) => ({
+                        value: String(i + 1).padStart(2, "0"),
+                        label: String(i + 1),
+                      })),
+                    ]}
+                    searchPlaceholder="Search day…"
+                  />
+                </div>
               </div>
             </label>
             <label className="block text-xs font-medium text-[var(--muted)]">
@@ -731,18 +917,21 @@ export default function DashboardMyProfile({
             </label>
             <label className="block text-xs font-medium text-[var(--muted)]">
               Availability
-              <select
-                name="availability"
-                defaultValue={(profile as { availability?: string }).availability ?? ""}
-                className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              >
-                <option value="">None</option>
-                <option value="Open to work">Open to work</option>
-                <option value="Open to collab">Open to collab</option>
-                <option value="Just vibing">Just vibing</option>
-                <option value="Busy">Busy</option>
-                <option value="Away">Away</option>
-              </select>
+              <div className="mt-1">
+                <SearchableSelect
+                  name="availability"
+                  defaultValue={(profile as { availability?: string }).availability ?? ""}
+                  options={[
+                    { value: "", label: "None" },
+                    { value: "Open to work", label: "Open to work" },
+                    { value: "Open to collab", label: "Open to collab" },
+                    { value: "Just vibing", label: "Just vibing" },
+                    { value: "Busy", label: "Busy" },
+                    { value: "Away", label: "Away" },
+                  ]}
+                  searchThreshold={10}
+                />
+              </div>
             </label>
             <label className="block text-xs font-medium text-[var(--muted)]">
               Current focus <span className="text-[var(--muted)]/70">(manual status, e.g. &quot;Working on X&quot;, &quot;Taking a break&quot;)</span>
@@ -774,17 +963,20 @@ export default function DashboardMyProfile({
               </p>
               <label className="block pt-2 text-xs font-medium text-[var(--muted)]">
                 Display style
-                <select
-                  name="discordPresenceStyle"
-                  defaultValue={(profile as { discordPresenceStyle?: string }).discordPresenceStyle ?? "widget"}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="widget">Widget — unified card (default)</option>
-                  <option value="pills">Pills — status pill + activity pills</option>
-                  <option value="minimal">Minimal — dot and compact text</option>
-                  <option value="stacked">Stacked — status + activities as cards</option>
-                  <option value="inline">Inline — single condensed row</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="discordPresenceStyle"
+                    defaultValue={(profile as { discordPresenceStyle?: string }).discordPresenceStyle ?? "widget"}
+                    options={[
+                      { value: "widget", label: "Widget — unified card (default)" },
+                      { value: "pills", label: "Pills — status pill + activity pills" },
+                      { value: "minimal", label: "Minimal — dot and compact text" },
+                      { value: "stacked", label: "Stacked — status + activities as cards" },
+                      { value: "inline", label: "Inline — single condensed row" },
+                    ]}
+                    searchThreshold={10}
+                  />
+                </div>
               </label>
             </div>
             <div className="space-y-2">
@@ -906,25 +1098,24 @@ export default function DashboardMyProfile({
               <div className="space-y-3">
                 {linkEntries.map((entry, index) => (
                   <div key={index} className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/60 p-2">
-                    <label className="w-32 shrink-0 text-xs font-medium text-[var(--muted)]">
+                    <label className="w-36 shrink-0 text-xs font-medium text-[var(--muted)]">
                       Icon
-                      <select
-                        value={entry.type}
-                        onChange={(e) =>
-                          setLinkEntries((prev) =>
-                            prev.map((p, i) =>
-                              i === index ? { ...p, type: e.target.value as LinkType } : p
+                      <div className="mt-1">
+                        <SearchableSelect
+                          value={entry.type}
+                          onChange={(v) =>
+                            setLinkEntries((prev) =>
+                              prev.map((p, i) =>
+                                i === index ? { ...p, type: v as LinkType } : p
+                              )
                             )
-                          )
-                        }
-                        className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                      >
-                        {LINK_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
+                          }
+                          options={LINK_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                          placeholder="Select link type…"
+                          searchPlaceholder="Search…"
+                          searchThreshold={8}
+                        />
+                      </div>
                     </label>
                     {(entry.type === "custom" && (
                       <label className="min-w-[80px] flex-1 text-xs font-medium text-[var(--muted)]">
@@ -1092,19 +1283,16 @@ export default function DashboardMyProfile({
               <div className="flex flex-wrap gap-4 shrink-0">
                 <label className="block text-xs font-medium text-[var(--muted)]">
                   Banner gradient
-                  <select
-                    name="bannerStyle"
-                    defaultValue={
-                      profile.bannerStyle ?? (profile.bannerAnimatedFire ? "fire" : "accent")
-                    }
-                    className="mt-1 block w-full max-w-xs rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                  >
-                    {BANNER_STYLE_OPTIONS.map(({ value, label }) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mt-1 max-w-xs">
+                    <SearchableSelect
+                      name="bannerStyle"
+                      defaultValue={
+                        profile.bannerStyle ?? (profile.bannerAnimatedFire ? "fire" : "accent")
+                      }
+                      options={BANNER_STYLE_OPTIONS}
+                      searchPlaceholder="Search…"
+                    />
+                  </div>
                 </label>
                 <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)] pt-6">
                   <input type="checkbox" name="bannerSmall" defaultChecked={profile.bannerSmall ?? false} className="rounded border-[var(--border)]" />
@@ -1234,31 +1422,33 @@ export default function DashboardMyProfile({
               <p className="text-xs font-medium text-[var(--muted)] mb-1">Page theme, accent color, terminal prompt, greeting, card look</p>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Page theme
-                <select
-                  name="pageTheme"
-                  defaultValue={(profile as { pageTheme?: string }).pageTheme ?? "classic-dark"}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="classic-dark">Classic — dark</option>
-                  <option value="classic-light">Classic — light</option>
-                  <option value="minimalist-light">Minimalist — light</option>
-                  <option value="minimalist-dark">Minimalist — dark</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="pageTheme"
+                    defaultValue={(profile as { pageTheme?: string }).pageTheme ?? "classic-dark"}
+                    options={[
+                      { value: "classic-dark", label: "Classic — dark" },
+                      { value: "classic-light", label: "Classic — light" },
+                      { value: "minimalist-light", label: "Minimalist — light" },
+                      { value: "minimalist-dark", label: "Minimalist — dark" },
+                    ]}
+                    searchThreshold={10}
+                  />
+                </div>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Accent color
-                <select
-                  name="accentColor"
-                  defaultValue={profile.accentColor ?? ""}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">Default (cyan)</option>
-                  {ACCENT_COLOR_OPTIONS.map(({ value, label }) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="accentColor"
+                    defaultValue={profile.accentColor ?? ""}
+                    options={[
+                      { value: "", label: "Default (cyan)" },
+                      ...ACCENT_COLOR_OPTIONS,
+                    ]}
+                    searchPlaceholder="Search color…"
+                  />
+                </div>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Terminal prompt <span className="text-[var(--muted)]/70">(e.g. $, &gt;, λ, ❯)</span>
@@ -1284,44 +1474,53 @@ export default function DashboardMyProfile({
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Avatar shape
-                <select
-                  name="avatarShape"
-                  defaultValue={(profile as { avatarShape?: string }).avatarShape ?? "circle"}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="circle">Circle</option>
-                  <option value="rounded">Rounded square</option>
-                  <option value="square">Square</option>
-                  <option value="soft">Soft (rounded-xl)</option>
-                  <option value="hexagon">Hexagon</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="avatarShape"
+                    defaultValue={(profile as { avatarShape?: string }).avatarShape ?? "circle"}
+                    options={[
+                      { value: "circle", label: "Circle" },
+                      { value: "rounded", label: "Rounded square" },
+                      { value: "square", label: "Square" },
+                      { value: "soft", label: "Soft (rounded-xl)" },
+                      { value: "hexagon", label: "Hexagon" },
+                    ]}
+                    searchThreshold={10}
+                  />
+                </div>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Layout density
-                <select
-                  name="layoutDensity"
-                  defaultValue={(profile as { layoutDensity?: string }).layoutDensity ?? "default"}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="default">Default</option>
-                  <option value="compact">Compact</option>
-                  <option value="spacious">Spacious</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="layoutDensity"
+                    defaultValue={(profile as { layoutDensity?: string }).layoutDensity ?? "default"}
+                    options={[
+                      { value: "default", label: "Default" },
+                      { value: "compact", label: "Compact" },
+                      { value: "spacious", label: "Spacious" },
+                    ]}
+                    searchThreshold={10}
+                  />
+                </div>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Card style
-                <select
-                  name="cardStyle"
-                  defaultValue={profile.cardStyle ?? "default"}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="default">Default (rounded)</option>
-                  <option value="sharp">Sharp corners</option>
-                  <option value="glass">Glass (blur)</option>
-                  <option value="neon">Neon (accent glow)</option>
-                  <option value="minimal">Minimal</option>
-                  <option value="elevated">Elevated</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="cardStyle"
+                    defaultValue={profile.cardStyle ?? "default"}
+                    options={[
+                      { value: "default", label: "Default (rounded)" },
+                      { value: "sharp", label: "Sharp corners" },
+                      { value: "glass", label: "Glass (blur)" },
+                      { value: "neon", label: "Neon (accent glow)" },
+                      { value: "minimal", label: "Minimal" },
+                      { value: "elevated", label: "Elevated" },
+                    ]}
+                    searchThreshold={10}
+                  />
+                </div>
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Box opacity
@@ -1343,18 +1542,21 @@ export default function DashboardMyProfile({
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Font
-                <select
-                  name="customFont"
-                  value={customFontValue}
-                  onChange={(e) => { setCustomFontValue(e.target.value); if (e.target.value !== "custom") setCustomFontUrlValue(""); }}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">Default (JetBrains Mono)</option>
-                  <option value="jetbrains-mono">JetBrains Mono</option>
-                  <option value="fira-code">Fira Code</option>
-                  <option value="space-mono">Space Mono</option>
-                  <option value="custom">Custom (upload)</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="customFont"
+                    value={customFontValue}
+                    onChange={(v) => { setCustomFontValue(v); if (v !== "custom") setCustomFontUrlValue(""); }}
+                    options={[
+                      { value: "", label: "Default (JetBrains Mono)" },
+                      { value: "jetbrains-mono", label: "JetBrains Mono" },
+                      { value: "fira-code", label: "Fira Code" },
+                      { value: "space-mono", label: "Space Mono" },
+                      { value: "custom", label: "Custom (upload)" },
+                    ]}
+                    searchThreshold={10}
+                  />
+                </div>
                 {customFontValue === "custom" && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <input type="hidden" name="customFontUrl" value={customFontUrlValue} />
@@ -1408,35 +1610,48 @@ export default function DashboardMyProfile({
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Cursor <span className="text-[var(--muted)]/70">(when viewing your profile)</span>
-                <select
-                  name="cursorStyle"
-                  value={cursorStyleValue}
-                  onChange={(e) => { setCursorStyleValue(e.target.value); if (e.target.value !== "custom") setCursorImageUrlValue(""); }}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="default">Default</option>
-                  <optgroup label="Basic">
-                    <option value="crosshair">Crosshair</option>
-                    <option value="pointer">Pointer</option>
-                    <option value="text">Text</option>
-                    <option value="grab">Grab</option>
-                  </optgroup>
-                  <optgroup label="Themed shapes">
-                    <option value="minimal">Minimal (dot)</option>
-                    <option value="beam">Beam (terminal)</option>
-                    <option value="spot">Spot (spotlight)</option>
-                    <option value="ring">Ring</option>
-                    <option value="neon">Neon dot</option>
-                    <option value="bolt">Bolt (lightning)</option>
-                    <option value="cross">Cross</option>
-                    <option value="hex">Hexagon</option>
-                  </optgroup>
-                  <optgroup label="Effects">
-                    <option value="glow">Glow follower</option>
-                    <option value="trail">Trail</option>
-                  </optgroup>
-                  <option value="custom">Custom (upload)</option>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="cursorStyle"
+                    value={cursorStyleValue}
+                    onChange={(v) => { setCursorStyleValue(v); if (v !== "custom") setCursorImageUrlValue(""); }}
+                    groups={[
+                      { label: "General", options: [{ value: "default", label: "Default" }] },
+                      {
+                        label: "Basic",
+                        options: [
+                          { value: "crosshair", label: "Crosshair" },
+                          { value: "pointer", label: "Pointer" },
+                          { value: "text", label: "Text" },
+                          { value: "grab", label: "Grab" },
+                        ],
+                      },
+                      {
+                        label: "Themed shapes",
+                        options: [
+                          { value: "minimal", label: "Minimal (dot)" },
+                          { value: "beam", label: "Beam (terminal)" },
+                          { value: "spot", label: "Spot (spotlight)" },
+                          { value: "ring", label: "Ring" },
+                          { value: "neon", label: "Neon dot" },
+                          { value: "bolt", label: "Bolt (lightning)" },
+                          { value: "cross", label: "Cross" },
+                          { value: "hex", label: "Hexagon" },
+                        ],
+                      },
+                      {
+                        label: "Effects",
+                        options: [
+                          { value: "glow", label: "Glow follower" },
+                          { value: "trail", label: "Trail" },
+                        ],
+                      },
+                      { label: "Custom", options: [{ value: "custom", label: "Custom (upload)" }] },
+                    ]}
+                    placeholder="Default"
+                    searchPlaceholder="Search cursor style…"
+                  />
+                </div>
                 {cursorStyleValue === "custom" && (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <input type="hidden" name="cursorImageUrl" value={cursorImageUrlValue} />
@@ -1488,32 +1703,42 @@ export default function DashboardMyProfile({
               </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Animations
-                <select
-                  name="animationPreset"
-                  defaultValue={(profile as { animationPreset?: string }).animationPreset ?? "none"}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="none">None</option>
-                  <optgroup label="Entrance">
-                    <option value="fade-in">Fade in</option>
-                    <option value="slide-up">Slide up</option>
-                    <option value="scale-in">Scale in</option>
-                    <option value="bounce-in">Bounce in</option>
-                    <option value="flip-in">Flip in</option>
-                    <option value="slide-in-left">Slide in from left</option>
-                    <option value="zoom-bounce">Zoom bounce</option>
-                    <option value="blur-in">Blur in</option>
-                    <option value="neon-glow">Neon glow</option>
-                    <option value="drift-in">Drift in</option>
-                    <option value="stagger">Stagger cascade</option>
-                  </optgroup>
-                  <optgroup label="Ongoing / Hover">
-                    <option value="float">Gentle float</option>
-                    <option value="pulse-border">Pulse border</option>
-                    <option value="glow">Glow on hover</option>
-                    <option value="shimmer">Shimmer on links</option>
-                  </optgroup>
-                </select>
+                <div className="mt-1">
+                  <SearchableSelect
+                    name="animationPreset"
+                    defaultValue={(profile as { animationPreset?: string }).animationPreset ?? "none"}
+                    groups={[
+                      { label: "General", options: [{ value: "none", label: "None" }] },
+                      {
+                        label: "Entrance",
+                        options: [
+                          { value: "fade-in", label: "Fade in" },
+                          { value: "slide-up", label: "Slide up" },
+                          { value: "scale-in", label: "Scale in" },
+                          { value: "bounce-in", label: "Bounce in" },
+                          { value: "flip-in", label: "Flip in" },
+                          { value: "slide-in-left", label: "Slide in from left" },
+                          { value: "zoom-bounce", label: "Zoom bounce" },
+                          { value: "blur-in", label: "Blur in" },
+                          { value: "neon-glow", label: "Neon glow" },
+                          { value: "drift-in", label: "Drift in" },
+                          { value: "stagger", label: "Stagger cascade" },
+                        ],
+                      },
+                      {
+                        label: "Ongoing / Hover",
+                        options: [
+                          { value: "float", label: "Gentle float" },
+                          { value: "pulse-border", label: "Pulse border" },
+                          { value: "glow", label: "Glow on hover" },
+                          { value: "shimmer", label: "Shimmer on links" },
+                        ],
+                      },
+                    ]}
+                    placeholder="None"
+                    searchPlaceholder="Search animation…"
+                  />
+                </div>
                 <p className="mt-0.5 text-[10px] text-[var(--muted)]">Entrance animations play on load. Ongoing/hover effects add ambient motion.</p>
               </label>
               <div className="space-y-5">
@@ -1943,6 +2168,29 @@ export default function DashboardMyProfile({
                       )}
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+
+            <div className={activeEditorSection === "versions" ? "block space-y-4" : "hidden"}>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden transition-all hover:border-[var(--border-bright)]">
+                <div className="px-4 py-3 border-b border-[var(--border)]/50 flex items-center gap-2">
+                  <div className="rounded-lg bg-[var(--accent)]/10 p-1.5">
+                    <ClockCounterClockwise size={18} weight="duotone" className="text-[var(--accent)]" aria-hidden />
+                  </div>
+                  <span className="text-sm font-medium text-[var(--foreground)]">Save & restore</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <p className="text-xs text-[var(--muted)]">
+                    Save up to 5 snapshots of your profile (including gallery and short links). Each version keeps its own copy of uploaded files.
+                  </p>
+                  <ProfileVersionsPanel
+                    profileId={profile.id}
+                    versions={initialVersions}
+                    onSaved={() => router.refresh()}
+                    onRestored={() => router.refresh()}
+                    onDeleted={() => router.refresh()}
+                  />
                 </div>
               </div>
             </div>

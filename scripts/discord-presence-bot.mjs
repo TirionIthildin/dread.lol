@@ -20,6 +20,7 @@ const PREMIUM_KEY_PREFIX = "discord:premium:";
 const LASTSEEN_KEY_PREFIX = "discord:lastseen:";
 const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 h
 const LASTSEEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+const LASTSEEN_SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 min – presenceUpdate only fires on *changes*, so we periodically refresh lastSeen for users currently online
 const DISCORD_API = "https://discord.com/api/v10";
 
 const token = process.env.DISCORD_BOT_TOKEN?.trim();
@@ -126,6 +127,39 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   fetchAndStoreUserFlags(userId).catch(() => {});
 });
 
+/**
+ * Refresh lastSeen for all users currently online/idle/dnd.
+ * presenceUpdate only fires when status *changes*, so users who stay online for long periods
+ * never trigger an update. This sweep keeps lastSeen accurate.
+ */
+function sweepLastSeenForOnlineUsers() {
+  const guildsToCheck = guildId
+    ? [client.guilds.cache.get(guildId)].filter(Boolean)
+    : [...client.guilds.cache.values()];
+  const now = String(Date.now());
+  let count = 0;
+  for (const guild of guildsToCheck) {
+    const presences = guild.presences?.cache;
+    if (!presences) continue;
+    for (const presence of presences.values()) {
+      if (presence.status && presence.status !== "offline") {
+        if (guildId && presence.guild?.id !== guild.id) continue;
+        const uid = presence.userId ?? presence.user?.id;
+        if (uid) {
+          const lastSeenKey = LASTSEEN_KEY_PREFIX + uid;
+          redis.setex(lastSeenKey, LASTSEEN_TTL_SECONDS, now).catch((err) => {
+            console.error("[Redis] lastseen sweep", uid, err?.message ?? err);
+          });
+          count += 1;
+        }
+      }
+    }
+  }
+  if (count > 0) {
+    console.log(`[Discord] Sweep: updated lastSeen for ${count} online user(s)`);
+  }
+}
+
 client.on("clientReady", () => {
   console.log(`[Discord] Logged in as ${client.user?.tag ?? "?"}`);
   if (guildId) {
@@ -134,6 +168,9 @@ client.on("clientReady", () => {
   } else {
     console.log("[Discord] Watching all guilds (set DISCORD_GUILD_ID to limit)");
   }
+  // Initial sweep after a short delay (let presence cache populate)
+  setTimeout(sweepLastSeenForOnlineUsers, 30_000);
+  setInterval(sweepLastSeenForOnlineUsers, LASTSEEN_SWEEP_INTERVAL_MS);
 });
 
 client.on("error", (err) => console.error("[Discord]", err.message));

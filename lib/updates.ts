@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Profile versions",
+    description: "Save and restore up to 5 snapshots of your profile, including gallery and short links.",
+  },
+  {
+    date: "2026-02",
     title: "Page themes",
     description: "Choose Classic or Minimalist with light or dark mode for your profile.",
   },

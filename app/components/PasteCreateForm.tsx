@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CopyButton from "@/app/components/CopyButton";
+import SearchableSelect from "@/app/components/SearchableSelect";
 
 const LANGUAGES = [
   { value: "markdown", label: "Markdown" },
@@ -176,22 +177,18 @@ export default function PasteCreateForm({
           </Link>
         </div>
       )}
-      <div>
-        <label htmlFor="paste-language" className="sr-only">
-          Language
-        </label>
-        <select
-          id="paste-language"
+      <div className="mb-3 max-w-[200px]">
+        <SearchableSelect
           value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="w-full max-w-[200px] mb-3 px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg)] text-[var(--foreground)] text-sm focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] focus:outline-none"
-        >
-          {LANGUAGES.map((opt) => (
-            <option key={opt.value || "plain"} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          onChange={setLanguage}
+          options={LANGUAGES.map((opt) => ({
+            value: opt.value || "",
+            label: opt.label,
+          }))}
+          placeholder="Select language…"
+          searchPlaceholder="Search language…"
+          ariaLabel="Paste language"
+        />
       </div>
       <div>
         <label htmlFor="paste-content" className="sr-only">

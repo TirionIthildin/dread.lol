@@ -32,6 +32,7 @@ export const COLLECTIONS = {
   profileTemplates: "profile_templates",
   templateFavorites: "template_favorites",
   templateReports: "template_reports",
+  profileVersions: "profile_versions",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

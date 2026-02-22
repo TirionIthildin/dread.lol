@@ -72,6 +72,8 @@ try {
   await db.collection("profile_templates").createIndex({ status: 1, applyCount: -1 });
   await db.collection("profile_templates").createIndex({ status: 1, createdAt: -1 });
 
+  await db.collection("profile_versions").createIndex({ userId: 1, createdAt: -1 });
+
   console.log("MongoDB indexes created.");
 } catch (err) {
   console.error("Migration failed:", err.message);

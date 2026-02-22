@@ -13,6 +13,7 @@ import {
   CaretRight,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import SearchableSelect from "@/app/components/SearchableSelect";
 import type { TemplateData } from "@/lib/marketplace-templates";
 import { ACCENT_THEMES } from "@/lib/profile-themes";
 
@@ -362,18 +363,15 @@ export default function DashboardMarketplaceEditPage({
               </div>
               <div>
                 <label className="block text-xs font-medium text-[var(--muted)] mb-1">Accent color</label>
-                <select
+                <SearchableSelect
                   value={data.accentColor ?? ""}
-                  onChange={(e) => updateData("accentColor", e.target.value || null)}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-                >
-                  <option value="">Default</option>
-                  {ACCENT_THEMES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => updateData("accentColor", v || null)}
+                  options={[
+                    { value: "", label: "Default" },
+                    ...ACCENT_THEMES.map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) })),
+                  ]}
+                  searchPlaceholder="Search…"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-[var(--muted)] mb-1">

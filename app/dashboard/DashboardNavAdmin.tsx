@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { GearSix, X, Users, Shield, GridFour, Star, CaretRight } from "@phosphor-icons/react";
 import AdminUserModal, { type AdminUser } from "@/app/dashboard/AdminUserModal";
 import AdminBadgesPanel from "@/app/dashboard/AdminBadgesPanel";
 import AdminTemplatesPanel from "@/app/dashboard/AdminTemplatesPanel";
@@ -167,12 +168,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
         onClick={openModal}
         className={buttonClass}
       >
-        <span aria-hidden>
-          <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </span>
+        <GearSix size={20} weight="regular" className="shrink-0" aria-hidden />
         Admin
       </button>
 
@@ -205,9 +201,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                 className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-colors"
                 aria-label="Close"
               >
-                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <X size={20} weight="regular" className="shrink-0" aria-hidden />
               </button>
             </div>
 
@@ -226,11 +220,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                       : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
                   }`}
                 >
-                  <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
+                  <Users size={16} weight="regular" className="shrink-0" aria-hidden />
                   User management
                 </button>
                 <button
@@ -242,9 +232,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                       : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
                   }`}
                 >
-                  <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 12V8H4v4m0 0v4h16v-4m0-4h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h2" />
-                  </svg>
+                  <Shield size={16} weight="regular" className="shrink-0" aria-hidden />
                   Badges
                 </button>
                 <button
@@ -256,9 +244,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                       : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
                   }`}
                 >
-                  <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z" />
-                  </svg>
+                  <GridFour size={16} weight="regular" className="shrink-0" aria-hidden />
                   Templates
                 </button>
                 <button
@@ -270,9 +256,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                       : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
                   }`}
                 >
-                  <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
+                  <Star size={16} weight="regular" className="shrink-0" aria-hidden />
                   Improvement
                 </button>
               </nav>
@@ -361,9 +345,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                                         {u.username ? `@${u.username}` : u.id}
                                       </span>
                                     </div>
-                                    <svg className="size-4 text-[var(--muted)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                      <path d="M9 18l6-6-6-6" />
-                                    </svg>
+                                    <CaretRight size={16} weight="regular" className="shrink-0 text-[var(--muted)]" aria-hidden />
                                   </button>
                                   <button
                                     type="button"
@@ -413,9 +395,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                                   {!u.approved && (
                                     <span className="text-xs text-[var(--muted)] shrink-0">Pending</span>
                                   )}
-                                  <svg className="size-4 text-[var(--muted)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M9 18l6-6-6-6" />
-                                  </svg>
+                                  <CaretRight size={16} weight="regular" className="shrink-0 text-[var(--muted)]" aria-hidden />
                                 </button>
                               </li>
                             );

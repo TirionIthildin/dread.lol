@@ -10,6 +10,7 @@ import {
 import { BADGE_ICON_OPTIONS, getBadgeIcon } from "@/lib/badge-icons";
 import { toast } from "sonner";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import SearchableSelect from "@/app/components/SearchableSelect";
 
 export type CustomBadge = {
   id: string;
@@ -371,17 +372,27 @@ export default function AdminBadgesPanel() {
               </div>
             )}
             {formBadgeType === "icon" && (
-              <select
-                value={formIconName}
-                onChange={(e) => setFormIconName(e.target.value)}
-                className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              >
-                {BADGE_ICON_OPTIONS.map((opt) => (
-                  <option key={opt.value || "none"} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-2 space-y-2">
+                <SearchableSelect
+                  value={formIconName}
+                  onChange={setFormIconName}
+                  options={BADGE_ICON_OPTIONS}
+                  placeholder="None (text only)"
+                  searchPlaceholder="Search icon…"
+                />
+                <p className="text-xs text-[var(--muted)]">
+                  <a
+                    href="https://phosphoricons.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--accent)] hover:underline"
+                  >
+                    Search all icons at phosphoricons.com
+                  </a>
+                  {" — add new icons to "}
+                  <code className="text-[10px] bg-[var(--surface)] px-1 rounded">lib/badge-icons.tsx</code>
+                </p>
+              </div>
             )}
           </div>
         </div>

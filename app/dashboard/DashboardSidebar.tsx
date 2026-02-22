@@ -11,6 +11,7 @@ import {
   SignOut,
   Storefront,
   Trophy,
+  User,
 } from "@phosphor-icons/react";
 import DashboardNavAdmin from "@/app/dashboard/DashboardNavAdmin";
 import type { SessionUser } from "@/lib/auth/session";
@@ -27,21 +28,7 @@ const mainNavItems = [
   {
     href: "/dashboard",
     label: "My profile",
-    icon: (
-      <svg
-        className="size-5 shrink-0"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
+    icon: <User size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
   {
     href: "/dashboard/marketplace",

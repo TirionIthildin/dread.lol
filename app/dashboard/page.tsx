@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData } from "@/lib/member-profiles";
+import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
 import UnapprovedMessage from "@/app/components/UnapprovedMessage";
@@ -49,11 +50,15 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const shortLinks = await getShortLinksForProfile(profile.id);
+    const [shortLinks, versions] = await Promise.all([
+      getShortLinksForProfile(profile.id),
+      getProfileVersions(userId),
+    ]);
     return (
       <DashboardMyProfile
         profile={profile}
         shortLinks={shortLinks}
+        versions={versions}
         discordAvatarUrl={session.picture ?? undefined}
       />
     );

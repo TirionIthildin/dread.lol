@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 
 const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
@@ -207,24 +207,13 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
         <div className={`flex items-center gap-2 px-3 py-2.5 sm:px-4 ${isMinimalist ? "border-b border-[var(--border)]/40 bg-transparent" : "border-b border-[var(--border)] bg-[var(--bg)]/90"}`}>
           {isMinimalist ? (
             <>
-              <Link
-                href="/"
-                className="text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
-                aria-label="Back to home"
-              >
-                ← Back
-              </Link>
               <span className="flex-1 min-w-0" />
               {canReport !== false && <ProfileReportButton slug={profile.slug} canSubmit={canSubmitReport ?? false} />}
             </>
           ) : (
             <>
               <div className="flex gap-1.5 items-center shrink-0">
-                <Link
-                  href="/"
-                  className="h-2.5 w-2.5 min-w-[10px] min-h-[10px] rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)] transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] cursor-pointer block"
-                  aria-label="Back to home"
-                />
+                <span className="h-2.5 w-2.5 min-w-[10px] min-h-[10px] rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)]" aria-hidden />
                 <span className="h-2.5 w-2.5 rounded-full bg-[#eab308] shadow-[0_0_6px_rgba(234,179,8,0.4)]" aria-hidden />
                 <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_rgba(34,197,94,0.4)]" aria-hidden />
               </div>
@@ -275,17 +264,13 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
                   <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
                     {profile.verified && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member of the community">
-                        <svg className="size-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-                        </svg>
+                        <Check size={14} weight="bold" className="shrink-0" aria-hidden />
                         Verified
                       </span>
                     )}
                     {profile.staff && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="Server staff — member of the Dread.lol team">
-                        <svg className="size-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-                        </svg>
+                        <Shield size={14} weight="fill" className="shrink-0" aria-hidden />
                         Staff
                       </span>
                     )}

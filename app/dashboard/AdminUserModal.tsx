@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { X } from "@phosphor-icons/react";
 import { useState, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { approveUserAction, setUserBadgesAction, setUserCustomBadgesAction } from "@/app/dashboard/actions";
@@ -135,9 +136,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
             className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] transition-colors"
             aria-label="Close"
           >
-            <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            <X size={20} weight="regular" className="shrink-0" aria-hidden />
           </button>
         </div>
         <div className="p-4 space-y-4 min-h-[220px]">

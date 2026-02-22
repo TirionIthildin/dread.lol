@@ -2,6 +2,9 @@
  * Curated Phosphor icons for custom badges. Admins pick by name in the Badges panel.
  * Keeps bundle small while offering badge-appropriate icons.
  * Uses SSR export for server component compatibility (ProfileContent).
+ *
+ * To add new icons: search at https://phosphoricons.com (site uses kebab-case, e.g. rocket-launch).
+ * Import the component (PascalCase: RocketLaunch) and add to BADGE_ICONS and BADGE_ICON_OPTIONS.
  */
 import type { IconProps } from "@phosphor-icons/react";
 import {

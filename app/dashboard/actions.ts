@@ -19,6 +19,11 @@ import {
   deleteBadge,
   setUserCustomBadges,
 } from "@/lib/member-profiles";
+import {
+  saveProfileVersion,
+  restoreProfileVersion,
+  deleteProfileVersion,
+} from "@/lib/profile-versions";
 import { normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, requireSafeUrl, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 
@@ -90,7 +95,9 @@ export async function updateProfileAction(
   const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
 
   const avatarUrl = validateUrlOrEmpty(formData.get("avatarUrl") as string);
-  const banner = validateUrlOrEmpty(formData.get("banner") as string);
+  // Banner is ASCII art text, not a URL
+  const bannerRaw = (formData.get("banner") as string)?.trim();
+  const banner = bannerRaw ? bannerRaw.slice(0, 5000) : undefined;
   const ogImageUrl = validateUrlOrEmpty(formData.get("ogImageUrl") as string);
   const bgType = (formData.get("backgroundType") as string)?.trim();
   const usesCustomMedia = ["image", "video"].includes(bgType ?? "");
@@ -103,7 +110,6 @@ export async function updateProfileAction(
   const backgroundAudioUrl = validateBackgroundUrl(rawBackgroundAudioUrl);
 
   if ((formData.get("avatarUrl") as string)?.trim() && !avatarUrl) return { error: "Avatar URL must use https or http" };
-  if ((formData.get("banner") as string)?.trim() && !banner) return { error: "Banner URL must use https or http" };
   if ((formData.get("ogImageUrl") as string)?.trim() && !ogImageUrl) return { error: "OG image URL must use https or http" };
   if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
   if (usesCustomMedia && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
@@ -444,5 +450,50 @@ export async function setUserCustomBadgesAction(userId: string, badgeIds: string
   revalidatePath("/dashboard/admin");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
+  return {};
+}
+
+/** Save current profile as a version (up to 5, includes assets). */
+export async function saveProfileVersionAction(
+  profileId: string,
+  name: string
+): Promise<{ id?: string; error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const trimmed = name?.trim().slice(0, 80);
+  if (!trimmed) return { error: "Name is required" };
+  const result = await saveProfileVersion(session.sub, profileId, trimmed);
+  if ("error" in result) return { error: result.error };
+  revalidatePath("/dashboard");
+  const slug = await getProfileSlugByUserId(session.sub);
+  if (slug) revalidatePath(`/${slug}`);
+  return { id: result.id };
+}
+
+/** Restore a saved profile version. */
+export async function restoreProfileVersionAction(versionId: string): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const result = await restoreProfileVersion(session.sub, versionId);
+  if (result.error) return result;
+  revalidatePath("/dashboard");
+  const slug = await getProfileSlugByUserId(session.sub);
+  if (slug) revalidatePath(`/${slug}`);
+  return {};
+}
+
+/** Delete a saved profile version. */
+export async function deleteProfileVersionAction(versionId: string): Promise<{ error?: string }> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!user.approved && !user.isAdmin) return { error: "Account not approved" };
+  const result = await deleteProfileVersion(session.sub, versionId);
+  if (result.error) return result;
+  revalidatePath("/dashboard");
   return {};
 }

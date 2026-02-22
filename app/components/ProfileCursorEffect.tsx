@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getAccentHex } from "@/lib/profile-themes";
 
 interface ProfileCursorEffectProps {
@@ -94,6 +95,48 @@ export default function ProfileCursorEffect({
     (cursorStyle === "glow" || cursorStyle === "trail") &&
     isHovering;
 
+  const cursorMarkup =
+    showEffect && cursorStyle === "glow" && pos ? (
+      <div
+        className="fixed pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{
+          left: pos.x,
+          top: pos.y,
+          width: 96,
+          height: 96,
+          background: `radial-gradient(circle, ${color}35 0%, ${color}15 35%, transparent 65%)`,
+        }}
+      />
+    ) : showEffect && cursorStyle === "trail" && pos ? (
+      <>
+        {trail.map((t) => (
+          <div
+            key={t.id}
+            className="fixed pointer-events-none z-[9998] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300"
+            style={{
+              left: t.x,
+              top: t.y,
+              width: 40,
+              height: 40,
+              background: `radial-gradient(circle, ${color}40 0%, ${color}15 50%, transparent 70%)`,
+              opacity: 0.7,
+            }}
+          />
+        ))}
+        <div
+          className="fixed pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            left: pos.x,
+            top: pos.y,
+            width: 10,
+            height: 10,
+            background: color,
+            boxShadow: `0 0 16px ${color}90, 0 0 32px ${color}50`,
+          }}
+        />
+      </>
+    ) : null;
+
   return (
     <div
       ref={containerRef}
@@ -102,47 +145,9 @@ export default function ProfileCursorEffect({
       className="relative"
     >
       {children}
-      {showEffect && cursorStyle === "glow" && pos && (
-        <div
-          className="fixed pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 rounded-full"
-          style={{
-            left: pos.x,
-            top: pos.y,
-            width: 96,
-            height: 96,
-            background: `radial-gradient(circle, ${color}35 0%, ${color}15 35%, transparent 65%)`,
-          }}
-        />
-      )}
-      {showEffect && cursorStyle === "trail" && pos && (
-        <>
-          {trail.map((t) => (
-            <div
-              key={t.id}
-              className="fixed pointer-events-none z-[9998] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300"
-              style={{
-                left: t.x,
-                top: t.y,
-                width: 40,
-                height: 40,
-                background: `radial-gradient(circle, ${color}40 0%, ${color}15 50%, transparent 70%)`,
-                opacity: 0.7,
-              }}
-            />
-          ))}
-          <div
-            className="fixed pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{
-              left: pos.x,
-              top: pos.y,
-              width: 10,
-              height: 10,
-              background: color,
-              boxShadow: `0 0 16px ${color}90, 0 0 32px ${color}50`,
-            }}
-          />
-        </>
-      )}
+      {typeof document !== "undefined" &&
+        document.body &&
+        createPortal(cursorMarkup, document.body)}
     </div>
   );
 }
