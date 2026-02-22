@@ -32,7 +32,7 @@ export default function UnapprovedMessage({
           Pay {priceDisplay} one-time for {basicTierName} to unlock your account and start building your profile.
         </p>
         <a
-          href="/api/polar/checkout-basic"
+          href="https://dread.lol/api/polar/checkout-basic"
           className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
         >
           <CreditCard size={20} weight="regular" className="shrink-0" aria-hidden />

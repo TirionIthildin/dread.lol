@@ -35,6 +35,24 @@ export default async function BillingPage() {
     getPremiumAccess(session.sub),
   ]);
 
+  const hasBasicPurchase =
+    billing.basicEnabled &&
+    billing.basicProductIds.length > 0 &&
+    polarState.ownedProductIds.some((id) => billing.basicProductIds.includes(id));
+
+  let basicPriceFormatted: string | null = null;
+  if (billing.basicEnabled && billing.basicProductIds.length > 0) {
+    const basicMap = await getProductsWithTypes(billing.basicProductIds, {
+      sandbox: billing.sandbox,
+    });
+    const firstBasic = billing.basicProductIds[0];
+    const info = firstBasic ? basicMap.get(firstBasic) : null;
+    basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
+  }
+  if (!basicPriceFormatted && billing.basicEnabled) {
+    basicPriceFormatted = `$${(billing.basicPriceCents / 100).toFixed(0)}`;
+  }
+
   const productMap =
     billing.productIds.length > 0
       ? await getProductsWithTypes(billing.productIds, { sandbox: billing.sandbox })
@@ -69,6 +87,10 @@ export default async function BillingPage() {
         ownedProductIds={polarState.ownedProductIds}
         hasPremiumAccess={premiumAccess.hasAccess}
         premiumSource={premiumAccess.source}
+        basicEnabled={billing.basicEnabled}
+        hasBasicPurchase={hasBasicPurchase}
+        basicTierName={billing.basicTierName}
+        basicPriceFormatted={basicPriceFormatted}
       />
     </div>
   );

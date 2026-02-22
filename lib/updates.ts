@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Premium requires Basic purchase",
+    description: "Users must purchase Basic first before subscribing or buying Premium. The billing page shows a clear prerequisite step when Basic is required.",
+  },
+  {
+    date: "2026-02",
     title: "Configurable Premium limits & Basic trial",
     description: "Gallery max, microblog Premium-only, paste limit, and Basic trial days are now configurable in Admin → Billing. Two-week Basic trial before payment required.",
   },

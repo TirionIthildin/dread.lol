@@ -41,6 +41,11 @@ type Props = {
   ownedProductIds: string[];
   hasPremiumAccess: boolean;
   premiumSource: PremiumSource;
+  /** When true and !hasBasicPurchase, Premium requires Basic purchase first. */
+  basicEnabled?: boolean;
+  hasBasicPurchase?: boolean;
+  basicTierName?: string;
+  basicPriceFormatted?: string | null;
 };
 
 const PREMIUM_FEATURES = [
@@ -63,6 +68,10 @@ export default function DashboardBillingClient({
   ownedProductIds,
   hasPremiumAccess,
   premiumSource,
+  basicEnabled = false,
+  hasBasicPurchase = true,
+  basicTierName = "Basic",
+  basicPriceFormatted = null,
 }: Props) {
   const premiumProductIds = premiumProducts.map((p) => p.id);
   const hasSubscriptionProducts = premiumProducts.some((p) => p.isRecurring);
@@ -158,8 +167,29 @@ export default function DashboardBillingClient({
         </div>
       </div>
 
-      {/* Upgrade section – when no access or has one-time but no sub */}
-      {(!hasPremiumAccess || (ownedPremium && !hasActiveSubscription && hasSubscriptionProducts)) && (
+      {/* Basic prerequisite – Premium requires Basic purchase first */}
+      {basicEnabled && !hasBasicPurchase && !hasPremiumAccess && (
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h3 className="mb-2 text-base font-semibold text-[var(--foreground)]">
+            Premium requires a Basic purchase
+          </h3>
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Purchase {basicTierName} first to unlock your account and access Premium.
+          </p>
+          <Link
+            href="https://dread.lol/api/polar/checkout-basic"
+            prefetch={false}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/15 px-5 py-3 text-sm font-medium text-[var(--accent)] transition-all hover:bg-[var(--accent)]/25 hover:border-[var(--accent)]/70"
+          >
+            <CreditCard size={18} weight="regular" />
+            Purchase {basicTierName} {basicPriceFormatted && `(${basicPriceFormatted})`}
+          </Link>
+        </section>
+      )}
+
+      {/* Upgrade section – when no access or has one-time but no sub (only if has Basic or Basic not required) */}
+      {(!hasPremiumAccess || (ownedPremium && !hasActiveSubscription && hasSubscriptionProducts)) &&
+        (hasBasicPurchase || !basicEnabled) && (
         <section>
           <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
             {hasPremiumAccess ? "Add recurring access" : "Choose your plan"}
@@ -217,7 +247,7 @@ export default function DashboardBillingClient({
             </span>
           </div>
         </section>
-      )}
+        )}
 
       {/* Owned products */}
       {ownedProductIds.length > 0 && (
