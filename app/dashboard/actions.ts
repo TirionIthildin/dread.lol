@@ -98,7 +98,6 @@ export async function updateProfileAction(
   // Banner is ASCII art text, not a URL
   const bannerRaw = (formData.get("banner") as string)?.trim();
   const banner = bannerRaw ? bannerRaw.slice(0, 5000) : undefined;
-  const ogImageUrl = validateUrlOrEmpty(formData.get("ogImageUrl") as string);
   const bgType = (formData.get("backgroundType") as string)?.trim();
   const usesCustomMedia = ["image", "video"].includes(bgType ?? "");
   const usesVisualBackground = usesCustomMedia || ["grid", "gradient", "dither"].includes(bgType ?? "");
@@ -110,7 +109,6 @@ export async function updateProfileAction(
   const backgroundAudioUrl = validateBackgroundUrl(rawBackgroundAudioUrl);
 
   if ((formData.get("avatarUrl") as string)?.trim() && !avatarUrl) return { error: "Avatar URL must use https or http" };
-  if ((formData.get("ogImageUrl") as string)?.trim() && !ogImageUrl) return { error: "OG image URL must use https or http" };
   if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
   if (usesCustomMedia && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
   if (rawBackgroundAudioUrl && !backgroundAudioUrl) return { error: "Background audio URL must use https or http or a valid path" };
@@ -139,7 +137,6 @@ export async function updateProfileAction(
       terminalTitle: (formData.get("terminalTitle") as string)?.trim() || undefined,
       terminalCommands: (formData.get("terminalCommands") as string)?.trim() || null,
       links: linksJson,
-      ogImageUrl,
       showUpdatedAt: formData.get("showUpdatedAt") === "on",
       accentColor: (formData.get("accentColor") as string)?.trim() || undefined,
       terminalPrompt: (formData.get("terminalPrompt") as string)?.trim() || undefined,
@@ -185,14 +182,45 @@ export async function updateProfileAction(
       currentFocus: ((formData.get("currentFocus") as string)?.trim() || null)?.slice(0, 120) ?? null,
       avatarShape: (formData.get("avatarShape") as string)?.trim() || undefined,
       layoutDensity: (formData.get("layoutDensity") as string)?.trim() || undefined,
-      noindex: formData.get("noindex") === "on",
-      metaDescription: ((formData.get("metaDescription") as string)?.trim() || undefined)?.slice(0, 200),
       showPageViews: formData.get("showPageViews") === "on",
       showDiscordBadges: formData.get("showDiscordBadges") === "on",
+      hiddenDiscordBadges: (() => {
+        if (formData.get("showDiscordBadges") !== "on") return null;
+        const raw = (formData.get("availableDiscordBadgeKeys") as string)?.trim();
+        if (!raw) return null;
+        const keys = raw.split(",").map((s) => s.trim()).filter(Boolean);
+        const hidden = keys.filter((key) => formData.get(`showDiscordBadge_${key}`) !== "on");
+        return hidden.length > 0 ? hidden.join(",") : null;
+      })(),
       showDiscordPresence: formData.get("showDiscordPresence") === "on",
       discordPresenceStyle: (() => {
         const s = (formData.get("discordPresenceStyle") as string)?.trim();
         return ["pills", "minimal", "stacked", "inline", "widget"].includes(s) ? s : undefined;
+      })(),
+      showDiscordWidgets: (() => {
+        const widgets: string[] = [];
+        if (formData.get("showDiscordWidgetAccountAge") === "on") widgets.push("accountAge");
+        if (formData.get("showDiscordWidgetJoined") === "on") widgets.push("joined");
+        if (formData.get("showDiscordWidgetServerCount") === "on") widgets.push("serverCount");
+        if (formData.get("showDiscordWidgetServerInvite") === "on") widgets.push("serverInvite");
+        return widgets.slice(0, 3).length > 0 ? widgets.slice(0, 3).join(",") : null;
+      })(),
+      ...(formData.get("showDiscordWidgetServerInvite") === "on" && {
+        discordInviteUrl: (() => {
+          const v = (formData.get("discordInviteUrl") as string)?.trim();
+          if (!v) return null;
+          if (v.startsWith("http")) {
+            if (!isSafeUrl(v)) return null;
+            if (!v.includes("discord.gg") && !v.includes("discord.com/invite")) return null;
+          }
+          return v.slice(0, 256);
+        })(),
+      }),
+      showRobloxWidgets: (() => {
+        const widgets: string[] = [];
+        if (formData.get("showRobloxWidgetAccountAge") === "on") widgets.push("accountAge");
+        if (formData.get("showRobloxWidgetProfile") === "on") widgets.push("profile");
+        return widgets.length > 0 ? widgets.join(",") : null;
       })(),
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();
@@ -216,6 +244,11 @@ export async function updateProfileAction(
       backgroundType: usesVisualBackground ? bgType : null,
       backgroundUrl: usesCustomMedia ? backgroundUrl : null,
       backgroundAudioUrl: backgroundAudioUrl || null,
+      ...(bgType === "video" || backgroundAudioUrl
+        ? {
+            unlockOverlayText: ((formData.get("unlockOverlayText") as string)?.trim() || null)?.slice(0, 80) ?? null,
+          }
+        : {}),
       showAudioPlayer: formData.get("showAudioPlayer") === "on",
       audioVisualizerStyle: (() => {
         const s = (formData.get("audioVisualizerStyle") as string)?.trim();

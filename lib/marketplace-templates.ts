@@ -52,6 +52,7 @@ export interface TemplateData {
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;
+  unlockOverlayText?: string | null;
   ogImageUrl?: string | null;
   /** Gallery items: imageUrl, title?, description? */
   gallery?: { imageUrl: string; title?: string; description?: string }[] | null;
@@ -131,6 +132,7 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     backgroundType: profile.backgroundType ?? null,
     backgroundUrl: profile.backgroundUrl ?? null,
     backgroundAudioUrl: profile.backgroundAudioUrl ?? null,
+    unlockOverlayText: (profile as { unlockOverlayText?: string | null }).unlockOverlayText ?? null,
     ogImageUrl: profile.ogImageUrl ?? null,
     showAudioPlayer: profile.showAudioPlayer ?? false,
     gallery: null, // Populate from gallery_items when creating from profile
@@ -538,6 +540,7 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.backgroundType !== undefined) update.backgroundType = data.backgroundType;
   if (data.backgroundUrl !== undefined) update.backgroundUrl = data.backgroundUrl;
   if (data.backgroundAudioUrl !== undefined) update.backgroundAudioUrl = data.backgroundAudioUrl;
+  if (data.unlockOverlayText !== undefined) update.unlockOverlayText = data.unlockOverlayText;
   if (data.ogImageUrl !== undefined) update.ogImageUrl = data.ogImageUrl;
   if (data.showAudioPlayer !== undefined) update.showAudioPlayer = data.showAudioPlayer;
   if (data.audioTracks !== undefined) {
@@ -642,6 +645,7 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     backgroundType: d.backgroundType ?? undefined,
     backgroundUrl: d.backgroundUrl ?? undefined,
     backgroundAudioUrl: d.backgroundAudioUrl ?? undefined,
+    unlockOverlayText: d.unlockOverlayText ?? undefined,
     ogImageUrl: d.ogImageUrl ?? undefined,
     showAudioPlayer: d.showAudioPlayer ?? false,
     audioTracks: d.audioTracks ?? undefined,

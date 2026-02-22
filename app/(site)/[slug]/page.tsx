@@ -17,6 +17,8 @@ import {
   getSimilarProfiles,
   getMutualGuilds,
 } from "@/lib/member-profiles";
+import { getDiscordWidgetData, type DiscordWidgetType } from "@/lib/discord-widgets";
+import { getRobloxWidgetData, type RobloxWidgetType } from "@/lib/roblox-widgets";
 import { getDiscordPresence } from "@/lib/discord-presence";
 import { getDiscordLastSeen } from "@/lib/discord-lastseen";
 import { getSession } from "@/lib/auth/session";
@@ -106,11 +108,41 @@ export default async function ProfilePage({ params }: Props) {
     getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
   ]);
-  const [similarProfiles, mutualGuilds] = await Promise.all([
+  const [similarProfiles, mutualGuilds, discordWidgetData, robloxWidgetData] = await Promise.all([
     getSimilarProfiles(memberRow.id, memberRow.tags ?? [], 6),
     session && session.sub !== memberRow.userId
       ? getMutualGuilds(session.sub, memberRow.userId)
       : Promise.resolve([]),
+    (() => {
+      const raw = memberRow.showDiscordWidgets?.trim();
+      if (!raw) return Promise.resolve(null);
+      const map: Record<string, DiscordWidgetType> = {
+        accountage: "accountAge",
+        joined: "joined",
+        servercount: "serverCount",
+        serverinvite: "serverInvite",
+      };
+      const enabled = raw
+        .split(",")
+        .map((s) => map[s.trim().toLowerCase()])
+        .filter(Boolean) as DiscordWidgetType[];
+      if (enabled.length === 0) return Promise.resolve(null);
+      return getDiscordWidgetData(memberRow.userId, enabled, memberRow.discordInviteUrl, memberRow.createdAt);
+    })(),
+    (() => {
+      const raw = (memberRow as { showRobloxWidgets?: string | null }).showRobloxWidgets?.trim();
+      if (!raw) return Promise.resolve(null);
+      const map: Record<string, RobloxWidgetType> = {
+        accountage: "accountAge",
+        profile: "profile",
+      };
+      const enabled = raw
+        .split(",")
+        .map((s) => map[s.trim().toLowerCase()])
+        .filter(Boolean) as RobloxWidgetType[];
+      if (enabled.length === 0) return Promise.resolve(null);
+      return getRobloxWidgetData(memberRow.userId, enabled);
+    })(),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent, {
     referrer: referrer ?? undefined,
@@ -126,6 +158,8 @@ export default async function ProfilePage({ params }: Props) {
     : [];
   const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges);
   if (showPageViews) profile.viewCount = viewCount;
+  if (discordWidgetData) profile.discordWidgets = discordWidgetData;
+  if (robloxWidgetData) profile.robloxWidgets = robloxWidgetData;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;
   const showLastSeen = showDiscordPresence && (!discordPresence?.status || discordPresence?.status === "offline");
   if (showDiscordPresence && discordPresence) {

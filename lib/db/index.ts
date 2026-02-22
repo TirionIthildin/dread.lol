@@ -37,6 +37,7 @@ export const COLLECTIONS = {
   templateReports: "template_reports",
   profileVersions: "profile_versions",
   blogPosts: "blog_posts",
+  userRoblox: "user_roblox",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

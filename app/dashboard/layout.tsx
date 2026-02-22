@@ -61,7 +61,7 @@ export default async function DashboardLayout({
 
       <main
         id="main-content"
-        className="flex-1 min-w-0 flex flex-col content-container py-6 md:py-8"
+        className="flex-1 min-w-0 flex flex-col content-container py-4 md:py-6 md:!max-w-[96rem]"
         tabIndex={-1}
       >
         {children}

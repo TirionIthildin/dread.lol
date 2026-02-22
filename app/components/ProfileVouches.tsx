@@ -3,7 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Eye } from "@phosphor-icons/react/dist/ssr";
 import type { VouchedByUser } from "@/lib/member-profiles";
+
+const iconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
 
 interface ProfileVouchesProps {
   slug: string;
@@ -12,6 +15,8 @@ interface ProfileVouchesProps {
   mutualVouchers?: VouchedByUser[];
   currentUserHasVouched: boolean;
   canVouch: boolean;
+  updatedAt?: string;
+  viewCount?: number | null;
 }
 
 export default function ProfileVouches({
@@ -21,6 +26,8 @@ export default function ProfileVouches({
   mutualVouchers = [],
   currentUserHasVouched: initialHasVouched,
   canVouch,
+  updatedAt,
+  viewCount,
 }: ProfileVouchesProps) {
   const router = useRouter();
   const [count, setCount] = useState(initialCount);
@@ -54,25 +61,45 @@ export default function ProfileVouches({
 
   const displayName = (u: VouchedByUser) => u.displayName?.trim() || u.username || "Someone";
 
+  const parts: React.ReactNode[] = [];
+  if (mutualVouchers.length > 0) {
+    parts.push(
+      <span key="mutual">
+        You&apos;re both vouched by{" "}
+        {mutualVouchers.map((u, i) => (
+          <span key={u.userId}>
+            {i > 0 && ", "}
+            <span className="font-medium text-[var(--foreground)]">{displayName(u)}</span>
+          </span>
+        ))}
+      </span>
+    );
+  }
+  parts.push(
+    <span key="count">
+      {count} {count === 1 ? "vouch" : "vouches"}
+    </span>
+  );
+  if (updatedAt) parts.push(<span key="updated">Last updated {updatedAt}</span>);
+  if (viewCount != null) {
+    parts.push(
+      <span key="views" className="inline-flex items-center gap-1">
+        <Eye {...iconProps} aria-hidden />
+        {viewCount} view{viewCount !== 1 ? "s" : ""}
+      </span>
+    );
+  }
+
   return (
     <div className="mt-4 pt-3 border-t border-[var(--border)]/50">
-      {mutualVouchers.length > 0 && (
-        <p className="text-xs text-[var(--muted)] mb-2">
-          You&apos;re both vouched by{" "}
-          {mutualVouchers.map((u, i) => (
-            <span key={u.userId}>
-              {i > 0 && ", "}
-              <span className="font-medium text-[var(--foreground)]">{displayName(u)}</span>
-            </span>
-          ))}
-        </p>
-      )}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-[var(--muted)]">
-          {count} {count === 1 ? "vouch" : "vouches"}
-        </span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-[var(--muted)] min-w-0 flex-1">
+          {parts.flatMap((p, i) =>
+            i === 0 ? [<span key={i}>{p}</span>] : [<span key={`s-${i}`} className="opacity-60">·</span>, <span key={i}>{p}</span>]
+          )}
+        </div>
         {vouchedBy.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
             {vouchedBy.slice(0, 12).map((u) => (
               <span
                 key={u.userId}
@@ -105,7 +132,7 @@ export default function ProfileVouches({
             type="button"
             onClick={toggleVouch}
             disabled={loading}
-            className="ml-auto shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] disabled:opacity-50"
+            className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-xs font-medium text-[var(--foreground)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] disabled:opacity-50"
           >
             {loading ? "…" : hasVouched ? "Unvouch" : "Vouch"}
           </button>

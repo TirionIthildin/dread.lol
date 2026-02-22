@@ -1,0 +1,92 @@
+import Link from "next/link";
+import { ArrowSquareOut } from "@phosphor-icons/react/dist/ssr";
+import type { RobloxWidgetData } from "@/lib/roblox-widgets";
+
+const labelClass = "text-[10px] font-medium uppercase tracking-wider";
+
+interface RobloxWidgetsDisplayProps {
+  data: RobloxWidgetData;
+}
+
+function RobloxIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      className={className}
+    >
+      <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.09 8 12 11.82 4.91 8 12 4.18zM4 8.82l7 3.5v7.36l-7-3.5V8.82zm9 10.86v-7.36l7-3.5v7.36l-7 3.5z" />
+    </svg>
+  );
+}
+
+export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps) {
+  const widgets: React.ReactNode[] = [];
+
+  const widgetBase =
+    "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[#00A2FF]/40";
+
+  if (data.accountAge) {
+    widgets.push(
+      <div
+        key="accountAge"
+        className={widgetBase}
+        title={`Roblox account since ${data.accountAge.createdAt.toLocaleDateString()}`}
+      >
+        <span className="shrink-0 text-[#00A2FF]">
+          <RobloxIcon className="block" />
+        </span>
+        <div>
+          <p className={`${labelClass} text-[#00A2FF]/80`}>Account age</p>
+          <p className="text-[var(--foreground)] font-medium">
+            {data.accountAge.label}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.profile) {
+    const label = data.profile.displayName || data.profile.username || "View profile";
+    widgets.push(
+      <Link
+        key="profile"
+        href={data.profile.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${widgetBase} text-[var(--foreground)] hover:border-[#00A2FF]/50 hover:bg-[#00A2FF]/10 group`}
+        aria-label={`Open Roblox profile for ${data.profile.displayName || data.profile.username}`}
+      >
+        <span className="shrink-0 text-[#00A2FF]">
+          <RobloxIcon className="block" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={`${labelClass} text-[#00A2FF]/80`}>Roblox</p>
+          <p className="font-medium truncate">{label}</p>
+        </div>
+        <ArrowSquareOut
+          size={14}
+          weight="regular"
+          className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+          aria-hidden
+        />
+      </Link>
+    );
+  }
+
+  if (widgets.length === 0) return null;
+
+  return (
+    <div
+      className="grid gap-2"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}
+      role="group"
+      aria-label="Roblox info"
+    >
+      {widgets}
+    </div>
+  );
+}

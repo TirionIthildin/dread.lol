@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData } from "@/lib/member-profiles";
+import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
+import { getDiscordWidgetData } from "@/lib/discord-widgets";
+import { hasRobloxLinked } from "@/lib/roblox-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
@@ -42,7 +45,6 @@ async function MemberProfileSection({
 }) {
   try {
     const { id: userId } = await getOrCreateUser(session);
-    void getUserDiscordBadgeData(userId);
     const slug = slugFromUsername(session.preferred_username ?? session.name ?? session.sub);
     const name = session.name ?? session.preferred_username ?? "Member";
     const profile = await getOrCreateMemberProfile(userId, {
@@ -50,16 +52,31 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [shortLinks, versions] = await Promise.all([
+    const [discordBadgeData, widgetPreviewData, shortLinks, versions, robloxLinked] = await Promise.all([
+      getUserDiscordBadgeData(userId),
+      getDiscordWidgetData(
+        profile.userId,
+        ["accountAge", "joined", "serverCount", "serverInvite"],
+        profile.discordInviteUrl,
+        profile.createdAt
+      ).catch(() => null),
       getShortLinksForProfile(profile.id),
       getProfileVersions(userId),
+      hasRobloxLinked(userId),
     ]);
+    const availableDiscordBadges = [
+      ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
+      ...getPremiumBadgeKeys(discordBadgeData.premiumType),
+    ];
     return (
       <DashboardMyProfile
         profile={profile}
         shortLinks={shortLinks}
         versions={versions}
         discordAvatarUrl={session.picture ?? undefined}
+        availableDiscordBadges={availableDiscordBadges}
+        widgetPreviewData={widgetPreviewData}
+        robloxLinked={robloxLinked}
       />
     );
   } catch (err) {

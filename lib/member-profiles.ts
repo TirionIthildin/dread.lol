@@ -1519,6 +1519,7 @@ export function memberProfileToProfile(
       return row.backgroundUrl ?? undefined;
     })(),
     backgroundAudioUrl: row.backgroundAudioUrl ?? (row.backgroundType === "audio" ? row.backgroundUrl ?? undefined : undefined),
+    unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,
     showPageViews: row.showPageViews ?? true,
@@ -1555,10 +1556,21 @@ export function memberProfileToProfile(
     ...(row.showDiscordBadges &&
       discordBadgeData &&
       (discordBadgeData.flags != null || discordBadgeData.premiumType != null) && {
-        discordBadges: [
-          ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
-          ...getPremiumBadgeKeys(discordBadgeData.premiumType),
-        ],
+        discordBadges: (() => {
+          const all = [
+            ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
+            ...getPremiumBadgeKeys(discordBadgeData.premiumType),
+          ];
+          const hiddenRaw = (row as { hiddenDiscordBadges?: string | null }).hiddenDiscordBadges?.trim();
+          if (!hiddenRaw) return all;
+          const hidden = new Set(
+            hiddenRaw
+              .split(",")
+              .map((s) => s.trim().toLowerCase())
+              .filter(Boolean)
+          );
+          return all.filter((key) => !hidden.has(key.toLowerCase()));
+        })(),
       }),
     ...(row.discordPresenceStyle && {
       discordPresenceStyle: row.discordPresenceStyle,

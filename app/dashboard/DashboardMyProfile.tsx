@@ -25,6 +25,9 @@ import {
   ClockCounterClockwise,
   ArrowCounterClockwise,
   FloppyDisk,
+  CalendarBlank,
+  Buildings,
+  ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
@@ -46,22 +49,27 @@ import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
 import type { ProfileShortLink } from "@/lib/member-profiles";
 import type { ProfileVersionRow } from "@/lib/profile-versions";
 import { ACCENT_COLOR_OPTIONS, BANNER_STYLE_OPTIONS } from "@/lib/profile-themes";
+import { getDiscordBadgeInfo } from "@/lib/discord-badges";
+import DiscordWidgetsDisplay, { normalizeWidgetData } from "@/app/components/DiscordWidgetsDisplay";
+import type { DiscordWidgetData } from "@/lib/discord-widgets";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
 const TAGLINE_MAX = 120;
 const DESCRIPTION_MAX = 2000;
 
-type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "display" | "fun" | "audio" | "versions";
+type EditorSectionId = "basics" | "links" | "banner" | "terminal" | "fun" | "widgets" | "audio" | "versions";
 const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNode }[] = [
   { id: "basics", label: "Basics", icon: <Notebook {...dashIcon} aria-hidden /> },
   { id: "links", label: "Links", icon: <LinkIcon {...dashIcon} aria-hidden /> },
   { id: "banner", label: "Banner", icon: <ImageIcon {...dashIcon} aria-hidden /> },
   { id: "terminal", label: "Terminal", icon: <Terminal {...dashIcon} aria-hidden /> },
-  { id: "display", label: "Display & SEO", icon: <Palette {...dashIcon} aria-hidden /> },
   { id: "fun", label: "Styling", icon: <SlidersHorizontal {...dashIcon} aria-hidden /> },
+  { id: "widgets", label: "Widgets", icon: <SquaresFour {...dashIcon} aria-hidden /> },
   { id: "audio", label: "Audio Manager", icon: <MusicNotes {...dashIcon} aria-hidden /> },
   { id: "versions", label: "Versions", icon: <ClockCounterClockwise {...dashIcon} aria-hidden /> },
 ];
+
+const MAX_WIDGETS = 3;
 
 
 function parseTerminalCommandsForEditor(raw: string | null): { command: string; output: string }[] {
@@ -89,6 +97,12 @@ interface DashboardMyProfileProps {
   versions?: ProfileVersionRow[];
   /** Current user's Discord avatar URL (from session), for "Use Discord avatar" button. */
   discordAvatarUrl?: string | null;
+  /** Discord badge keys this user has (for per-badge visibility toggles). */
+  availableDiscordBadges?: string[];
+  /** Pre-fetched widget data for live preview (dates may arrive as ISO strings). */
+  widgetPreviewData?: DiscordWidgetData | null;
+  /** Whether the user has linked their Roblox account via OAuth. */
+  robloxLinked?: boolean;
 }
 
 const LINK_TYPES = [
@@ -218,13 +232,17 @@ function linkEntriesToFormPayload(entries: LinkEntry[]): { discord: string; robl
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg border border-[var(--border)] bg-[var(--accent)]/20 px-4 py-2 text-sm font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] disabled:opacity-50 disabled:pointer-events-none"
-    >
-      {pending ? "Saving…" : "Save changes"}
-    </button>
+    <div className="sticky bottom-0 pt-6 pb-2 -mb-2 flex items-center gap-3 bg-gradient-to-t from-[var(--surface)] via-[var(--surface)] to-transparent">
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex items-center gap-2 rounded-lg border-2 border-[var(--accent)] bg-[var(--accent)]/20 px-5 py-2.5 text-sm font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] disabled:opacity-50 disabled:pointer-events-none"
+      >
+        <FloppyDisk size={18} weight="regular" />
+        {pending ? "Saving…" : "Save changes"}
+      </button>
+      <span className="text-xs text-[var(--muted)]">⌘/Ctrl+Enter to save</span>
+    </div>
   );
 }
 
@@ -421,6 +439,9 @@ export default function DashboardMyProfile({
   shortLinks: initialShortLinks = [],
   versions: initialVersions = [],
   discordAvatarUrl,
+  availableDiscordBadges = [],
+  widgetPreviewData = null,
+  robloxLinked = false,
 }: DashboardMyProfileProps) {
   const [tab, setTab] = useState<DashboardTab>("editor");
   const [state, formAction] = useActionState<ProfileFormState, FormData>(
@@ -472,6 +493,52 @@ export default function DashboardMyProfile({
   const backgroundAudioFileRef = useRef<HTMLInputElement>(null);
   const [backgroundDragOver, setBackgroundDragOver] = useState(false);
   const [audioDragOver, setAudioDragOver] = useState(false);
+
+  const [widgetAccountAge, setWidgetAccountAge] = useState(() =>
+    (profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("accountAge") ?? false
+  );
+  const [widgetJoined, setWidgetJoined] = useState(() =>
+    (profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("joined") ?? false
+  );
+  const [widgetServerCount, setWidgetServerCount] = useState(() =>
+    (profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("serverCount") ?? false
+  );
+  const [widgetServerInvite, setWidgetServerInvite] = useState(() =>
+    (profile as { showDiscordWidgets?: string }).showDiscordWidgets?.includes("serverInvite") ?? false
+  );
+  const [discordInviteInput, setDiscordInviteInput] = useState(
+    (profile as { discordInviteUrl?: string }).discordInviteUrl ?? ""
+  );
+  const widgetCount = [widgetAccountAge, widgetJoined, widgetServerCount, widgetServerInvite].filter(Boolean).length;
+  const canEnableMore = widgetCount < MAX_WIDGETS;
+
+  const widgetPreviewFiltered = (() => {
+    const raw = normalizeWidgetData(widgetPreviewData);
+    const inviteUrl = discordInviteInput.trim();
+    const hasValidInvite = inviteUrl && /^(https?:\/\/)?(discord\.gg\/|discord\.com\/invite\/)[a-zA-Z0-9-]+$|^[a-zA-Z0-9-]{2,32}$/.test(inviteUrl);
+    const resolvedInviteUrl = hasValidInvite
+      ? inviteUrl.startsWith("http")
+        ? inviteUrl
+        : `https://discord.gg/${inviteUrl.replace(/^(discord\.gg\/|discord\.com\/invite\/)/i, "")}`
+      : null;
+    const out: DiscordWidgetData = {};
+    if (widgetAccountAge && raw?.accountAge) out.accountAge = raw.accountAge;
+    if (widgetJoined && raw?.joined) out.joined = raw.joined;
+    if (widgetServerCount && raw?.serverCount != null) out.serverCount = raw.serverCount;
+    if (widgetServerInvite) {
+      out.serverInvite = resolvedInviteUrl
+        ? { url: resolvedInviteUrl, guildName: raw?.serverInvite?.guildName ?? "Your server" }
+        : raw?.serverInvite ?? { url: "#", guildName: "Your server (add link below)" };
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  })();
+
+  const [widgetRobloxAccountAge, setWidgetRobloxAccountAge] = useState(() =>
+    (profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("accountAge") ?? false
+  );
+  const [widgetRobloxProfile, setWidgetRobloxProfile] = useState(() =>
+    (profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("profile") ?? false
+  );
 
   const handleBackgroundFileUpload = useCallback(async (file: File) => {
     const type = file.type?.toLowerCase().split(";")[0]?.trim();
@@ -664,15 +731,28 @@ export default function DashboardMyProfile({
     if (state?.success) router.refresh();
   }, [state?.success, router]);
 
+  // Ctrl+Enter / Cmd+Enter to save
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        const form = document.getElementById("profile-editor-form") as HTMLFormElement | null;
+        if (form && tab === "editor") form.requestSubmit();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [tab]);
+
   const formKey = `${profile.id}-${(profile as { updatedAt?: Date }).updatedAt?.getTime?.() ?? 0}`;
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col overflow-hidden xl:h-[calc(100vh-6rem)]">
+      {/* Tabs only on smaller screens; xl+ shows side-by-side */}
       <nav
-        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
+        className="xl:hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden shrink-0 mb-4"
         aria-label="Profile editor"
       >
-        <div className="flex border-b border-[var(--border)] bg-[var(--bg)]/50">
+        <div className="flex">
           <TabButton active={tab === "editor"} onClick={() => setTab("editor")} icon={<PencilSimple {...dashIcon} />}>
             Editor
           </TabButton>
@@ -682,38 +762,43 @@ export default function DashboardMyProfile({
         </div>
       </nav>
 
-      {tab === "editor" && (
-      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm flex flex-col h-[min(75vh,800px)]">
-        <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444]" aria-hidden />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#eab308]" aria-hidden />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" aria-hidden />
-            <span className="ml-2 text-xs text-[var(--muted)] font-mono inline-flex items-center gap-2">
-              <PencilSimple size={14} weight="regular" /> Editor
-            </span>
+      {/* Side-by-side layout on xl; stacked on smaller */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden xl:flex-row xl:gap-4">
+        {/* Editor panel - full width on <xl, left half on xl+ */}
+        <section
+          className={`animate-dashboard-panel flex flex-1 flex-col min-h-0 xl:flex-[1.2] rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
+            tab === "preview" ? "hidden xl:flex" : ""
+          } xl:min-w-0`}
+          aria-label="Profile editor"
+        >
+          <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
+            <div className="flex items-center gap-2">
+              <PencilSimple size={18} weight="regular" className="text-[var(--accent)]" aria-hidden />
+              <span className="text-sm font-medium text-[var(--foreground)]">Editor</span>
+              <span className="text-xs text-[var(--muted)] hidden sm:inline">— edit your profile</span>
+            </div>
+            <Link
+              href={`/${profile.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:underline"
+            >
+              <ArrowSquareOut size={14} weight="regular" />
+              Preview in new tab
+            </Link>
           </div>
-          <Link
-            href={`/${profile.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-[var(--accent)] hover:underline"
-          >
-            Preview in new tab
-          </Link>
-        </div>
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          <nav
-            className="w-48 shrink-0 border-r border-[var(--border)] bg-[var(--bg)]/50 p-2 flex flex-col gap-0.5 overflow-hidden"
-            aria-label="Editor sections"
-          >
+          <div className="grid min-h-0 flex-1 grid-cols-[14rem_1fr] xl:grid-cols-[14rem_1fr]">
+            <nav
+              className="flex w-52 flex-col gap-1 overflow-hidden border-r border-[var(--border)] bg-[var(--bg)]/50 p-3 xl:w-56"
+              aria-label="Editor sections"
+            >
             {EDITOR_SECTIONS.map(({ id, label, icon }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setActiveEditorSection(id)}
                 aria-current={activeEditorSection === id ? "true" : undefined}
-                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                   activeEditorSection === id
                     ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
                     : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
@@ -723,17 +808,17 @@ export default function DashboardMyProfile({
                 <span className="truncate">{label}</span>
               </button>
             ))}
-            <div className="mt-auto pt-3 border-t border-[var(--border)]">
+            <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <Link
                 href="/marketplace"
-                className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+                className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
               >
                 Browse templates →
               </Link>
             </div>
           </nav>
-          <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4">
-          <form key={formKey} action={formAction} className="space-y-4 max-w-2xl">
+          <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-5 lg:p-6 overscroll-contain">
+          <form id="profile-editor-form" key={formKey} action={formAction} className="space-y-5 max-w-3xl">
             <input type="hidden" name="profileId" value={profile.id} />
             {(() => {
               const payload = linkEntriesToFormPayload(linkEntries);
@@ -746,8 +831,8 @@ export default function DashboardMyProfile({
                 </>
               );
             })()}
-            <div className={activeEditorSection === "basics" ? "block space-y-3" : "hidden"}>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={activeEditorSection === "basics" ? "block space-y-4" : "hidden"}>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Slug (URL path)
                 <input
@@ -1081,6 +1166,51 @@ export default function DashboardMyProfile({
               />
               <span className="mt-0.5 block text-[10px] text-[var(--muted)]">{descriptionValue.length} / {DESCRIPTION_MAX}</span>
             </label>
+            <div className="space-y-2 rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--foreground)]">
+                <input type="checkbox" name="showUpdatedAt" defaultChecked={profile.showUpdatedAt ?? false} className="rounded border-[var(--border)]" />
+                Show &quot;Last updated&quot; date on profile
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--foreground)]">
+                <input type="checkbox" name="showPageViews" defaultChecked={profile.showPageViews ?? true} className="rounded border-[var(--border)]" />
+                Display page views <span className="text-[var(--muted)]/70">(on profile and in dashboard analytics)</span>
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--foreground)]">
+                <input type="checkbox" name="showDiscordBadges" defaultChecked={profile.showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
+                Show my Discord badges on profile <span className="text-[var(--muted)]/70">(Staff, Partner, HypeSquad, etc.)</span>
+              </label>
+              {availableDiscordBadges.length > 0 && (
+                <input type="hidden" name="availableDiscordBadgeKeys" value={availableDiscordBadges.join(",")} />
+              )}
+              {profile.showDiscordBadges && availableDiscordBadges.length > 0 && (
+                <div className="ml-4 mt-2 space-y-1.5 rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/40 p-3">
+                  <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Choose which badges to show</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                    {availableDiscordBadges.map((key) => {
+                      const info = getDiscordBadgeInfo(key);
+                      const hidden = (profile as { hiddenDiscordBadges?: string }).hiddenDiscordBadges
+                        ?.split(",")
+                        .map((s) => s.trim().toLowerCase())
+                        .includes(key.toLowerCase());
+                      return (
+                        <label key={key} className="inline-flex items-center gap-2 cursor-pointer text-xs text-[var(--foreground)]">
+                          <input
+                            type="checkbox"
+                            name={`showDiscordBadge_${key}`}
+                            defaultChecked={!hidden}
+                            className="rounded border-[var(--border)]"
+                          />
+                          {info?.label ?? key}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                ⚠️ Discord badge display is currently broken; some badges (e.g. Nitro) may not show reliably.
+              </p>
+            </div>
             </div>
 
             <div className={activeEditorSection === "links" ? "block space-y-3" : "hidden"}>
@@ -1373,49 +1503,6 @@ export default function DashboardMyProfile({
                   + Add command
                 </button>
               </div>
-            </div>
-
-            <div className={activeEditorSection === "display" ? "block space-y-3" : "hidden"}>
-              <label className="block text-xs font-medium text-[var(--muted)]">
-                Custom OG image URL <span className="text-[var(--muted)]/70">(for social previews; leave blank to use avatar)</span>
-                <input
-                  type="url"
-                  name="ogImageUrl"
-                  defaultValue={profile.ogImageUrl ?? ""}
-                  placeholder="https://…"
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-              <label className="block text-xs font-medium text-[var(--muted)]">
-                Meta description <span className="text-[var(--muted)]/70">(override for social/SEO; leave blank to use tagline or description)</span>
-                <textarea
-                  name="metaDescription"
-                  defaultValue={(profile as { metaDescription?: string }).metaDescription ?? ""}
-                  placeholder="Optional"
-                  rows={2}
-                  maxLength={200}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input type="checkbox" name="noindex" defaultChecked={(profile as { noindex?: boolean }).noindex ?? false} className="rounded border-[var(--border)]" />
-                Ask search engines not to index this profile <span className="text-[var(--muted)]/70">(noindex)</span>
-              </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input type="checkbox" name="showUpdatedAt" defaultChecked={profile.showUpdatedAt ?? false} className="rounded border-[var(--border)]" />
-                Show “Last updated” date on profile
-              </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input type="checkbox" name="showPageViews" defaultChecked={profile.showPageViews ?? true} className="rounded border-[var(--border)]" />
-                Display page views <span className="text-[var(--muted)]/70">(on profile and in dashboard analytics)</span>
-              </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input type="checkbox" name="showDiscordBadges" defaultChecked={profile.showDiscordBadges ?? false} className="rounded border-[var(--border)]" />
-                Show my Discord badges on profile <span className="text-[var(--muted)]/70">(Staff, Partner, HypeSquad, etc.)</span>
-              </label>
-              <p className="text-xs text-amber-600 dark:text-amber-500">
-                ⚠️ Discord badge display is currently broken; some badges (e.g. Nitro) may not show reliably.
-              </p>
             </div>
 
             <div className={activeEditorSection === "fun" ? "block space-y-3" : "hidden"}>
@@ -1892,7 +1979,19 @@ export default function DashboardMyProfile({
                     {backgroundUploadError && (
                       <p className="text-xs text-[var(--warning)] rounded-lg bg-[var(--warning)]/10 px-3 py-2">{backgroundUploadError}</p>
                     )}
-                    <p className="text-[10px] text-[var(--muted)]">Uses a &quot;Click to view profile&quot; overlay when media plays.</p>
+                    {(backgroundTypeValue === "video" || backgroundAudioUrlValue) && (
+                      <label className="block text-xs font-medium text-[var(--muted)]">
+                        Overlay text <span className="text-[var(--muted)]/70">(shown before visitors unlock profile)</span>
+                        <input
+                          type="text"
+                          name="unlockOverlayText"
+                          defaultValue={(profile as { unlockOverlayText?: string }).unlockOverlayText ?? ""}
+                          placeholder="Click here to view profile"
+                          maxLength={80}
+                          className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                        />
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -1991,6 +2090,198 @@ export default function DashboardMyProfile({
                     )}
                     <p className="text-[10px] text-[var(--muted)]">Works with image, video, or no visual background.</p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={activeEditorSection === "widgets" ? "block space-y-4" : "hidden"}>
+              <div className="rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/5 overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#5865F2]/20 flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-[#5865F2]/15 p-1.5">
+                      <DiscordLogo size={18} weight="fill" className="text-[#5865F2]" aria-hidden />
+                    </div>
+                    <span className="text-sm font-medium text-[var(--foreground)]">Profile widgets</span>
+                  </div>
+                  <span className="text-xs text-[var(--muted)]">
+                    {widgetCount} of {MAX_WIDGETS} selected
+                  </span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <p className="text-xs text-[var(--muted)]">
+                    Info cards for your profile. Pick up to {MAX_WIDGETS}. Order: account age → joined → servers → invite.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[
+                      {
+                        key: "accountAge",
+                        checked: widgetAccountAge,
+                        setChecked: setWidgetAccountAge,
+                        name: "showDiscordWidgetAccountAge",
+                        icon: <DiscordLogo size={20} weight="fill" className="shrink-0 text-[#5865F2]" aria-hidden />,
+                        label: "Account age",
+                        desc: "How long you've had your Discord account",
+                      },
+                      {
+                        key: "joined",
+                        checked: widgetJoined,
+                        setChecked: setWidgetJoined,
+                        name: "showDiscordWidgetJoined",
+                        icon: <CalendarBlank size={20} weight="regular" className="shrink-0 text-[var(--accent)]" aria-hidden />,
+                        label: "Joined",
+                        desc: "When you signed up for Dread.lol",
+                      },
+                      {
+                        key: "serverCount",
+                        checked: widgetServerCount,
+                        setChecked: setWidgetServerCount,
+                        name: "showDiscordWidgetServerCount",
+                        icon: <Buildings size={20} weight="regular" className="shrink-0 text-[#5865F2]" aria-hidden />,
+                        label: "Server count",
+                        desc: "Number of Discord servers you're in",
+                      },
+                      {
+                        key: "serverInvite",
+                        checked: widgetServerInvite,
+                        setChecked: setWidgetServerInvite,
+                        name: "showDiscordWidgetServerInvite",
+                        icon: <ArrowSquareOut size={20} weight="regular" className="shrink-0 text-[#5865F2]" aria-hidden />,
+                        label: "Server invite",
+                        desc: "Link for visitors to join your Discord",
+                      },
+                    ].map((w) => (
+                      <label
+                        key={w.key}
+                        className={`flex items-start gap-3 rounded-lg border px-3 py-3 cursor-pointer transition-colors ${
+                          w.checked
+                            ? "border-[#5865F2]/40 bg-[#5865F2]/15"
+                            : canEnableMore
+                              ? "border-[var(--border)]/50 hover:border-[var(--border)]"
+                              : "border-[var(--border)]/50 opacity-60 cursor-not-allowed"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          name={w.name}
+                          checked={w.checked}
+                          onChange={(e) => {
+                            if (e.target.checked && !canEnableMore) return;
+                            w.setChecked(e.target.checked);
+                          }}
+                          disabled={!w.checked && !canEnableMore}
+                          className="mt-1 rounded border-[var(--border)]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {w.icon}
+                            <span className="text-sm font-medium">{w.label}</span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-[var(--muted)]">{w.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  {widgetServerInvite && (
+                    <label className="block">
+                      <span className="text-xs font-medium text-[var(--muted)]">Discord invite link</span>
+                      <input
+                        type="text"
+                        name="discordInviteUrl"
+                        value={discordInviteInput}
+                        onChange={(e) => setDiscordInviteInput(e.target.value)}
+                        placeholder="https://discord.gg/abc123 or abc123"
+                        className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                      />
+                      {discordInviteInput.trim() && !/^(https?:\/\/)?(discord\.gg\/|discord\.com\/invite\/)[a-zA-Z0-9-]+$|^[a-zA-Z0-9-]{2,32}$/.test(
+                        discordInviteInput.trim()
+                      ) && (
+                        <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-500">
+                          Use a valid Discord invite (e.g. discord.gg/abc123)
+                        </p>
+                      )}
+                    </label>
+                  )}
+                  {widgetPreviewFiltered && (
+                    <div className="pt-2 border-t border-[#5865F2]/20">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] mb-2">Preview</p>
+                      <div className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/60 p-3">
+                        <DiscordWidgetsDisplay data={widgetPreviewFiltered} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[#00A2FF]/20 bg-[#00A2FF]/5 overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#00A2FF]/20 flex items-center gap-2">
+                  <div className="rounded-lg bg-[#00A2FF]/15 p-1.5">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-[#00A2FF]">
+                      <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.09 8 12 11.82 4.91 8 12 4.18zM4 8.82l7 3.5v7.36l-7-3.5V8.82zm9 10.86v-7.36l7-3.5v7.36l-7 3.5z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium text-[var(--foreground)]">Roblox widgets</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <p className="text-xs text-[var(--muted)]">
+                    Show Roblox info on your profile. Requires linking your Roblox account via OAuth.
+                  </p>
+                  {robloxLinked ? (
+                    <>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-xs text-[var(--terminal)]">✓ Roblox linked</span>
+                        <Link
+                          href="/api/auth/roblox"
+                          className="text-xs text-[#00A2FF] hover:underline"
+                        >
+                          Re-link account
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (confirm("Unlink Roblox? You can re-link anytime.")) {
+                              const res = await fetch(`/api/profiles/${profile.slug}/roblox/disconnect`, { method: "DELETE" });
+                              if (res.ok) window.location.reload();
+                            }
+                          }}
+                          className="text-xs text-[var(--muted)] hover:text-[var(--warning)]"
+                        >
+                          Unlink
+                        </button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="flex items-center gap-2.5 rounded-lg border border-[var(--border)]/50 hover:border-[var(--border)] px-3 py-2.5 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="showRobloxWidgetAccountAge"
+                            checked={widgetRobloxAccountAge}
+                            onChange={(e) => setWidgetRobloxAccountAge(e.target.checked)}
+                            className="rounded border-[var(--border)]"
+                          />
+                          <span className="text-sm font-medium">Account age</span>
+                        </label>
+                        <label className="flex items-center gap-2.5 rounded-lg border border-[var(--border)]/50 hover:border-[var(--border)] px-3 py-2.5 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            name="showRobloxWidgetProfile"
+                            checked={widgetRobloxProfile}
+                            onChange={(e) => setWidgetRobloxProfile(e.target.checked)}
+                            className="rounded border-[var(--border)]"
+                          />
+                          <span className="text-sm font-medium">Profile link</span>
+                        </label>
+                      </div>
+                    </>
+                  ) : (
+                    <Link
+                      href="/api/auth/roblox"
+                      className="inline-flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/40 bg-[#00A2FF]/15 px-4 py-2.5 text-sm font-medium text-[#00A2FF] transition-colors hover:border-[#00A2FF]/60 hover:bg-[#00A2FF]/20"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.09 8 12 11.82 4.91 8 12 4.18zM4 8.82l7 3.5v7.36l-7-3.5V8.82zm9 10.86v-7.36l7-3.5v7.36l-7 3.5z" />
+                      </svg>
+                      Link Roblox account
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -2215,30 +2506,39 @@ export default function DashboardMyProfile({
           </div>
         </div>
       </section>
-      )}
 
-      {tab === "preview" && (
-      <section className="animate-dashboard-panel rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
-        <div className="border-b border-[var(--border)] px-4 py-3 flex items-center gap-2 bg-[var(--bg)]/80">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#eab308]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" aria-hidden />
-          <span className="ml-2 text-xs text-[var(--muted)] font-mono inline-flex items-center gap-2">
-            <Eye size={14} weight="regular" /> Preview
-          </span>
+      {/* Preview panel - right side on xl, full width when tab=preview on <xl */}
+      <section
+        className={`animate-dashboard-panel flex flex-col flex-1 min-h-0 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
+          tab === "editor" ? "hidden xl:flex" : ""
+        }`}
+        aria-label="Profile preview"
+      >
+        <div className="border-b border-[var(--border)] px-4 py-3 flex items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
+          <div className="flex items-center gap-2">
+            <Eye size={18} weight="regular" className="text-[var(--terminal)]" aria-hidden />
+            <span className="text-sm font-medium text-[var(--foreground)]">Live preview</span>
+            <span className="text-xs text-[var(--muted)] hidden sm:inline">— updates when you save</span>
+          </div>
+          <Link
+            href={`/${profile.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-[var(--accent)] hover:underline"
+          >
+            Open in tab
+          </Link>
         </div>
-        <p className="px-4 py-2 text-xs text-[var(--muted)] border-b border-[var(--border)]/50">
-          Live page. Save changes in Editor to see updates.
-        </p>
-        <div className="relative w-full min-h-[60vh] bg-[var(--bg)]">
+        <div className="flex-1 min-h-0 relative bg-[var(--bg)]">
           <iframe
+            key={formKey}
             src={`/${profile.slug}`}
             title={`Preview of /${profile.slug}`}
-            className="absolute inset-0 w-full h-full min-h-[60vh] rounded-b-xl border-0"
+            className="absolute inset-0 w-full h-full rounded-b-xl border-0"
           />
         </div>
       </section>
-      )}
+      </div>
 
       <ConfirmDialog
         open={shortLinkToDelete != null}

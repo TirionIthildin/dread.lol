@@ -876,6 +876,44 @@
       0 0 0 1px rgba(15, 23, 42, 0.06);
   }
 
+  /* Discord widgets: light theme styling */
+  [data-page-theme="classic-light"] .discord-widget-card,
+  [data-page-theme="minimalist-light"] .discord-widget-card {
+    border-color: rgba(88, 101, 242, 0.2);
+    background: rgba(255, 255, 255, 0.7);
+  }
+  [data-page-theme="classic-light"] .discord-widget-card:hover,
+  [data-page-theme="minimalist-light"] .discord-widget-card:hover {
+    border-color: rgba(88, 101, 242, 0.35);
+  }
+  [data-page-theme="classic-light"] .discord-widget-card[href]:hover,
+  [data-page-theme="minimalist-light"] .discord-widget-card[href]:hover {
+    background: rgba(88, 101, 242, 0.08);
+  }
+  [data-page-theme="classic-light"] .discord-widget-label,
+  [data-page-theme="minimalist-light"] .discord-widget-label {
+    color: rgba(88, 101, 242, 0.9);
+  }
+  [data-page-theme="classic-light"] .discord-widget-icon,
+  [data-page-theme="minimalist-light"] .discord-widget-icon {
+    color: #5865F2;
+  }
+
+  /* Roblox widgets: light theme */
+  [data-page-theme="classic-light"] .roblox-widget-card,
+  [data-page-theme="minimalist-light"] .roblox-widget-card {
+    border-color: rgba(0, 162, 255, 0.2);
+    background: rgba(255, 255, 255, 0.7);
+  }
+  [data-page-theme="classic-light"] .roblox-widget-card:hover,
+  [data-page-theme="minimalist-light"] .roblox-widget-card:hover {
+    border-color: rgba(0, 162, 255, 0.35);
+  }
+  [data-page-theme="classic-light"] .roblox-widget-card[href]:hover,
+  [data-page-theme="minimalist-light"] .roblox-widget-card[href]:hover {
+    background: rgba(0, 162, 255, 0.08);
+  }
+
   .profile-density-compact .profile-content-inner {
     padding: 0.5rem 0.75rem;
     font-size: 0.8125rem;

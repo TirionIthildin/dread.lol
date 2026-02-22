@@ -85,10 +85,20 @@ export interface ProfileDoc {
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;
+  /** Custom text for unlock overlay (video/audio); default "Click here to view profile". */
+  unlockOverlayText?: string | null;
   showDiscordBadges?: boolean;
+  /** Comma-separated Discord badge keys to hide on profile (e.g. Nitro,NitroClassic). */
+  hiddenDiscordBadges?: string | null;
   showDiscordPresence?: boolean;
   /** Discord presence display style: pills, minimal, stacked, inline. */
   discordPresenceStyle?: string | null;
+  /** Discord widgets to show: comma-separated accountAge,serverCount,serverInvite. */
+  showDiscordWidgets?: string | null;
+  /** User's Discord server invite URL or code (for server invite widget). */
+  discordInviteUrl?: string | null;
+  /** Roblox widgets to show: comma-separated accountAge,profile (requires OAuth link). */
+  showRobloxWidgets?: string | null;
   showAudioPlayer?: boolean;
   /** Audio visualizer style: none, bars, waveform, circle, line, blocks */
   audioVisualizerStyle?: string | null;

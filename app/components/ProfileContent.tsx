@@ -18,6 +18,8 @@ import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
 import ProfileBlogButton from "@/app/components/ProfileBlogButton";
 import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
+import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
+import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/discord-lastseen";
@@ -198,7 +200,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
         />
       )}
     <div
-      className={`relative z-10 w-full max-h-[calc(100vh-1.5rem)] overflow-auto ${isMinimalist ? "max-w-md" : "max-w-2xl"} ${themeClass} ${fontClass}`}
+      className={`relative z-10 w-full min-w-0 max-w-2xl max-h-[calc(100vh-3rem)] overflow-auto shrink-0 ${themeClass} ${fontClass}`}
     >
       <article
         className={`rounded-2xl border overflow-hidden transition-all duration-300 ${isMinimalist ? "profile-minimalist-card border-[var(--border)]/60 shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)]" : "rounded-xl border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]"} ${!isMinimalist ? cardClass : ""} ${densityClass} ${animationClass}`}
@@ -431,6 +433,21 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
             roblox={profile.roblox}
             links={profile.links}
           />
+          {profile.discordWidgets &&
+            (profile.discordWidgets.accountAge ||
+              profile.discordWidgets.joined ||
+              profile.discordWidgets.serverCount != null ||
+              profile.discordWidgets.serverInvite) && (
+              <div className="mt-4">
+                <DiscordWidgetsDisplay data={profile.discordWidgets} />
+              </div>
+            )}
+          {profile.robloxWidgets &&
+            (profile.robloxWidgets.accountAge || profile.robloxWidgets.profile) && (
+              <div className="mt-4">
+                <RobloxWidgetsDisplay data={profile.robloxWidgets} />
+              </div>
+            )}
           <div className="mt-4 flex flex-wrap gap-2">
             <ProfileBlogButton slug={profile.slug} />
             <ProfileGalleryButton slug={profile.slug} />
@@ -454,7 +471,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
               </div>
             </div>
           )}
-          {vouches && (
+          {vouches ? (
             <ProfileVouches
               slug={vouches.slug}
               count={vouches.count}
@@ -462,19 +479,23 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
               mutualVouchers={vouches.mutualVouchers}
               currentUserHasVouched={vouches.currentUserHasVouched}
               canVouch={vouches.canVouch}
+              updatedAt={profile.updatedAt}
+              viewCount={profile.showPageViews ? profile.viewCount ?? null : undefined}
             />
-          )}
-          {(profile.updatedAt || (profile.showPageViews && profile.viewCount != null)) && (
-            <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)] flex flex-wrap items-center gap-x-3 gap-y-1">
+          ) : (profile.updatedAt || (profile.showPageViews && profile.viewCount != null)) ? (
+            <p className="mt-4 pt-3 border-t border-[var(--border)]/50 text-xs text-[var(--muted)] flex flex-wrap items-center gap-x-1 gap-y-1">
               {profile.updatedAt && <span>Last updated {profile.updatedAt}</span>}
               {profile.showPageViews && profile.viewCount != null && (
-                <span className="inline-flex items-center gap-1">
-                  <Eye {...profileMetaIconProps} aria-hidden />
-                  {profile.viewCount} view{profile.viewCount !== 1 ? "s" : ""}
-                </span>
+                <>
+                  {profile.updatedAt && <span className="opacity-60">·</span>}
+                  <span className="inline-flex items-center gap-1">
+                    <Eye {...profileMetaIconProps} aria-hidden />
+                    {profile.viewCount} view{profile.viewCount !== 1 ? "s" : ""}
+                  </span>
+                </>
               )}
             </p>
-          )}
+          ) : null}
         </div>
         {useTerminalLayout && (
           <ProfileCommandBar

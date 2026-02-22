@@ -11,6 +11,26 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Bigger profile editor",
+    description: "Full-viewport editor with side-by-side live preview, wider layout, sticky save bar, and ⌘/Ctrl+Enter shortcut.",
+  },
+  {
+    date: "2026-02",
+    title: "Roblox widgets",
+    description: "Link your Roblox account via OAuth and show account age or profile link on your profile.",
+  },
+  {
+    date: "2026-02",
+    title: "Joined widget & badge controls",
+    description: "Show when you joined Dread.lol on your profile. Choose which Discord badges to display.",
+  },
+  {
+    date: "2026-02",
+    title: "Discord widgets",
+    description: "Show account age, server count, and server invite links on your profile.",
+  },
+  {
+    date: "2026-02",
     title: "Profile micro-blog",
     description: "Write markdown posts on your profile. Each member gets their own blog at /slug/blog.",
   },

@@ -1,0 +1,144 @@
+import Link from "next/link";
+import { DiscordLogo, ArrowSquareOut, CalendarBlank } from "@phosphor-icons/react/dist/ssr";
+import type { DiscordWidgetData } from "@/lib/discord-widgets";
+
+/** Normalize widget data from server (Dates may be ISO strings). */
+export function normalizeWidgetData(data: DiscordWidgetData | null | undefined): DiscordWidgetData | null {
+  if (!data) return null;
+  const out: DiscordWidgetData = {};
+  if (data.accountAge) {
+    const createdAt =
+      typeof data.accountAge.createdAt === "string"
+        ? new Date(data.accountAge.createdAt)
+        : data.accountAge.createdAt;
+    out.accountAge = { createdAt, label: data.accountAge.label };
+  }
+  if (data.joined) {
+    const createdAt =
+      typeof data.joined.createdAt === "string"
+        ? new Date(data.joined.createdAt)
+        : data.joined.createdAt;
+    out.joined = { createdAt, label: data.joined.label };
+  }
+  if (data.serverCount != null) out.serverCount = data.serverCount;
+  if (data.serverInvite) out.serverInvite = data.serverInvite;
+  return out;
+}
+
+const discordIconProps = { size: 18, weight: "fill" as const, className: "discord-widget-icon shrink-0 text-[#5865F2]" };
+const joinedIconProps = { size: 18, weight: "regular" as const, className: "shrink-0 text-[var(--accent)]" };
+const labelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[#5865F2]/80";
+const joinedLabelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]";
+
+interface DiscordWidgetsDisplayProps {
+  data: DiscordWidgetData;
+}
+
+export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayProps) {
+  const widgets: React.ReactNode[] = [];
+
+  const widgetBase = "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[#5865F2]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors";
+  const joinedWidgetBase = "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--border)]/50 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--border-bright)]/50";
+
+  if (data.accountAge) {
+    widgets.push(
+      <div
+        key="accountAge"
+        className={`${widgetBase} hover:border-[#5865F2]/40`}
+        title={`Discord account since ${data.accountAge.createdAt.toLocaleDateString()}`}
+      >
+        <DiscordLogo {...discordIconProps} aria-hidden />
+        <div>
+          <p className={labelClass}>Account age</p>
+          <p className="text-[var(--foreground)] font-medium">{data.accountAge.label}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.joined) {
+    widgets.push(
+      <div
+        key="joined"
+        className={`${joinedWidgetBase}`}
+        title={`Joined Dread.lol on ${data.joined.createdAt.toLocaleDateString()}`}
+      >
+        <CalendarBlank {...joinedIconProps} aria-hidden />
+        <div>
+          <p className={joinedLabelClass}>Joined</p>
+          <p className="text-[var(--foreground)] font-medium">{data.joined.label}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.serverCount != null) {
+    widgets.push(
+      <div
+        key="serverCount"
+        className={`${widgetBase} hover:border-[#5865F2]/40`}
+        title="Number of Discord servers this user is in"
+      >
+        <DiscordLogo {...discordIconProps} aria-hidden />
+        <div>
+          <p className={labelClass}>Servers</p>
+          <p className="text-[var(--foreground)] font-medium">
+            {data.serverCount} server{data.serverCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (data.serverInvite) {
+    const guildPart = data.serverInvite.guildName ?? "my Discord";
+    const countPart = data.serverInvite.memberCount != null ? ` · ${data.serverInvite.memberCount.toLocaleString()} members` : "";
+    const label = `Join ${guildPart}${countPart}`;
+    const isPlaceholder = data.serverInvite.url === "#";
+    const content = (
+      <>
+        <DiscordLogo {...discordIconProps} aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className={labelClass}>Join server</p>
+          <p className="font-medium truncate">{label}</p>
+        </div>
+        {!isPlaceholder && (
+          <ArrowSquareOut size={14} weight="regular" className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
+        )}
+      </>
+    );
+    widgets.push(
+      isPlaceholder ? (
+        <div
+          key="serverInvite"
+          className={`${widgetBase} opacity-80 text-[var(--foreground)]`}
+        >
+          {content}
+        </div>
+      ) : (
+        <Link
+          key="serverInvite"
+          href={data.serverInvite.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${widgetBase} text-[var(--foreground)] hover:border-[#5865F2]/50 hover:bg-[#5865F2]/10 group`}
+        >
+          {content}
+        </Link>
+      )
+    );
+  }
+
+  if (widgets.length === 0) return null;
+
+  return (
+    <div
+      className="grid gap-2"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}
+      role="group"
+      aria-label="Discord info"
+    >
+      {widgets}
+    </div>
+  );
+}

@@ -92,11 +92,12 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   }, [backgroundAudioUrl, unlocked]);
 
   const content = (
-    <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center">
+    <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center py-6">
       {children}
     </div>
   );
 
+  const unlockOverlayLabel = profile.unlockOverlayText?.trim() || "Click here to view profile";
   const unlockOverlay = needsUnlock && !unlocked && (
     <button
       type="button"
@@ -105,7 +106,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
       aria-label="Click to view profile and play media"
     >
       <span className="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)]/95 px-7 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all duration-200 hover:border-[var(--accent)]/70 hover:bg-[var(--surface)]">
-        Click here to view profile
+        {unlockOverlayLabel}
       </span>
     </button>
   );

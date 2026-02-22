@@ -95,6 +95,8 @@ export interface Profile {
   backgroundUrl?: string;
   /** Ambient background audio URL (separate from visual background). */
   backgroundAudioUrl?: string;
+  /** Custom text for the unlock overlay when profile has video or audio (default: "Click here to view profile"). */
+  unlockOverlayText?: string;
   /** When true, ask search engines not to index this profile. */
   noindex?: boolean;
   /** Override meta/OG description for social sharing. */
@@ -140,5 +142,17 @@ export interface Profile {
   audioVisualizerAnimation?: string;
   /** Audio tracks for the player: url and optional title. */
   audioTracks?: { url: string; title?: string }[];
+  /** Roblox widgets (requires OAuth link): accountAge, profile. */
+  robloxWidgets?: {
+    accountAge?: { createdAt: Date; label: string };
+    profile?: { url: string; displayName: string; username: string };
+  };
+  /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
+  discordWidgets?: {
+    accountAge?: { createdAt: Date; label: string };
+    joined?: { createdAt: Date; label: string };
+    serverCount?: number;
+    serverInvite?: { url: string; guildName?: string; memberCount?: number };
+  };
 }
 

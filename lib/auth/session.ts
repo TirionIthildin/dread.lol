@@ -79,15 +79,26 @@ export async function destroySession(): Promise<void> {
   }
 }
 
-export async function setOAuthState(state: string, codeVerifier: string): Promise<void> {
+const OAUTH_STATE_PROVIDERS = { discord: "", roblox: "roblox:" } as const;
+
+export async function setOAuthState(
+  state: string,
+  codeVerifier: string,
+  provider: keyof typeof OAUTH_STATE_PROVIDERS = "discord"
+): Promise<void> {
   const redis = getValkey();
-  await redis.setex(OAUTH_STATE_PREFIX + state, OAUTH_STATE_TTL, codeVerifier);
+  const prefix = OAUTH_STATE_PREFIX + OAUTH_STATE_PROVIDERS[provider];
+  await redis.setex(prefix + state, OAUTH_STATE_TTL, codeVerifier);
 }
 
 /** Returns the stored value (or "" for Discord); null if state was not found or already used. One-time use: key is deleted after read. */
-export async function consumeOAuthState(state: string): Promise<string | null> {
+export async function consumeOAuthState(
+  state: string,
+  provider: keyof typeof OAUTH_STATE_PROVIDERS = "discord"
+): Promise<string | null> {
   const redis = getValkey();
-  const key = OAUTH_STATE_PREFIX + state;
+  const prefix = OAUTH_STATE_PREFIX + OAUTH_STATE_PROVIDERS[provider];
+  const key = prefix + state;
   const value = await redis.get(key);
   if (value !== null) await redis.del(key);
   return value;
