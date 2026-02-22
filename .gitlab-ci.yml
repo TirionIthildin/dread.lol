@@ -1,5 +1,6 @@
 stages:
   - build
+  - deploy
 
 # Dread.lol Docker Build
 docker-build:
@@ -24,5 +25,21 @@ docker-build:
       fi
   rules:
     - if: $CI_COMMIT_BRANCH
+      exists:
+        - Dockerfile
+
+# Deploy to Coolify after successful build (main branch only)
+deploy-coolify:
+  stage: deploy
+  image: curlimages/curl:latest
+  script:
+    - |
+      curl -X GET "https://coolify.ithildin.co/api/v1/deploy?uuid=rock48o8kccgwsw40g00g0co&force=false" \
+        -H "Authorization: Bearer $COOLIFY_API_TOKEN" \
+        -H "Accept: application/json" \
+        -w "\nHTTP Status: %{http_code}\n" \
+        -f
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       exists:
         - Dockerfile
