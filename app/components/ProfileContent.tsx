@@ -16,6 +16,7 @@ import ProfileVouches from "@/app/components/ProfileVouches";
 import ProfileReportButton from "@/app/components/ProfileReportButton";
 import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
+import ProfileBlogButton from "@/app/components/ProfileBlogButton";
 import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
@@ -430,7 +431,8 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
             roblox={profile.roblox}
             links={profile.links}
           />
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ProfileBlogButton slug={profile.slug} />
             <ProfileGalleryButton slug={profile.slug} />
           </div>
           {profile.showAudioPlayer && profile.audioTracks && profile.audioTracks.length > 0 && (

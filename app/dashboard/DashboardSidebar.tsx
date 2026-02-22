@@ -4,9 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
+  Article,
+  ChartLine,
   ClipboardText,
   DiscordLogo,
-  FileText,
   ImagesSquare,
   SignOut,
   Storefront,
@@ -39,6 +40,11 @@ const mainNavItems = [
 
 const contentNavItems = [
   {
+    href: "/dashboard/blog",
+    label: "Blog",
+    icon: <Article size={20} weight="regular" className="shrink-0" aria-hidden />,
+  },
+  {
     href: "/dashboard/gallery",
     label: "Gallery",
     icon: <ImagesSquare size={20} weight="regular" className="shrink-0" aria-hidden />,
@@ -58,8 +64,8 @@ const discoverNavItems = [
   },
   {
     href: "/dashboard/views",
-    label: "Logs",
-    icon: <FileText size={20} weight="regular" className="shrink-0" aria-hidden />,
+    label: "Analytics",
+    icon: <ChartLine size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
 ] as const;
 

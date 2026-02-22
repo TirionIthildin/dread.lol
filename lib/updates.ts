@@ -11,6 +11,16 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Profile micro-blog",
+    description: "Write markdown posts on your profile. Each member gets their own blog at /slug/blog.",
+  },
+  {
+    date: "2026-02",
+    title: "Profile analytics",
+    description: "See who viewed your profile, traffic sources (Google, Discord, X, etc.), views over time, and device breakdown.",
+  },
+  {
+    date: "2026-02",
     title: "Unique view counts",
     description: "Profile views now count unique visitors (IP + browser) instead of every page load.",
   },

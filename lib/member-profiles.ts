@@ -14,6 +14,8 @@ import {
 import type { Profile } from "@/lib/profiles";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import type { SessionUser } from "@/lib/auth/session";
+import { escapeRegex } from "@/lib/regex";
+import { getBaseDomain } from "@/lib/site";
 
 export interface MemberProfileWithViews {
   profile: ProfileRow;
@@ -157,10 +159,11 @@ export async function getPendingUsersListPaginated(options: {
 
   const filter: Record<string, unknown> = { approved: false };
   if (search) {
+    const escaped = escapeRegex(search);
     filter.$or = [
-      { username: { $regex: search, $options: "i" } },
-      { displayName: { $regex: search, $options: "i" } },
-      { _id: { $regex: search, $options: "i" } },
+      { username: { $regex: escaped, $options: "i" } },
+      { displayName: { $regex: escaped, $options: "i" } },
+      { _id: { $regex: escaped, $options: "i" } },
     ];
   }
 
@@ -526,12 +529,13 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
   const q = search?.trim();
   const client = await getDb();
   const dbName = await getDbName();
-  const filter: Record<string, unknown> = q
+  const escaped = q ? escapeRegex(q) : "";
+  const filter: Record<string, unknown> = escaped
     ? {
         $or: [
-          { username: { $regex: q, $options: "i" } },
-          { displayName: { $regex: q, $options: "i" } },
-          { _id: { $regex: q, $options: "i" } },
+          { username: { $regex: escaped, $options: "i" } },
+          { displayName: { $regex: escaped, $options: "i" } },
+          { _id: { $regex: escaped, $options: "i" } },
         ],
       }
     : {};
@@ -577,6 +581,7 @@ export async function getOrCreateMemberProfile(
         name: defaults.name,
         description: "",
         avatarUrl: defaults.avatarUrl ?? null,
+        showPageViews: true,
         createdAt: now,
         updatedAt: now,
       };
@@ -965,10 +970,57 @@ function computeVisitorKey(visitorIp: string, userAgent?: string | null): string
   return crypto.createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
+/** Parse referrer URL to a domain for traffic source analytics. */
+function parseReferrerDomain(referrer: string | null | undefined): string | null {
+  if (!referrer?.trim()) return null;
+  try {
+    const u = new URL(referrer.trim());
+    const host = u.hostname.replace(/^www\./i, "").toLowerCase();
+    return host || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Map referrer domain to a human-readable traffic source label. */
+function referrerDomainToSource(domain: string, siteHost?: string): string {
+  const d = domain.toLowerCase();
+  if (siteHost && d === siteHost.replace(/^www\./, "")) return "Internal";
+  if (d.includes("google")) return "Google";
+  if (d === "x.com" || d === "twitter.com" || d === "t.co") return "X (Twitter)";
+  if (d.includes("discord")) return "Discord";
+  if (d.includes("github")) return "GitHub";
+  if (d.includes("linkedin")) return "LinkedIn";
+  if (d.includes("youtube") || d.includes("youtu.be")) return "YouTube";
+  if (d.includes("reddit")) return "Reddit";
+  if (d.includes("facebook")) return "Facebook";
+  if (d.includes("instagram")) return "Instagram";
+  if (d.includes("tiktok")) return "TikTok";
+  if (d.includes("mastodon")) return "Mastodon";
+  if (d.includes("bluesky")) return "Bluesky";
+  return domain;
+}
+
+/** Parse user agent to device type. */
+function parseDeviceType(userAgent: string | null | undefined): "desktop" | "mobile" | "bot" | "unknown" {
+  if (!userAgent) return "unknown";
+  const ua = userAgent.toLowerCase();
+  if (/bot|crawl|spider|slurp|headless|phantom|scraper|curl|wget|python|java\s/i.test(ua)) return "bot";
+  if (/mobile|android|iphone|ipad|ipod|webos|blackberry|iemobile|opera\smini/i.test(ua)) return "mobile";
+  return "desktop";
+}
+
+export type RecordProfileViewOptions = {
+  viewerUserId?: string | null;
+  referrer?: string | null;
+  countryCode?: string | null;
+};
+
 export async function recordProfileView(
   profileId: string,
   visitorIp: string,
-  userAgent?: string | null
+  userAgent?: string | null,
+  options?: RecordProfileViewOptions
 ): Promise<void> {
   const client = await getDb();
   const dbName = await getDbName();
@@ -979,6 +1031,10 @@ export async function recordProfileView(
     return;
   }
   const visitorKey = computeVisitorKey(visitorIp, userAgent);
+  const referrer = options?.referrer ?? null;
+  const referrerDomain = referrer ? parseReferrerDomain(referrer) : null;
+  const deviceType = parseDeviceType(userAgent);
+
   await client.db(dbName).collection(COLLECTIONS.profileViews).insertOne({
     _id: new ObjectId(),
     profileId: oid,
@@ -986,6 +1042,11 @@ export async function recordProfileView(
     userAgent: userAgent ?? null,
     visitorKey,
     viewedAt: new Date(),
+    viewerUserId: options?.viewerUserId ?? null,
+    referrer: referrer ?? null,
+    referrerDomain: referrerDomain ?? null,
+    deviceType,
+    countryCode: options?.countryCode ?? null,
   });
 }
 
@@ -1076,6 +1137,234 @@ export async function getProfileViews(
     if (recentViews.length >= recentLimit) break;
   }
   return { viewCount, recentViews };
+}
+
+/** Viewer with optional profile info (when logged-in and has a profile). */
+export interface ProfileViewerRow {
+  id: string;
+  viewedAt: Date;
+  viewerUserId: string | null;
+  /** Populated when viewer has a Dread profile. */
+  viewerProfile?: { slug: string; name: string; avatarUrl: string | null } | null;
+}
+
+/** Full analytics for a profile: who viewed, traffic sources, views over time, devices, countries. */
+export interface ProfileAnalytics {
+  viewCount: number;
+  viewsThisWeek: number;
+  viewsOverTime: { date: string; count: number }[];
+  trafficSources: { source: string; count: number }[];
+  deviceBreakdown: { desktop: number; mobile: number; bot: number; unknown: number };
+  countries: { countryCode: string; count: number }[];
+  whoViewed: ProfileViewerRow[];
+}
+
+export async function getProfileAnalytics(
+  profileId: string,
+  recentViewersLimit = 25,
+  daysBack = 30
+): Promise<ProfileAnalytics> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(profileId);
+  } catch {
+    return {
+      viewCount: 0,
+      viewsThisWeek: 0,
+      viewsOverTime: [],
+      trafficSources: [],
+      deviceBreakdown: { desktop: 0, mobile: 0, bot: 0, unknown: 0 },
+      countries: [],
+      whoViewed: [],
+    };
+  }
+
+  const db = client.db(dbName);
+  const viewsColl = db.collection(COLLECTIONS.profileViews);
+  const profilesColl = db.collection(COLLECTIONS.profiles);
+
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const daysAgo = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+
+  const [
+    uniqueResult,
+    weekResult,
+    viewsOverTimeRaw,
+    trafficRaw,
+    deviceRaw,
+    countryRaw,
+    recentViews,
+  ] = await Promise.all([
+    // Unique view count
+    viewsColl
+      .aggregate<{ uniqueCount: number }>([
+        { $match: { profileId: oid } },
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$visitorKey",
+                { $concat: ["$visitorIp", "|", { $ifNull: ["$userAgent", ""] }] },
+              ],
+            },
+          },
+        },
+        { $count: "uniqueCount" },
+      ])
+      .toArray(),
+    // Views this week (unique)
+    viewsColl
+      .aggregate<{ count: number }>([
+        { $match: { profileId: oid, viewedAt: { $gte: weekAgo } } },
+        {
+          $group: {
+            _id: {
+              $ifNull: [
+                "$visitorKey",
+                { $concat: ["$visitorIp", "|", { $ifNull: ["$userAgent", ""] }] },
+              ],
+            },
+          },
+        },
+        { $count: "count" },
+      ])
+      .toArray(),
+    // Views per day (last N days)
+    viewsColl
+      .aggregate<{ _id: string; count: number }>([
+        { $match: { profileId: oid, viewedAt: { $gte: daysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$viewedAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray(),
+    // Traffic sources (referrer domain → count)
+    viewsColl
+      .aggregate<{ _id: string | null; count: number }>([
+        { $match: { profileId: oid } },
+        { $group: { _id: "$referrerDomain", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 15 },
+      ])
+      .toArray(),
+    // Device breakdown
+    viewsColl
+      .aggregate<{ _id: string; count: number }>([
+        { $match: { profileId: oid } },
+        { $group: { _id: { $ifNull: ["$deviceType", "unknown"] }, count: { $sum: 1 } } },
+      ])
+      .toArray(),
+    // Country breakdown (from Cloudflare CF-IPCountry)
+    viewsColl
+      .aggregate<{ _id: string; count: number }>([
+        { $match: { profileId: oid, countryCode: { $exists: true, $nin: [null, ""] } } },
+        { $group: { _id: "$countryCode", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 15 },
+      ])
+      .toArray(),
+    // Recent views (deduped by visitor, most recent first)
+    viewsColl
+      .find({ profileId: oid })
+      .sort({ viewedAt: -1 })
+      .limit(recentViewersLimit * 3)
+      .toArray(),
+  ]);
+
+  const viewCount = uniqueResult[0]?.uniqueCount ?? 0;
+  const viewsThisWeek = weekResult[0]?.count ?? 0;
+
+  // Build views over time (fill gaps with 0)
+  const viewsOverTimeMap = new Map<string, number>();
+  for (const row of viewsOverTimeRaw) {
+    viewsOverTimeMap.set(row._id, row.count);
+  }
+  const viewsOverTime: { date: string; count: number }[] = [];
+  for (let i = 0; i < daysBack; i++) {
+    const d = new Date(daysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    viewsOverTime.push({ date: key, count: viewsOverTimeMap.get(key) ?? 0 });
+  }
+
+  // Traffic sources with human-readable labels
+  const siteHost = getBaseDomain();
+  const trafficSources = trafficRaw.map((r) => ({
+    source: r._id ? referrerDomainToSource(r._id, siteHost) : "Direct",
+    count: r.count,
+  }));
+
+  // Countries (from Cloudflare CF-IPCountry)
+  const countries = countryRaw.map((r) => ({
+    countryCode: r._id,
+    count: r.count,
+  }));
+
+  // Device breakdown
+  const deviceBreakdown = { desktop: 0, mobile: 0, bot: 0, unknown: 0 };
+  for (const row of deviceRaw) {
+    const k = row._id as keyof typeof deviceBreakdown;
+    if (k in deviceBreakdown) deviceBreakdown[k] = row.count;
+    else deviceBreakdown.unknown += row.count;
+  }
+
+  // Who viewed: dedupe by visitor, prefer viewerUserId for "who" when available
+  const seen = new Set<string>();
+  const whoRows: {
+    id: string;
+    viewedAt: Date;
+    viewerUserId: string | null;
+  }[] = [];
+  for (const v of recentViews as { _id: ObjectId; visitorKey?: string; visitorIp: string; userAgent?: string | null; viewerUserId?: string | null; viewedAt: Date }[]) {
+    const key = v.visitorKey ?? `${v.visitorIp}|${v.userAgent ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    whoRows.push({
+      id: v._id.toString(),
+      viewedAt: v.viewedAt,
+      viewerUserId: v.viewerUserId ?? null,
+    });
+    if (whoRows.length >= recentViewersLimit) break;
+  }
+
+  // Enrich with viewer profiles
+  const viewerUserIds = [...new Set(whoRows.map((r) => r.viewerUserId).filter(Boolean))] as string[];
+  const viewerProfiles =
+    viewerUserIds.length > 0
+      ? await profilesColl
+          .find({ userId: { $in: viewerUserIds } })
+          .project({ userId: 1, slug: 1, name: 1, avatarUrl: 1 })
+          .toArray()
+      : [];
+  const profileByUserId = new Map(
+    (viewerProfiles as { userId: string; slug: string; name: string; avatarUrl?: string | null }[]).map(
+      (p) => [p.userId, { slug: p.slug, name: p.name, avatarUrl: p.avatarUrl ?? null }]
+    )
+  );
+
+  const whoViewed: ProfileViewerRow[] = whoRows.map((r) => ({
+    id: r.id,
+    viewedAt: r.viewedAt,
+    viewerUserId: r.viewerUserId,
+    viewerProfile: r.viewerUserId ? profileByUserId.get(r.viewerUserId) ?? null : null,
+  }));
+
+  return {
+    viewCount,
+    viewsThisWeek,
+    viewsOverTime,
+    trafficSources,
+    deviceBreakdown,
+    countries,
+    whoViewed,
+  };
 }
 
 export async function updateMemberProfile(

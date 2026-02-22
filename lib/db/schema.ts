@@ -109,6 +109,16 @@ export interface ProfileViewDoc {
   /** Hash of IP+UA for unique view counting. New records only. */
   visitorKey?: string | null;
   viewedAt: Date;
+  /** Logged-in viewer's Discord user ID (for "who viewed" analytics). */
+  viewerUserId?: string | null;
+  /** Full Referer URL. */
+  referrer?: string | null;
+  /** Parsed domain for traffic source (e.g. "google.com", "discord.com"). */
+  referrerDomain?: string | null;
+  /** Parsed from user agent: desktop, mobile, bot, unknown. */
+  deviceType?: "desktop" | "mobile" | "bot" | "unknown" | null;
+  /** Country code from Cloudflare CF-IPCountry (ISO 3166-1 Alpha 2). */
+  countryCode?: string | null;
 }
 
 export interface VouchDoc {
@@ -152,6 +162,15 @@ export interface UserBadgeDoc {
   badgeId: ObjectId;
 }
 
+export interface BlogPostDoc {
+  _id: ObjectId;
+  profileId: ObjectId;
+  title: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /** ProfileRow: API-facing shape with string id (from _id.toString()) */
 export type ProfileRow = Omit<ProfileDoc, "_id"> & { id: string };
 export type NewProfileRow = Omit<ProfileRow, "createdAt" | "updatedAt">;
@@ -173,6 +192,15 @@ export type ProfileShortLinkRow = Omit<ProfileShortLinkDoc, "_id" | "profileId">
 };
 export type BadgeRow = Omit<BadgeDoc, "_id"> & { id: string };
 export type UserBadgeRow = Omit<UserBadgeDoc, "_id" | "badgeId"> & { id: string; badgeId: string };
+
+export interface BlogPostRow {
+  id: string;
+  profileId: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export type User = UserDoc;
 export type NewUser = Omit<UserDoc, "createdAt" | "updatedAt">;

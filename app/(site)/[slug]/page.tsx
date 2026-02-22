@@ -22,7 +22,7 @@ import { getDiscordLastSeen } from "@/lib/discord-lastseen";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import ProfileAdminToolbar from "@/app/components/ProfileAdminToolbar";
-import { getClientIp, getUserAgent } from "@/lib/request";
+import { getClientIp, getUserAgent, getReferer, getCfCountry } from "@/lib/request";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
 
@@ -88,9 +88,11 @@ export default async function ProfilePage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
   const showPageViews = memberRow.showPageViews ?? true;
-  const [ip, userAgent, badgeFlags, customBadges, discordBadgeData, vouchesData, session, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
+  const [ip, userAgent, referrer, countryCode, badgeFlags, customBadges, discordBadgeData, vouchesData, session, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
+    getReferer(),
+    getCfCountry(),
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
@@ -110,7 +112,11 @@ export default async function ProfilePage({ params }: Props) {
       ? getMutualGuilds(session.sub, memberRow.userId)
       : Promise.resolve([]),
   ]);
-  await recordProfileView(memberRow.id, ip, userAgent);
+  await recordProfileView(memberRow.id, ip, userAgent, {
+    referrer: referrer ?? undefined,
+    viewerUserId: session && session.sub !== memberRow.userId ? session.sub : undefined,
+    countryCode: countryCode ?? undefined,
+  });
   const currentUserHasVouched = session
     ? await hasUserVouched(memberRow.id, session.sub)
     : false;

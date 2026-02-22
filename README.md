@@ -52,6 +52,10 @@ The app reads `X-Forwarded-Host` (or `Host`) and extracts the username: `alice.d
 
 **Debug:** `https://username.dread.lol/api/debug/headers` shows incoming headers and extracted slug.
 
+**Analytics:** Profile analytics use Cloudflare headers when available:
+- `CF-Connecting-IP` for visitor IP (preferred over `X-Forwarded-For`)
+- `CF-IPCountry` for country when "Add visitor location headers" Managed Transform is enabled
+
 ## Scripts
 
 - `npm run dev` — start dev server

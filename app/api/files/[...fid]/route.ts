@@ -14,6 +14,9 @@ const FONT_MIME_TYPES = new Set([
  * GET /api/files/3,0123456789 – stream file from internal SeaweedFS.
  * SeaweedFS is not internet-facing; this route proxies the file to the client.
  * Supports ?type= for font files to ensure correct MIME type (e.g. ?type=font/woff2).
+ *
+ * ACCESS CONTROL: Files are public once uploaded. fids are volumeId,fileId and
+ * are not secret; do not store sensitive content in SeaweedFS if exposure is a concern.
  */
 export async function GET(request: NextRequest, { params }: Params) {
   if (!isSeaweedConfigured()) {

@@ -1407,7 +1407,7 @@ export default function DashboardMyProfile({
               </label>
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
                 <input type="checkbox" name="showPageViews" defaultChecked={profile.showPageViews ?? true} className="rounded border-[var(--border)]" />
-                Display page views <span className="text-[var(--muted)]/70">(on profile and in dashboard logs)</span>
+                Display page views <span className="text-[var(--muted)]/70">(on profile and in dashboard analytics)</span>
               </label>
               <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
                 <input type="checkbox" name="showDiscordBadges" defaultChecked={profile.showDiscordBadges ?? false} className="rounded border-[var(--border)]" />

@@ -5,6 +5,9 @@ const url = process.env.DATABASE_URL ?? "mongodb://dread:dread@localhost:27017/d
 let cachedClient: MongoClient | null = null;
 
 export async function getDb() {
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL must be set in production");
+  }
   if (cachedClient) return cachedClient;
   const client = new MongoClient(url);
   await client.connect();
@@ -33,6 +36,7 @@ export const COLLECTIONS = {
   templateFavorites: "template_favorites",
   templateReports: "template_reports",
   profileVersions: "profile_versions",
+  blogPosts: "blog_posts",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
