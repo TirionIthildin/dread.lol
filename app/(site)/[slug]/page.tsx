@@ -165,7 +165,7 @@ export default async function ProfilePage({ params }: Props) {
   if (showDiscordPresence && discordPresence) {
     profile.discordPresence = {
       status: discordPresence.status,
-      activities: discordPresence.activities.map((a) => ({
+      activities: (discordPresence.activities ?? []).map((a) => ({
         name: a.name,
         type: a.type,
         state: a.state ?? undefined,

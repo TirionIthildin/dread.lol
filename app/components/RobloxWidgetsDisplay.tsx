@@ -23,6 +23,21 @@ function RobloxIcon({ className }: { className?: string }) {
   );
 }
 
+function RobloxAvatar({ avatarUrl, size = 36 }: { avatarUrl: string; size?: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={avatarUrl}
+      alt=""
+      width={size}
+      height={size}
+      className="rounded-full shrink-0 object-cover"
+      referrerPolicy="no-referrer"
+      aria-hidden
+    />
+  );
+}
+
 export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps) {
   const widgets: React.ReactNode[] = [];
 
@@ -30,11 +45,17 @@ export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps
     "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[#00A2FF]/40";
 
   if (data.accountAge) {
+    const createdAt = data.accountAge.createdAt instanceof Date
+      ? data.accountAge.createdAt
+      : new Date(data.accountAge.createdAt as string);
+    const title = !isNaN(createdAt.getTime())
+      ? `Roblox account since ${createdAt.toLocaleDateString()}`
+      : "Roblox account age";
     widgets.push(
       <div
         key="accountAge"
         className={widgetBase}
-        title={`Roblox account since ${data.accountAge.createdAt.toLocaleDateString()}`}
+        title={title}
       >
         <span className="shrink-0 text-[#00A2FF]">
           <RobloxIcon className="block" />
@@ -60,9 +81,13 @@ export default function RobloxWidgetsDisplay({ data }: RobloxWidgetsDisplayProps
         className={`${widgetBase} text-[var(--foreground)] hover:border-[#00A2FF]/50 hover:bg-[#00A2FF]/10 group`}
         aria-label={`Open Roblox profile for ${data.profile.displayName || data.profile.username}`}
       >
-        <span className="shrink-0 text-[#00A2FF]">
-          <RobloxIcon className="block" />
-        </span>
+        {data.profile.avatarUrl ? (
+          <RobloxAvatar avatarUrl={data.profile.avatarUrl} />
+        ) : (
+          <span className="shrink-0 text-[#00A2FF]">
+            <RobloxIcon className="block" />
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <p className={`${labelClass} text-[#00A2FF]/80`}>Roblox</p>
           <p className="font-medium truncate">{label}</p>

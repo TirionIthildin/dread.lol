@@ -6,6 +6,11 @@ import ProfileBackground from "@/app/components/ProfileBackground";
 import ProfileCursorEffect from "@/app/components/ProfileCursorEffect";
 import type { Profile } from "@/lib/profiles";
 
+function profileNeedsUnlock(profile: Profile): boolean {
+  const bgType = profile.backgroundType ?? "";
+  return bgType === "video" || Boolean(profile.backgroundAudioUrl?.trim());
+}
+
 const PREVIEW_STORAGE_KEY = "dread-preview-profile";
 const PREVIEW_MESSAGE_TYPE = "dread-preview-update";
 
@@ -34,11 +39,16 @@ function parseStoredProfile(): Profile | null {
 }
 
 export default function LivePreviewPage() {
-  const [profile, setProfile] = useState<Profile | null>(() => parseStoredProfile());
+  // Always start with null to avoid hydration mismatch (server has no sessionStorage, client might have profile)
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [testOverlayVisible, setTestOverlayVisible] = useState(false);
 
   const refreshFromStorage = useCallback(() => {
     const next = parseStoredProfile();
-    if (next) setProfile(next);
+    if (next) {
+      setProfile(next);
+      setTestOverlayVisible(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -51,7 +61,7 @@ export default function LivePreviewPage() {
     return () => window.removeEventListener("message", handler);
   }, [refreshFromStorage]);
 
-  // Initial load - parent may have written before iframe loaded
+  // Initial load - read from sessionStorage only on client after mount
   useEffect(() => {
     refreshFromStorage();
   }, [refreshFromStorage]);
@@ -65,6 +75,7 @@ export default function LivePreviewPage() {
   }
 
   const needsCursorEffect = profile.cursorStyle === "glow" || profile.cursorStyle === "trail";
+  const needsUnlock = profileNeedsUnlock(profile);
   const content = (
     <div className="relative">
       <ProfileContent
@@ -79,14 +90,34 @@ export default function LivePreviewPage() {
   );
 
   return (
-    <ProfileBackground profile={profile}>
-      {needsCursorEffect ? (
-        <ProfileCursorEffect cursorStyle={profile.cursorStyle} accentColor={profile.accentColor}>
-          {content}
-        </ProfileCursorEffect>
-      ) : (
-        content
+    <div className="flex flex-col min-h-screen">
+      {needsUnlock && (
+        <div className="shrink-0 flex items-center justify-end gap-2 px-3 py-1.5 bg-[var(--surface)]/80 border-b border-[var(--border)]/50">
+          <button
+            type="button"
+            onClick={() => setTestOverlayVisible(true)}
+            className="text-xs font-medium text-[var(--muted)] hover:text-[var(--foreground)] px-2 py-1 rounded hover:bg-[var(--bg)]/60 transition-colors"
+          >
+            Test overlay
+          </button>
+        </div>
       )}
-    </ProfileBackground>
+      <div className="flex-1 min-h-0">
+        <ProfileBackground
+          profile={profile}
+          defaultUnlocked
+          testOverlayVisible={testOverlayVisible}
+          onTestOverlayDismissed={() => setTestOverlayVisible(false)}
+        >
+          {needsCursorEffect ? (
+            <ProfileCursorEffect cursorStyle={profile.cursorStyle} accentColor={profile.accentColor}>
+              {content}
+            </ProfileCursorEffect>
+          ) : (
+            content
+          )}
+        </ProfileBackground>
+      </div>
+    </div>
   );
 }

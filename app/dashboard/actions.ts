@@ -148,6 +148,21 @@ export async function updateProfileAction(
   if (usesCustomMedia && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
   if (rawBackgroundAudioUrl && !backgroundAudioUrl) return { error: "Background audio URL must use https or http or a valid path" };
 
+  const widgetSelection = (() => {
+    const order: Array<{ src: "discord" | "roblox"; val: string }> = [];
+    if (formData.get("showDiscordWidgetAccountAge") === "on") order.push({ src: "discord", val: "accountAge" });
+    if (formData.get("showDiscordWidgetJoined") === "on") order.push({ src: "discord", val: "joined" });
+    if (formData.get("showDiscordWidgetServerCount") === "on") order.push({ src: "discord", val: "serverCount" });
+    if (formData.get("showDiscordWidgetServerInvite") === "on") order.push({ src: "discord", val: "serverInvite" });
+    if (formData.get("showRobloxWidgetAccountAge") === "on") order.push({ src: "roblox", val: "accountAge" });
+    if (formData.get("showRobloxWidgetProfile") === "on") order.push({ src: "roblox", val: "profile" });
+    const taken = order.slice(0, 4);
+    return {
+      discord: taken.filter((x) => x.src === "discord").map((x) => x.val),
+      roblox: taken.filter((x) => x.src === "roblox").map((x) => x.val),
+    };
+  })();
+
   try {
     await updateMemberProfile(profileId, session.sub, {
       slug,
@@ -252,14 +267,7 @@ export async function updateProfileAction(
         const s = (formData.get("discordPresenceStyle") as string)?.trim();
         return ["pills", "minimal", "stacked", "inline", "widget"].includes(s) ? s : undefined;
       })(),
-      showDiscordWidgets: (() => {
-        const widgets: string[] = [];
-        if (formData.get("showDiscordWidgetAccountAge") === "on") widgets.push("accountAge");
-        if (formData.get("showDiscordWidgetJoined") === "on") widgets.push("joined");
-        if (formData.get("showDiscordWidgetServerCount") === "on") widgets.push("serverCount");
-        if (formData.get("showDiscordWidgetServerInvite") === "on") widgets.push("serverInvite");
-        return widgets.slice(0, 4).length > 0 ? widgets.slice(0, 4).join(",") : null;
-      })(),
+      showDiscordWidgets: widgetSelection.discord.length > 0 ? widgetSelection.discord.join(",") : null,
       ...(formData.get("showDiscordWidgetServerInvite") === "on" && {
         discordInviteUrl: (() => {
           const v = (formData.get("discordInviteUrl") as string)?.trim();
@@ -271,12 +279,7 @@ export async function updateProfileAction(
           return v.slice(0, 256);
         })(),
       }),
-      showRobloxWidgets: (() => {
-        const widgets: string[] = [];
-        if (formData.get("showRobloxWidgetAccountAge") === "on") widgets.push("accountAge");
-        if (formData.get("showRobloxWidgetProfile") === "on") widgets.push("profile");
-        return widgets.length > 0 ? widgets.join(",") : null;
-      })(),
+      showRobloxWidgets: widgetSelection.roblox.length > 0 ? widgetSelection.roblox.join(",") : null,
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();
         const url = validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim());

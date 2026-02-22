@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
-import { hasRobloxLinked } from "@/lib/roblox-widgets";
+import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
@@ -52,7 +52,7 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [discordBadgeData, widgetPreviewData, shortLinks, versions, robloxLinked] = await Promise.all([
+    const [discordBadgeData, widgetPreviewData, shortLinks, versions, robloxLinked, robloxWidgetData] = await Promise.all([
       getUserDiscordBadgeData(userId),
       getDiscordWidgetData(
         profile.userId,
@@ -63,12 +63,14 @@ async function MemberProfileSection({
       getShortLinksForProfile(profile.id),
       getProfileVersions(userId),
       hasRobloxLinked(userId),
+      getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
     ]);
     const availableDiscordBadges = [
       ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
       ...getPremiumBadgeKeys(discordBadgeData.premiumType),
     ];
     const baseProfileForPreview = memberProfileToProfile(profile, undefined, discordBadgeData);
+    if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
     return (
       <DashboardMyProfile
         profile={profile}

@@ -33,12 +33,18 @@ function resolveMediaUrl(url: string): string {
 interface ProfileBackgroundProps {
   profile: Profile;
   children: React.ReactNode;
+  /** When true (e.g. live preview), start unlocked so no overlay blocks the view. */
+  defaultUnlocked?: boolean;
+  /** When true, show the unlock overlay for testing (e.g. from live preview "Test overlay" button). */
+  testOverlayVisible?: boolean;
+  /** Called when user clicks the overlay in test mode. */
+  onTestOverlayDismissed?: () => void;
 }
 
 const BUILT_IN_BACKGROUNDS = ["grid", "gradient", "dither"] as const;
 
-export default function ProfileBackground({ profile, children }: ProfileBackgroundProps) {
-  const [unlocked, setUnlocked] = useState(false);
+export default function ProfileBackground({ profile, children, defaultUnlocked = false, testOverlayVisible = false, onTestOverlayDismissed }: ProfileBackgroundProps) {
+  const [unlocked, setUnlocked] = useState(defaultUnlocked);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const customBgType = ["image", "video"].includes(profile.backgroundType ?? "")
@@ -100,10 +106,18 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   );
 
   const unlockOverlayLabel = profile.unlockOverlayText?.trim() || "Click here to view profile";
-  const unlockOverlay = needsUnlock && !unlocked && (
+  const showOverlay = (needsUnlock && !unlocked) || testOverlayVisible;
+  const handleOverlayClick = useCallback(() => {
+    if (testOverlayVisible) {
+      onTestOverlayDismissed?.();
+    } else {
+      handleUnlock();
+    }
+  }, [testOverlayVisible, onTestOverlayDismissed, handleUnlock]);
+  const unlockOverlay = showOverlay && (
     <button
       type="button"
-      onClick={handleUnlock}
+      onClick={handleOverlayClick}
       className={`fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset ${isLightTheme ? "bg-white/70 hover:bg-white/60" : "bg-black/60 hover:bg-black/50"}`}
       aria-label="Click to view profile and play media"
     >

@@ -4,6 +4,21 @@
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 
+/** Fetch Roblox avatar headshot URL from thumbnails API (public, no auth required). */
+export async function fetchRobloxAvatarUrl(robloxUserId: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${encodeURIComponent(robloxUserId)}&size=100x100&format=Png&isCircular=true`
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { data?: Array<{ imageUrl?: string }> };
+    const first = data.data?.[0];
+    return first?.imageUrl?.trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Check if a user has linked their Roblox account. */
 export async function hasRobloxLinked(userId: string): Promise<boolean> {
   const client = await getDb();
@@ -18,8 +33,8 @@ export async function hasRobloxLinked(userId: string): Promise<boolean> {
 export type RobloxWidgetType = "accountAge" | "profile";
 
 export interface RobloxWidgetData {
-  accountAge?: { createdAt: Date; label: string };
-  profile?: { url: string; displayName: string; username: string };
+  accountAge?: { createdAt: Date; label: string; avatarUrl?: string | null };
+  profile?: { url: string; displayName: string; username: string; avatarUrl?: string | null };
 }
 
 function formatAccountAge(createdAt: Date): string {
@@ -72,11 +87,17 @@ export async function getRobloxWidgetData(
   };
 
   const data: RobloxWidgetData = {};
+  const needsAvatar = enabledWidgets.includes("accountAge") || enabledWidgets.includes("profile");
+  const avatarUrl =
+    needsAvatar && row.robloxUserId
+      ? await fetchRobloxAvatarUrl(row.robloxUserId)
+      : null;
 
   if (enabledWidgets.includes("accountAge") && row.robloxAccountCreatedAt) {
     data.accountAge = {
       createdAt: row.robloxAccountCreatedAt,
       label: formatAccountAge(row.robloxAccountCreatedAt) + " on Roblox",
+      avatarUrl: avatarUrl ?? null,
     };
   }
 
@@ -85,6 +106,7 @@ export async function getRobloxWidgetData(
       url: row.robloxProfileUrl,
       displayName: row.robloxDisplayName ?? row.robloxUsername ?? "Roblox",
       username: row.robloxUsername ?? "",
+      avatarUrl: avatarUrl ?? null,
     };
   }
 

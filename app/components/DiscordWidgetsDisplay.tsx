@@ -41,11 +41,17 @@ export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayPro
   const joinedWidgetBase = "discord-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--border)]/50 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--border-bright)]/50";
 
   if (data.accountAge) {
+    const createdAt =
+      data.accountAge.createdAt instanceof Date
+        ? data.accountAge.createdAt
+        : new Date(data.accountAge.createdAt as string);
+    const accountAgeTitle =
+      !isNaN(createdAt.getTime()) ? `Discord account since ${createdAt.toLocaleDateString()}` : "Discord account age";
     widgets.push(
       <div
         key="accountAge"
         className={`${widgetBase} hover:border-[#5865F2]/40`}
-        title={`Discord account since ${data.accountAge.createdAt.toLocaleDateString()}`}
+        title={accountAgeTitle}
       >
         <DiscordLogo {...discordIconProps} aria-hidden />
         <div>
@@ -57,12 +63,12 @@ export default function DiscordWidgetsDisplay({ data }: DiscordWidgetsDisplayPro
   }
 
   if (data.joined) {
+    const createdAt =
+      data.joined.createdAt instanceof Date ? data.joined.createdAt : new Date(data.joined.createdAt as string);
+    const joinedTitle =
+      !isNaN(createdAt.getTime()) ? `Joined Dread.lol on ${createdAt.toLocaleDateString()}` : "Joined Dread.lol";
     widgets.push(
-      <div
-        key="joined"
-        className={`${joinedWidgetBase}`}
-        title={`Joined Dread.lol on ${data.joined.createdAt.toLocaleDateString()}`}
-      >
+      <div key="joined" className={`${joinedWidgetBase}`} title={joinedTitle}>
         <CalendarBlank {...joinedIconProps} aria-hidden />
         <div>
           <p className={joinedLabelClass}>Joined</p>
