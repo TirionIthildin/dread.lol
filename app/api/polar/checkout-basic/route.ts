@@ -5,10 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
-import { getOriginFromRequest } from "@/lib/site";
+import { getCanonicalOrigin } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
-  const origin = getOriginFromRequest(request);
+  const origin = getCanonicalOrigin();
   const billing = await getBillingSettings();
   if (!billing.basicEnabled || billing.basicProductIds.length === 0) {
     return NextResponse.redirect(

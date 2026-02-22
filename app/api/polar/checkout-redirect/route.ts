@@ -8,14 +8,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
-import { getOriginFromRequest } from "@/lib/site";
+import { getCanonicalOrigin } from "@/lib/site";
 import {
   getProductsWithTypes,
   pickProductForCheckout,
 } from "@/lib/polar-products";
 
 export async function GET(request: NextRequest) {
-  const origin = getOriginFromRequest(request);
+  const origin = getCanonicalOrigin();
   const billing = await getBillingSettings();
   if (!billing.enabled) {
     return NextResponse.redirect(`${origin}/dashboard?error=checkout_unavailable`, 302);

@@ -6,10 +6,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Checkout } from "@polar-sh/nextjs";
 import { getBillingSettings } from "@/lib/settings";
-import { getOriginFromRequest } from "@/lib/site";
+import { getCanonicalOrigin } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
-  const origin = getOriginFromRequest(request);
+  const origin = getCanonicalOrigin();
   const billing = await getBillingSettings();
   const products = request.nextUrl.searchParams.get("products") ?? "";
   const isBasicCheckout = billing.basicEnabled && billing.basicProductIds.length > 0 && billing.basicProductIds.includes(products);
