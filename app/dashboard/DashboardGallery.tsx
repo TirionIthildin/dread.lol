@@ -158,7 +158,7 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
         <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-4 space-y-4">
           {atGalleryLimit && (
             <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3 text-sm text-[var(--muted)]">
-              Free accounts are limited to {galleryMaxFree} images. <Link href="/dashboard/billing" className="text-[var(--accent)] hover:underline">Upgrade to Premium</Link> for unlimited.
+              Free accounts are limited to {galleryMaxFree} images. <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Upgrade to Premium</Link> for unlimited.
             </div>
           )}
           <p className="text-sm font-medium text-[var(--foreground)]">

@@ -31,10 +31,7 @@ export async function GET(request: NextRequest) {
     });
   }
   const billing = await getBillingSettings();
-  const products = request.nextUrl.searchParams.get("products") ?? "";
-  const isBasicCheckout = billing.basicEnabled && billing.basicProductIds.length > 0 && billing.basicProductIds.includes(products);
-  const checkoutAllowed = billing.enabled || isBasicCheckout;
-  if (!checkoutAllowed) {
+  if (!billing.enabled) {
     return NextResponse.redirect(`${origin}/dashboard?error=checkout_unavailable`, 302);
   }
 

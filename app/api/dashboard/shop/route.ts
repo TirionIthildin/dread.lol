@@ -1,5 +1,5 @@
 /**
- * User billing status. Returns subscription state and whether billing is enabled.
+ * User shop status. Returns subscription state, owned products, and whether shop is enabled.
  * Used by dashboard to show Subscribe / Manage links.
  */
 import { NextResponse } from "next/server";

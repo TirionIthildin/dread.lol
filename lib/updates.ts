@@ -11,13 +11,18 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
-    title: "Premium requires Basic purchase",
-    description: "Users must purchase Basic first before subscribing or buying Premium. The billing page shows a clear prerequisite step when Basic is required.",
+    title: "Shop: Premium + addons",
+    description: "Billing is now the Shop. Premium unlocks all features. Custom badge addon lets you create your own badge with full design control (label, color, icon, image).",
   },
   {
     date: "2026-02",
-    title: "Configurable Premium limits & Basic trial",
-    description: "Gallery max, microblog Premium-only, paste limit, and Basic trial days are now configurable in Admin → Billing. Two-week Basic trial before payment required.",
+    title: "Premium subscription",
+    description: "Single Premium tier. Subscribe for full access to all features—effects, custom colors, gallery, pastes, microblog, and more.",
+  },
+  {
+    date: "2026-02",
+    title: "Configurable Premium limits",
+    description: "Gallery max, microblog Premium-only, and paste limit are configurable in Admin → Billing.",
   },
   {
     date: "2026-02",
@@ -32,7 +37,7 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
     title: "Auto-fetch prices from Polar",
-    description: "Prices are fetched from Polar API and shown on Subscribe/Buy buttons and the Basic paywall. No manual price config needed.",
+    description: "Prices are fetched from Polar API and shown on Subscribe/Buy buttons. No manual price config needed.",
   },
   {
     date: "2026-02",
@@ -43,11 +48,6 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
     date: "2026-02",
     title: "Multiple products per tier",
     description: "Add multiple product IDs per tier (Premium, Basic). Support subscriptions, one-time purchases, and lifetime deals like $100 permanent Premium.",
-  },
-  {
-    date: "2026-02",
-    title: "Basic tier ($4 account creation)",
-    description: "One-time $4 payment to create an account. Enable in Admin → Billing, create a $4 product in Polar, and set the product IDs.",
   },
   {
     date: "2026-02",

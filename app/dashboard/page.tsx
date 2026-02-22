@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
-import { getBillingSettings } from "@/lib/settings";
-import { getProductsWithTypes, formatPrice } from "@/lib/polar-products";
 import { PolarSuccessHandler } from "@/app/dashboard/PolarSuccessHandler";
 import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
 import { getPremiumAccess } from "@/lib/premium-permissions";
@@ -14,7 +12,6 @@ import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
 import UnapprovedMessage from "@/app/components/UnapprovedMessage";
-import BasicTrialBanner from "@/app/components/BasicTrialBanner";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -22,31 +19,12 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-import {
-  canUseDashboard as checkDashboardAccess,
-  getBasicTrialDaysRemaining,
-  getBasicTrialEndDate,
-  isWithinBasicTrial,
-} from "@/lib/dashboard-access";
+import { canUseDashboard as checkDashboardAccess } from "@/lib/dashboard-access";
 
 export default async function DashboardPage() {
   const session = await getSession();
   const user = session ? await getOrCreateUser(session) : null;
-  const billing = await getBillingSettings();
-  const canUseDashboard = checkDashboardAccess(user, billing);
-
-  let basicPriceFormatted: string | null = null;
-  if (billing.basicEnabled && billing.basicProductIds.length > 0) {
-    const basicMap = await getProductsWithTypes(billing.basicProductIds, {
-      sandbox: billing.sandbox,
-    });
-    const firstBasic = billing.basicProductIds[0];
-    const info = firstBasic ? basicMap.get(firstBasic) : null;
-    basicPriceFormatted = info?.price ? formatPrice(info.price) : null;
-    if (basicPriceFormatted === "Pay what you want" || !basicPriceFormatted) {
-      basicPriceFormatted = `$${(billing.basicPriceCents / 100).toFixed(0)}`;
-    }
-  }
+  const canUseDashboard = checkDashboardAccess(user);
 
   return (
     <div className="space-y-6">
@@ -55,33 +33,12 @@ export default async function DashboardPage() {
       </Suspense>
       {session && !canUseDashboard && (
         <div className="animate-fade-in-up animate-delay-100">
-          <UnapprovedMessage
-            basicEnabled={billing.basicEnabled}
-            basicTierName={billing.basicTierName}
-            basicPriceFormatted={basicPriceFormatted}
-          />
+          <UnapprovedMessage />
         </div>
       )}
 
       {session && canUseDashboard && (
-        <div className="animate-fade-in-up animate-delay-100 space-y-4">
-          {user &&
-            !user.approved &&
-            !user.isAdmin &&
-            billing.basicEnabled &&
-            billing.basicTrialDays > 0 &&
-            isWithinBasicTrial(user.createdAt, billing.basicTrialDays) && (() => {
-              const endDate = getBasicTrialEndDate(user.createdAt, billing.basicTrialDays);
-              if (!endDate) return null;
-              return (
-                <BasicTrialBanner
-                  daysRemaining={getBasicTrialDaysRemaining(user.createdAt, billing.basicTrialDays)}
-                  trialEndDate={endDate}
-                  basicTierName={billing.basicTierName}
-                  basicPriceFormatted={basicPriceFormatted}
-                />
-              );
-            })()}
+        <div className="animate-fade-in-up animate-delay-100">
           <MemberProfileSection session={session} />
         </div>
       )}

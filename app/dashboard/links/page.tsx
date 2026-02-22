@@ -23,7 +23,7 @@ export default async function LinksPage() {
     getOrCreateUser(session),
     getBillingSettings(),
   ]);
-  if (!canUseDashboard(user, billing)) redirect("/dashboard");
+  if (!canUseDashboard(user)) redirect("/dashboard");
 
   const slug = slugFromUsername(
     session.preferred_username ?? session.name ?? session.sub

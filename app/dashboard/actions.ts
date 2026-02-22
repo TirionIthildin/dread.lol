@@ -97,7 +97,7 @@ export async function updateLinksAction(
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
@@ -130,7 +130,7 @@ export async function updateProfileAction(
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
@@ -375,7 +375,7 @@ export async function addGalleryItemAction(
     getBillingSettings(),
     getPremiumAccess(session.sub),
   ]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   if (billing.galleryMaxFree > 0 && !premiumAccess.hasAccess) {
     const { getGalleryForProfile } = await import("@/lib/member-profiles");
     const gallery = await getGalleryForProfile(profileId);
@@ -408,7 +408,7 @@ export async function updateGalleryItemAction(
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await updateGalleryItem(itemId, session.sub, {
       title: data.title !== undefined ? (data.title?.trim() || null) : undefined,
@@ -428,7 +428,7 @@ export async function deleteGalleryItemAction(itemId: string): Promise<{ error?:
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await deleteGalleryItem(itemId, session.sub);
     revalidatePath("/dashboard");
@@ -445,7 +445,7 @@ export async function setGalleryOrderAction(profileId: string, orderedIds: strin
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await setGalleryOrder(profileId, session.sub, orderedIds);
     revalidatePath("/dashboard");
@@ -465,7 +465,7 @@ export async function addShortLinkAction(
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     const url = requireSafeUrl(data.url.trim(), "URL");
     const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url });
@@ -484,7 +484,7 @@ export async function deleteShortLinkAction(linkId: string): Promise<{ error?: s
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await deleteShortLink(linkId, session.sub);
     revalidatePath("/dashboard");
@@ -618,7 +618,7 @@ export async function saveProfileVersionAction(
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   const trimmed = name?.trim().slice(0, 80);
   if (!trimmed) return { error: "Name is required" };
   const result = await saveProfileVersion(session.sub, profileId, trimmed);
@@ -634,7 +634,7 @@ export async function restoreProfileVersionAction(versionId: string): Promise<{ 
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   const result = await restoreProfileVersion(session.sub, versionId);
   if (result.error) return result;
   revalidatePath("/dashboard");
@@ -648,7 +648,7 @@ export async function deleteProfileVersionAction(versionId: string): Promise<{ e
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
   const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
-  if (!canUseDashboard(user, billing)) return { error: "Account not approved" };
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
   const result = await deleteProfileVersion(session.sub, versionId);
   if (result.error) return result;
   revalidatePath("/dashboard");

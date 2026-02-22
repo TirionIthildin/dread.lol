@@ -10,14 +10,10 @@ export type BillingSettingsState = {
   productIds: string[];
   sandbox: boolean;
   polarConfigured: boolean;
-  basicEnabled: boolean;
-  basicProductIds: string[];
-  basicTierName: string;
-  basicPriceFormatted: string | null;
-  basicTrialDays: number;
   galleryMaxFree: number;
   blogPremiumOnly: boolean;
   pasteMaxFreePerMonth: number;
+  customBadgeProductIds: string[];
 };
 
 export default function AdminBillingPanel() {
@@ -29,13 +25,10 @@ export default function AdminBillingPanel() {
   const [formTierName, setFormTierName] = useState("Premium");
   const [formProductIds, setFormProductIds] = useState("");
   const [formSandbox, setFormSandbox] = useState(false);
-  const [formBasicEnabled, setFormBasicEnabled] = useState(false);
-  const [formBasicProductIds, setFormBasicProductIds] = useState("");
-  const [formBasicTierName, setFormBasicTierName] = useState("Basic");
-  const [formBasicTrialDays, setFormBasicTrialDays] = useState(14);
   const [formGalleryMaxFree, setFormGalleryMaxFree] = useState(10);
   const [formBlogPremiumOnly, setFormBlogPremiumOnly] = useState(true);
   const [formPasteMaxFreePerMonth, setFormPasteMaxFreePerMonth] = useState(10);
+  const [formCustomBadgeProductIds, setFormCustomBadgeProductIds] = useState("");
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -44,26 +37,23 @@ export default function AdminBillingPanel() {
       const data = await res.json();
       const b = data.billing ?? {};
       const prodIds = Array.isArray(b.productIds) ? b.productIds : (b.productId ? [b.productId] : []);
-      const basicIds = Array.isArray(b.basicProductIds) ? b.basicProductIds : (b.basicProductId ? [b.basicProductId] : []);
+      const customBadgeIds = Array.isArray(b.customBadgeProductIds) ? b.customBadgeProductIds : [];
       setSettings({
         enabled: !!b.enabled,
         tierName: b.tierName ?? "Premium",
         productIds: prodIds,
         sandbox: !!b.sandbox,
         polarConfigured: !!b.polarConfigured,
-        basicEnabled: !!b.basicEnabled,
-        basicProductIds: basicIds,
-        basicTierName: b.basicTierName ?? "Basic",
-        basicPriceFormatted: b.basicPriceFormatted ?? null,
-        basicTrialDays: typeof b.basicTrialDays === "number" ? b.basicTrialDays : 14,
         galleryMaxFree: typeof b.galleryMaxFree === "number" ? b.galleryMaxFree : 10,
         blogPremiumOnly: typeof b.blogPremiumOnly === "boolean" ? b.blogPremiumOnly : true,
         pasteMaxFreePerMonth: typeof b.pasteMaxFreePerMonth === "number" ? b.pasteMaxFreePerMonth : 10,
+        customBadgeProductIds: customBadgeIds,
       });
       setFormEnabled(!!b.enabled);
       setFormTierName(b.tierName ?? "Premium");
       setFormProductIds(prodIds.join("\n"));
       setFormSandbox(!!b.sandbox);
+      setFormCustomBadgeProductIds(customBadgeIds.join("\n"));
       setError(null);
     } catch {
       setError("Failed to load settings");
@@ -83,13 +73,10 @@ export default function AdminBillingPanel() {
       setFormTierName(settings.tierName);
       setFormProductIds(settings.productIds.join("\n"));
       setFormSandbox(settings.sandbox);
-      setFormBasicEnabled(settings.basicEnabled);
-      setFormBasicProductIds(settings.basicProductIds.join("\n"));
-      setFormBasicTierName(settings.basicTierName ?? "Basic");
-      setFormBasicTrialDays(settings.basicTrialDays ?? 14);
       setFormGalleryMaxFree(settings.galleryMaxFree ?? 10);
       setFormBlogPremiumOnly(settings.blogPremiumOnly ?? true);
       setFormPasteMaxFreePerMonth(settings.pasteMaxFreePerMonth ?? 10);
+      setFormCustomBadgeProductIds(settings.customBadgeProductIds?.join("\n") ?? "");
     }
   }, [settings]);
 
@@ -106,13 +93,10 @@ export default function AdminBillingPanel() {
               tierName: formTierName.trim() || "Premium",
               productIds: formProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
               sandbox: formSandbox,
-              basicEnabled: formBasicEnabled,
-              basicProductIds: formBasicProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
-              basicTierName: formBasicTierName.trim() || "Basic",
-              basicTrialDays: formBasicTrialDays,
               galleryMaxFree: formGalleryMaxFree,
               blogPremiumOnly: formBlogPremiumOnly,
               pasteMaxFreePerMonth: formPasteMaxFreePerMonth,
+              customBadgeProductIds: formCustomBadgeProductIds.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
             },
           }),
         });
@@ -122,23 +106,18 @@ export default function AdminBillingPanel() {
           return;
         }
         const pIds = Array.isArray(data.billing.productIds) ? data.billing.productIds : [];
-        const bIds = Array.isArray(data.billing.basicProductIds) ? data.billing.basicProductIds : [];
         setSettings({
           enabled: data.billing.enabled,
           tierName: data.billing.tierName,
           productIds: pIds,
           sandbox: data.billing.sandbox,
           polarConfigured: data.billing.polarConfigured,
-          basicEnabled: data.billing.basicEnabled,
-          basicProductIds: bIds,
-          basicTierName: data.billing.basicTierName,
-          basicPriceFormatted: data.billing.basicPriceFormatted ?? null,
-          basicTrialDays: data.billing.basicTrialDays ?? 14,
           galleryMaxFree: data.billing.galleryMaxFree ?? 10,
           blogPremiumOnly: data.billing.blogPremiumOnly ?? true,
           pasteMaxFreePerMonth: data.billing.pasteMaxFreePerMonth ?? 10,
+          customBadgeProductIds: Array.isArray(data.billing.customBadgeProductIds) ? data.billing.customBadgeProductIds : [],
         });
-        toast.success("Billing settings saved");
+        toast.success("Shop settings saved");
       } catch {
         toast.error("Failed to save");
       }
@@ -167,7 +146,7 @@ export default function AdminBillingPanel() {
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-4">
           <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2 mb-3">
             <CreditCard size={18} weight="regular" className="text-[var(--accent)]" />
-            Premium (Polar)
+            Shop (Premium + addons)
           </h3>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-[var(--muted)]">Connection:</span>
@@ -194,7 +173,7 @@ export default function AdminBillingPanel() {
                 className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
               />
               <span className="text-sm font-medium text-[var(--foreground)]">
-                Billing enabled
+                Shop enabled
               </span>
             </label>
             <p className="text-xs text-[var(--muted)] -mt-2">
@@ -250,83 +229,21 @@ export default function AdminBillingPanel() {
               Sandbox mode for testing. Overrides POLAR_SANDBOX env when set.
             </p>
 
-            <div className="pt-6 mt-6 border-t border-[var(--border)]">
-              <h4 className="text-sm font-semibold text-[var(--foreground)] mb-3">Basic (account creation)</h4>
-              <p className="text-xs text-[var(--muted)] mb-4">
-                One-time payment to create an account. When enabled, unapproved users see &quot;Pay $4 for Basic&quot; instead of the Discord message.
-              </p>
-              <label className="flex items-center gap-3 cursor-pointer mb-4">
-                <input
-                  type="checkbox"
-                  checked={formBasicEnabled}
-                  onChange={(e) => setFormBasicEnabled(e.target.checked)}
-                  disabled={!settings?.polarConfigured}
-                  className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
-                />
-                <span className="text-sm font-medium text-[var(--foreground)]">
-                  Basic paywall enabled
-                </span>
+            <div>
+              <label htmlFor="billing-custom-badge-ids" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
+                Custom badge addon product IDs
               </label>
-              <div className="space-y-3 mb-4">
-                <div>
-                  <label htmlFor="billing-basic-product-ids" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Basic product IDs
-                  </label>
-                  <textarea
-                    id="billing-basic-product-ids"
-                    rows={2}
-                    value={formBasicProductIds}
-                    onChange={(e) => setFormBasicProductIds(e.target.value)}
-                    placeholder="prod_xxx&#10;prod_yyy (one per line)"
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
-                  />
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    Polar one-time products that grant account creation (e.g. $4). One per line. First = default for checkout.
-                  </p>
-                </div>
-                <div>
-                  <label htmlFor="billing-basic-tier-name" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Tier name
-                  </label>
-                  <input
-                    id="billing-basic-tier-name"
-                    type="text"
-                    value={formBasicTierName}
-                    onChange={(e) => setFormBasicTierName(e.target.value)}
-                    placeholder="Basic"
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-                  />
-                </div>
-                {(settings?.basicProductIds?.length ?? 0) > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-[var(--foreground)] mb-1">
-                      Price (from Polar)
-                    </p>
-                    <p className="text-sm text-[var(--muted)]">
-                      {settings?.basicPriceFormatted ?? "—"}
-                    </p>
-                    <p className="text-xs text-[var(--muted)] mt-1">
-                      Auto-fetched and cached. Shown as &quot;Pay {settings?.basicPriceFormatted ?? "$4"} for {formBasicTierName || "Basic"}&quot;.
-                    </p>
-                  </div>
-                )}
-                <div className="pt-4 mt-4 border-t border-[var(--border)]">
-                  <label htmlFor="billing-basic-trial-days" className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                    Free trial (days)
-                  </label>
-                  <input
-                    id="billing-basic-trial-days"
-                    type="number"
-                    min={0}
-                    value={formBasicTrialDays}
-                    onChange={(e) => setFormBasicTrialDays(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                    className="w-full max-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
-                  />
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    Days new users can use the dashboard before paying for Basic. 0 = no trial.
-                  </p>
-                </div>
-              </div>
+              <textarea
+                id="billing-custom-badge-ids"
+                rows={2}
+                value={formCustomBadgeProductIds}
+                onChange={(e) => setFormCustomBadgeProductIds(e.target.value)}
+                placeholder="prod_xxx (one per line)"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Polar one-time product IDs that grant the custom badge addon. Users can then create their own badge.
+              </p>
             </div>
 
             <div className="pt-6 mt-6 border-t border-[var(--border)]">
@@ -389,7 +306,7 @@ export default function AdminBillingPanel() {
               disabled={isPending}
               className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 transition-colors"
             >
-              {isPending ? "Saving…" : "Save billing settings"}
+              {isPending ? "Saving…" : "Save shop settings"}
             </button>
           </form>
         </div>

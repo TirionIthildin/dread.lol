@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CreditCard,
@@ -16,8 +17,13 @@ import {
   Copy,
   Stack,
   ShieldCheck,
+  Medal,
+  PencilSimple,
 } from "@phosphor-icons/react";
 import type { PremiumSource } from "@/lib/premium-permissions";
+import { BADGE_ICON_OPTIONS } from "@/lib/badge-icons";
+import SearchableSelect from "@/app/components/SearchableSelect";
+import { toast } from "sonner";
 
 type PremiumProduct = {
   id: string;
@@ -41,6 +47,8 @@ type Props = {
   ownedProductIds: string[];
   hasPremiumAccess: boolean;
   premiumSource: PremiumSource;
+  customBadgeProducts: PremiumProduct[];
+  hasCustomBadgeAddon: boolean;
 };
 
 const PREMIUM_FEATURES = [
@@ -54,7 +62,7 @@ const PREMIUM_FEATURES = [
   { icon: Copy, label: "Unlimited pastes", desc: "Create pastes without monthly caps" },
 ];
 
-export default function DashboardBillingClient({
+export default function DashboardShopClient({
   billingEnabled,
   tierName,
   premiumProducts,
@@ -63,7 +71,50 @@ export default function DashboardBillingClient({
   ownedProductIds,
   hasPremiumAccess,
   premiumSource,
+  customBadgeProducts,
+  hasCustomBadgeAddon,
 }: Props) {
+  const [customBadge, setCustomBadge] = useState<{
+    label: string;
+    description?: string | null;
+    color?: string | null;
+    badgeType?: "label" | "image" | "icon";
+    imageUrl?: string | null;
+    iconName?: string | null;
+  } | null>(null);
+  const [formLabel, setFormLabel] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formColor, setFormColor] = useState("");
+  const [formBadgeType, setFormBadgeType] = useState<"label" | "image" | "icon">("label");
+  const [formImageUrl, setFormImageUrl] = useState("");
+  const [formIconName, setFormIconName] = useState("");
+  const [badgeSaving, setBadgeSaving] = useState(false);
+
+  const fetchCustomBadge = useCallback(async () => {
+    if (!hasCustomBadgeAddon) return;
+    try {
+      const res = await fetch("/api/dashboard/shop/custom-badge");
+      if (!res.ok) return;
+      const data = await res.json();
+      const b = data.badge;
+      if (b) {
+        setCustomBadge(b);
+        setFormLabel(b.label ?? "");
+        setFormDescription(b.description ?? "");
+        setFormColor(b.color ?? "");
+        setFormBadgeType((b.badgeType as "label" | "image" | "icon") ?? "label");
+        setFormImageUrl(b.imageUrl ?? "");
+        setFormIconName(b.iconName ?? "");
+      }
+    } catch {
+      // ignore
+    }
+  }, [hasCustomBadgeAddon]);
+
+  useEffect(() => {
+    fetchCustomBadge();
+  }, [fetchCustomBadge]);
+
   const premiumProductIds = premiumProducts.map((p) => p.id);
   const hasSubscriptionProducts = premiumProducts.some((p) => p.isRecurring);
   const hasOneTimeProducts = premiumProducts.some((p) => !p.isRecurring);
@@ -78,10 +129,10 @@ export default function DashboardBillingClient({
           <CreditCard size={40} weight="duotone" className="text-[var(--accent)]" />
         </div>
         <h2 className="mt-5 text-xl font-semibold text-[var(--foreground)]">
-          Premium not yet available
+          Shop not yet available
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
-          Billing is not configured yet. Admins can enable it and add products in Admin → Billing.
+          Shop is not configured yet. Admins can enable it in Admin → Shop.
         </p>
       </div>
     );
@@ -96,9 +147,11 @@ export default function DashboardBillingClient({
           ? "Lifetime access"
           : null;
 
+  const allProducts = [...premiumProducts, ...customBadgeProducts];
+
   return (
     <div className="space-y-10">
-      {/* Hero status */}
+      {/* Premium hero */}
       <div
         className={`relative overflow-hidden rounded-2xl border p-6 md:p-8 transition-colors ${
           hasPremiumAccess
@@ -130,7 +183,7 @@ export default function DashboardBillingClient({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-xl font-semibold text-[var(--foreground)] md:text-2xl">
-                  {hasPremiumAccess ? `You have ${tierName}` : `Upgrade to ${tierName}`}
+                  {hasPremiumAccess ? `You have ${tierName}` : `${tierName}`}
                 </h2>
                 {statusLabel && (
                   <span className="inline-flex items-center rounded-full bg-[var(--accent)]/20 px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
@@ -147,7 +200,7 @@ export default function DashboardBillingClient({
           </div>
           {hasPremiumAccess && hasActiveSubscription && (
             <Link
-              href="https://dread.lol/api/polar/customer-portal"
+              href="/api/polar/customer-portal"
               prefetch={false}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/15 px-5 py-3 text-sm font-medium text-[var(--accent)] transition-all hover:bg-[var(--accent)]/25 hover:border-[var(--accent)]/70"
             >
@@ -158,11 +211,11 @@ export default function DashboardBillingClient({
         </div>
       </div>
 
-      {/* Upgrade section – when no access or has one-time but no sub */}
+      {/* Premium plans */}
       {(!hasPremiumAccess || (ownedPremium && !hasActiveSubscription && hasSubscriptionProducts)) && (
         <section>
           <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {hasPremiumAccess ? "Add recurring access" : "Choose your plan"}
+            {hasPremiumAccess ? "Add recurring access" : `${tierName}`}
           </h3>
           <p className="mb-4 text-xs text-[var(--muted)]">
             Secure payments via Polar. Cancel anytime.
@@ -176,7 +229,7 @@ export default function DashboardBillingClient({
                 period="/month"
                 description="Cancel anytime. Full access to all features."
                 cta="Subscribe"
-                href="https://dread.lol/api/polar/checkout-redirect?prefer=recurring"
+                href="/api/polar/checkout-redirect?prefer=recurring"
                 icon={<Plus size={20} weight="regular" />}
                 featured
               />
@@ -187,9 +240,9 @@ export default function DashboardBillingClient({
                 name={prod.name}
                 priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
                 period="one-time"
-                description="Pay once, keep forever. No recurring charges."
+                description="Pay once, keep forever."
                 cta="Buy lifetime"
-                href="https://dread.lol/api/polar/checkout-redirect?prefer=one_time"
+                href="/api/polar/checkout-redirect?prefer=one_time"
                 icon={<CreditCard size={20} weight="regular" />}
               />
             ))}
@@ -200,26 +253,182 @@ export default function DashboardBillingClient({
                 period={null}
                 description="Get started"
                 cta="Get Premium"
-                href="https://dread.lol/api/polar/checkout-redirect"
+                href="/api/polar/checkout-redirect"
                 icon={<Plus size={20} weight="regular" />}
                 featured
               />
             )}
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[var(--muted)]">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} weight="fill" className="text-[var(--accent)]" />
-              Secure checkout
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CreditCard size={14} weight="regular" />
-              Cancel anytime (subscriptions)
-            </span>
-          </div>
         </section>
       )}
 
-      {/* Owned products */}
+      {/* Custom Badge addon */}
+      {customBadgeProducts.length > 0 && (
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 md:p-8">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+            <Medal size={18} weight="regular" />
+            Custom badge addon
+          </h3>
+          <p className="mb-4 text-sm text-[var(--muted)]">
+            Create your own badge with label, color, icon, or image. It appears on your profile.
+          </p>
+
+          {hasCustomBadgeAddon ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
+                <CheckCircle size={18} weight="fill" />
+                You have the custom badge addon
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!formLabel.trim()) {
+                    toast.error("Label is required");
+                    return;
+                  }
+                  setBadgeSaving(true);
+                  try {
+                    const res = await fetch("/api/dashboard/shop/custom-badge", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        label: formLabel.trim(),
+                        description: formDescription.trim() || undefined,
+                        color: formColor.trim() || undefined,
+                        badgeType: formBadgeType,
+                        imageUrl: formBadgeType === "image" ? formImageUrl.trim() || undefined : undefined,
+                        iconName: formBadgeType === "icon" ? formIconName || undefined : undefined,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                      toast.error(data.error);
+                    } else {
+                      setCustomBadge(data.badge);
+                      toast.success("Badge saved");
+                    }
+                  } catch {
+                    toast.error("Failed to save");
+                  } finally {
+                    setBadgeSaving(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label htmlFor="badge-label" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Badge label
+                  </label>
+                  <input
+                    id="badge-label"
+                    type="text"
+                    maxLength={50}
+                    value={formLabel}
+                    onChange={(e) => setFormLabel(e.target.value)}
+                    placeholder="e.g. Early supporter"
+                    className="w-full max-w-xs rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="badge-description" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Description (tooltip)
+                  </label>
+                  <input
+                    id="badge-description"
+                    type="text"
+                    maxLength={200}
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="Shown on hover"
+                    className="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Badge style
+                  </label>
+                  <div className="flex gap-4">
+                    {(["label", "icon", "image"] as const).map((t) => (
+                      <label key={t} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="badgeType"
+                          checked={formBadgeType === t}
+                          onChange={() => setFormBadgeType(t)}
+                          className="text-[var(--accent)]"
+                        />
+                        <span className="text-sm capitalize">{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {formBadgeType === "icon" && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Icon</label>
+                    <SearchableSelect
+                      value={formIconName}
+                      onChange={setFormIconName}
+                      options={BADGE_ICON_OPTIONS}
+                      placeholder="Choose icon"
+                      className="max-w-[200px]"
+                    />
+                  </div>
+                )}
+                {formBadgeType === "image" && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Image URL</label>
+                    <input
+                      type="url"
+                      value={formImageUrl}
+                      onChange={(e) => setFormImageUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="badge-color" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                    Color (preset or hex)
+                  </label>
+                  <input
+                    id="badge-color"
+                    type="text"
+                    value={formColor}
+                    onChange={(e) => setFormColor(e.target.value)}
+                    placeholder="amber, blue, #ff0000"
+                    className="w-full max-w-[180px] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={badgeSaving}
+                  className="flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+                >
+                  <PencilSimple size={16} weight="regular" />
+                  {badgeSaving ? "Saving…" : "Save badge"}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {customBadgeProducts.map((prod) => (
+                <PlanCard
+                  key={prod.id}
+                  name="Custom badge"
+                  priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
+                  period="one-time"
+                  description="Design your own badge. Label, color, icon or image. Shows on your profile."
+                  cta="Get addon"
+                  href={`/api/polar/checkout-redirect?product=${prod.id}`}
+                  icon={<Medal size={20} weight="regular" />}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Your products */}
       {ownedProductIds.length > 0 && (
         <section>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -227,7 +436,7 @@ export default function DashboardBillingClient({
           </h3>
           <div className="flex flex-wrap gap-3">
             {ownedProductIds.map((id) => {
-              const prod = premiumProducts.find((p) => p.id === id);
+              const prod = allProducts.find((p) => p.id === id);
               const label = prod ? (prod.isRecurring ? tierName : prod.name) : id;
               const priceStr = prod?.priceFormatted ?? prod?.pricesFormatted[0];
               return (
@@ -251,7 +460,7 @@ export default function DashboardBillingClient({
         </section>
       )}
 
-      {/* Features */}
+      {/* Premium features */}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 md:p-8">
         <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-[var(--foreground)]">
           <Lock size={20} weight="regular" className="text-[var(--muted)]" />

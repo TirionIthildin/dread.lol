@@ -42,6 +42,7 @@ export const COLLECTIONS = {
   polarSubscriptions: "polar_subscriptions",
   polarOrders: "polar_orders",
   settings: "settings",
+  userCreatedBadges: "user_created_badges",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

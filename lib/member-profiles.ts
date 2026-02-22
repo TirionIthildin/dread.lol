@@ -353,24 +353,49 @@ export async function getCustomBadgesForUser(userId: string): Promise<CustomBadg
   const db = client.db(dbName);
   const userBadges = db.collection(COLLECTIONS.userBadges);
   const badges = db.collection(COLLECTIONS.badges);
+  const userCreatedBadges = db.collection(COLLECTIONS.userCreatedBadges);
 
-  const ubDocs = await userBadges.find({ userId }).toArray();
-  if (ubDocs.length === 0) return [];
-  const badgeIds = ubDocs.map((ub) => ub.badgeId);
-  const badgeDocs = await badges.find({ _id: { $in: badgeIds } }).sort({ sortOrder: 1 }).toArray();
-  return badgeDocs
-    .sort((a, b) => a.sortOrder - b.sortOrder || a._id.toString().localeCompare(b._id.toString()))
-    .map((b) => ({
-      id: b._id.toString(),
-      key: b.key,
-      label: b.label,
-      description: b.description ?? undefined,
-      color: b.color ?? undefined,
-      sortOrder: b.sortOrder,
-      badgeType: b.badgeType ?? undefined,
-      imageUrl: b.imageUrl ?? undefined,
-      iconName: b.iconName ?? undefined,
-    }));
+  const [ubDocs, userCreated] = await Promise.all([
+    userBadges.find({ userId }).toArray(),
+    userCreatedBadges.findOne({ userId }),
+  ]);
+
+  const result: CustomBadge[] = [];
+
+  if (ubDocs.length > 0) {
+    const badgeIds = ubDocs.map((ub) => ub.badgeId);
+    const badgeDocs = await badges.find({ _id: { $in: badgeIds } }).sort({ sortOrder: 1 }).toArray();
+    const assigned = badgeDocs
+      .sort((a, b) => a.sortOrder - b.sortOrder || a._id.toString().localeCompare(b._id.toString()))
+      .map((b) => ({
+        id: b._id.toString(),
+        key: b.key,
+        label: b.label,
+        description: b.description ?? undefined,
+        color: b.color ?? undefined,
+        sortOrder: b.sortOrder,
+        badgeType: b.badgeType ?? undefined,
+        imageUrl: b.imageUrl ?? undefined,
+        iconName: b.iconName ?? undefined,
+      }));
+    result.push(...assigned);
+  }
+
+  if (userCreated && userCreated.label) {
+    result.push({
+      id: (userCreated._id ?? "").toString(),
+      key: "user-created",
+      label: userCreated.label,
+      description: userCreated.description ?? undefined,
+      color: userCreated.color ?? undefined,
+      sortOrder: userCreated.sortOrder ?? 999,
+      badgeType: userCreated.badgeType ?? undefined,
+      imageUrl: userCreated.imageUrl ?? undefined,
+      iconName: userCreated.iconName ?? undefined,
+    });
+  }
+
+  return result.sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
 }
 
 export async function getAllCustomBadges(): Promise<CustomBadge[]> {

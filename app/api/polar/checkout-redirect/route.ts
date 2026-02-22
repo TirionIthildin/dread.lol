@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
 import { getCanonicalOrigin } from "@/lib/site";
-import { getUserPolarState } from "@/lib/polar-subscription";
 import {
   getProductsWithTypes,
   pickProductForCheckout,
@@ -73,19 +72,6 @@ export async function GET(request: NextRequest) {
       `${origin}/dashboard?auth=required&return=${returnPath}`,
       302
     );
-  }
-
-  // Premium requires Basic purchase when basicEnabled
-  if (billing.basicEnabled && billing.basicProductIds.length > 0) {
-    const polarState = await getUserPolarState(session.sub);
-    const hasBasic =
-      polarState.ownedProductIds.some((id) => billing.basicProductIds.includes(id));
-    if (!hasBasic) {
-      return NextResponse.redirect(
-        `${origin}/api/polar/checkout-basic`,
-        302
-      );
-    }
   }
 
   const url = new URL("/api/polar/checkout", origin);

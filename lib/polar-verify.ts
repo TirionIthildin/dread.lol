@@ -4,8 +4,6 @@
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { getPolarClient } from "@/lib/polar";
-import { getBillingSettings } from "@/lib/settings";
-import type { UserDoc } from "@/lib/db/schema";
 
 export interface VerifyResult {
   ok: boolean;
@@ -14,29 +12,8 @@ export interface VerifyResult {
 }
 
 /**
- * Approve user when they paid for Basic (account creation). Called from verify and webhook.
- */
-export async function approveUserIfBasicProduct(
-  userId: string,
-  productId: string
-): Promise<boolean> {
-  const billing = await getBillingSettings();
-  if (!billing.basicEnabled || billing.basicProductIds.length === 0 || !billing.basicProductIds.includes(productId)) {
-    return false;
-  }
-  const client = await getDb();
-  const dbName = await getDbName();
-  const now = new Date();
-  const result = await client
-    .db(dbName)
-    .collection<UserDoc>(COLLECTIONS.users)
-    .updateOne({ _id: userId }, { $set: { approved: true, updatedAt: now } });
-  return result.modifiedCount > 0;
-}
-
-/**
  * Verify a checkout by ID with Polar API. If succeeded and not already processed,
- * records it in DB and runs grant logic (e.g. Basic → approve user). Idempotent.
+ * records it in DB. Idempotent.
  */
 export async function verifyCheckout(
   checkoutId: string,
@@ -77,20 +54,6 @@ export async function verifyCheckout(
       orderId: orderId ?? null,
       processedAt: new Date(),
     });
-
-    // Basic tier: if order is for Basic product, approve user (immediate feedback when webhook is delayed)
-    if (userId && orderId) {
-      try {
-        const order = await polar.orders.get({ id: orderId });
-        const orderData = order as unknown as { productId?: string; product_id?: string };
-        const productId = orderData.productId ?? orderData.product_id ?? null;
-        if (productId) {
-          await approveUserIfBasicProduct(userId, productId);
-        }
-      } catch {
-        // Ignore: webhook will handle approve when it arrives
-      }
-    }
 
     return { ok: true };
   } catch (err) {

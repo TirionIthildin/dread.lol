@@ -50,21 +50,14 @@ export interface BillingSettings {
   sandbox: boolean;
   /** Whether Polar env vars are configured (read-only indicator). */
   polarConfigured: boolean;
-  /** Basic tier: $4 one-time to create account. */
-  basicEnabled: boolean;
-  /** Product IDs that grant account creation. First is default for checkout. */
-  basicProductIds: string[];
-  basicTierName: string;
-  /** Price in cents for display (e.g. 400 = $4). */
-  basicPriceCents: number;
-  /** Days of free trial before Basic payment required. 0 = no trial. */
-  basicTrialDays: number;
   /** Max gallery images for free users. Premium users have no limit. 0 = unlimited. */
   galleryMaxFree: number;
   /** When true, only Premium users can create blog posts. */
   blogPremiumOnly: boolean;
   /** Max pastes per month for free users. Premium unlimited. 0 = unlimited. */
   pasteMaxFreePerMonth: number;
+  /** Product IDs that grant custom badge addon (user can create their own badge). */
+  customBadgeProductIds: string[];
 }
 
 /**
@@ -84,32 +77,6 @@ export async function getBillingSettings(): Promise<BillingSettings> {
       ? String(tierNameFromDb).trim()
       : "Premium";
 
-  const basicEnabledFromDb = await getSetting<boolean>("billing.basicEnabled");
-  const basicProductIdsFromDb = await getSetting<string[] | string | null>("billing.basicProductIds");
-  const basicProductIdFromDb = await getSetting<string | null>("billing.basicProductId"); // legacy
-  const basicTierNameFromDb = await getSetting<string | null>("billing.basicTierName");
-  const basicPriceCentsFromDb = await getSetting<number>("billing.basicPriceCents");
-
-  const basicEnabled =
-    basicEnabledFromDb !== undefined && basicEnabledFromDb !== null
-      ? Boolean(basicEnabledFromDb)
-      : false;
-  const basicProductIds = parseProductIds(basicProductIdsFromDb, basicProductIdFromDb);
-  const basicTierName =
-    basicTierNameFromDb !== undefined && basicTierNameFromDb !== null && String(basicTierNameFromDb).trim()
-      ? String(basicTierNameFromDb).trim()
-      : "Basic";
-  const basicPriceCents =
-    basicPriceCentsFromDb !== undefined && basicPriceCentsFromDb !== null && typeof basicPriceCentsFromDb === "number"
-      ? Math.max(0, Math.round(basicPriceCentsFromDb))
-      : 400;
-
-  const basicTrialDaysFromDb = await getSetting<number>("billing.basicTrialDays");
-  const basicTrialDays =
-    basicTrialDaysFromDb !== undefined && basicTrialDaysFromDb !== null && typeof basicTrialDaysFromDb === "number"
-      ? Math.max(0, Math.round(basicTrialDaysFromDb))
-      : 14;
-
   const galleryMaxFreeFromDb = await getSetting<number>("billing.galleryMaxFree");
   const galleryMaxFree =
     galleryMaxFreeFromDb !== undefined && galleryMaxFreeFromDb !== null && typeof galleryMaxFreeFromDb === "number"
@@ -124,6 +91,9 @@ export async function getBillingSettings(): Promise<BillingSettings> {
     pasteMaxFreePerMonthFromDb !== undefined && pasteMaxFreePerMonthFromDb !== null && typeof pasteMaxFreePerMonthFromDb === "number"
       ? Math.max(0, Math.round(pasteMaxFreePerMonthFromDb))
       : 10;
+
+  const customBadgeProductIdsFromDb = await getSetting<string[] | string | null>("billing.customBadgeProductIds");
+  const customBadgeProductIds = parseProductIds(customBadgeProductIdsFromDb, null);
 
   const enabled =
     enabledFromDb !== undefined && enabledFromDb !== null
@@ -141,14 +111,10 @@ export async function getBillingSettings(): Promise<BillingSettings> {
     productIds,
     sandbox,
     polarConfigured,
-    basicEnabled: basicEnabled && !!polarConfigured,
-    basicProductIds,
-    basicTierName,
-    basicPriceCents,
-    basicTrialDays,
     galleryMaxFree,
     blogPremiumOnly,
     pasteMaxFreePerMonth,
+    customBadgeProductIds,
   };
 }
 
