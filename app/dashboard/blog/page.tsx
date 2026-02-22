@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
-import { getOrCreateUser, getOrCreateMemberProfile, getBlogPostsForProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile } from "@/lib/member-profiles";
+import { getBlogPostsForProfile } from "@/lib/blog";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardBlog from "@/app/dashboard/DashboardBlog";
 
