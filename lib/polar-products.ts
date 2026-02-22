@@ -34,37 +34,41 @@ function cacheKey(id: string, sandbox: boolean): string {
 /**
  * Fetch a single product from Polar API. Returns null if not found or Polar not configured.
  */
+function effectiveSandbox(options?: { sandbox?: boolean }): boolean {
+  if (options?.sandbox === true) return true;
+  if (options?.sandbox === false) return false;
+  return process.env.POLAR_SANDBOX === "1" || process.env.POLAR_SANDBOX === "true";
+}
+
 export async function getProductInfo(
   productId: string,
   options?: { sandbox?: boolean }
 ): Promise<PolarProductInfo | null> {
   if (!isPolarConfigured() || !productId?.trim()) return null;
-  const key = cacheKey(productId.trim(), options?.sandbox ?? false);
+  const useSandbox = effectiveSandbox(options);
+  const key = cacheKey(productId.trim(), useSandbox);
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return hit.data;
 
   try {
-    const polar = getPolarClient(options?.sandbox ? "sandbox" : undefined);
+    const server = useSandbox ? "sandbox" : "production";
+    const polar = getPolarClient(server);
     const product = await polar.products.get({ id: productId.trim() });
     const data = product as unknown as {
       id?: string;
       name?: string;
       is_recurring?: boolean;
       isRecurring?: boolean;
-      prices?: Array<{
-        amount_type?: string;
-        is_archived?: boolean;
-        price_amount?: number;
-        price_currency?: string;
-        recurring_interval?: string | null;
-        minimum_amount?: number;
-        preset_amount?: number | null;
-      }>;
+      recurring_interval?: string | null;
+      recurringInterval?: string | null;
+      prices?: Array<Record<string, unknown>>;
     };
-    const prices = parsePrices(data.prices);
+    const productRecurringInterval =
+      data.recurring_interval ?? data.recurringInterval ?? null;
+    const prices = parsePrices(data.prices, productRecurringInterval);
     const info: PolarProductInfo = {
       id: data.id ?? productId,
-      name: data.name ?? productId,
+      name: (data as { name?: string }).name ?? productId,
       isRecurring: data.is_recurring ?? data.isRecurring ?? false,
       price: prices[0] ?? null,
       prices,
@@ -85,17 +89,23 @@ function getNum(obj: Record<string, unknown>, ...keys: string[]): number | null 
 }
 
 function parsePrices(
-  raw?: unknown
+  raw?: unknown,
+  productRecurringInterval?: string | null
 ): PolarProductPrice[] {
   if (!Array.isArray(raw)) return [];
   const result: PolarProductPrice[] = [];
   for (const p of raw) {
     const pr = p as Record<string, unknown>;
-    if (pr.is_archived === true) continue;
+    if (pr.is_archived === true || pr.isArchived === true) continue;
     const amountType = String(pr.amount_type ?? pr.amountType ?? "fixed");
     const currency = (String(pr.price_currency ?? pr.priceCurrency ?? "usd")).toUpperCase();
-    const recurringInterval =
-      pr.recurring_interval != null ? String(pr.recurring_interval) : pr.recurringInterval != null ? String(pr.recurringInterval) : null;
+    const priceInterval =
+      pr.recurring_interval != null
+        ? String(pr.recurring_interval)
+        : pr.recurringInterval != null
+          ? String(pr.recurringInterval)
+          : null;
+    const recurringInterval = priceInterval ?? (productRecurringInterval ? String(productRecurringInterval) : null);
     let amountCents: number | null = null;
     if (amountType === "fixed") {
       amountCents = getNum(pr, "price_amount", "priceAmount");
@@ -150,7 +160,9 @@ export function formatPrice(p: PolarProductPrice | null): string {
     minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
   }).format(amount);
   if (p.recurringInterval) {
-    const interval = p.recurringInterval === "month" ? "/month" : p.recurringInterval === "year" ? "/year" : `/${p.recurringInterval}`;
+    const i = p.recurringInterval.toLowerCase();
+    const interval =
+      i === "month" ? "/month" : i === "year" ? "/year" : i === "week" ? "/week" : i === "day" ? "/day" : `/${p.recurringInterval}`;
     return `${formatted}${interval}`;
   }
   return formatted;

@@ -23,7 +23,6 @@ async function syncSubscription(data: unknown) {
   const sub = data as Record<string, unknown>;
   const externalId = getExternalId(sub);
   if (!externalId) return;
-  if (!externalId) return;
 
   const client = await getDb();
   const dbName = await getDbName();
@@ -143,10 +142,12 @@ const polarWebhookHandler =
     onPayload: async () => {},
     onSubscriptionCreated: async (p) => syncSubscription(p.data),
     onSubscriptionUpdated: async (p) => syncSubscription(p.data),
+    onSubscriptionUncanceled: async (p) => syncSubscription(p.data),
     onSubscriptionActive: async (p) => syncSubscription(p.data),
     onSubscriptionCanceled: async (p) => syncSubscription(p.data),
     onSubscriptionRevoked: async (p) => syncSubscription(p.data),
     onOrderCreated: async (p) => syncOrder(p.data),
+    onOrderUpdated: async (p) => syncOrder(p.data),
     onOrderPaid: async (p) => syncOrder(p.data),
   });
 

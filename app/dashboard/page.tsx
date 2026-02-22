@@ -14,6 +14,7 @@ import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
 import UnapprovedMessage from "@/app/components/UnapprovedMessage";
+import BasicTrialBanner from "@/app/components/BasicTrialBanner";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -21,7 +22,12 @@ export const metadata: Metadata = {
   robots: "noindex, nofollow",
 };
 
-import { canUseDashboard as checkDashboardAccess } from "@/lib/dashboard-access";
+import {
+  canUseDashboard as checkDashboardAccess,
+  getBasicTrialDaysRemaining,
+  getBasicTrialEndDate,
+  isWithinBasicTrial,
+} from "@/lib/dashboard-access";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -58,7 +64,24 @@ export default async function DashboardPage() {
       )}
 
       {session && canUseDashboard && (
-        <div className="animate-fade-in-up animate-delay-100">
+        <div className="animate-fade-in-up animate-delay-100 space-y-4">
+          {user &&
+            !user.approved &&
+            !user.isAdmin &&
+            billing.basicEnabled &&
+            billing.basicTrialDays > 0 &&
+            isWithinBasicTrial(user.createdAt, billing.basicTrialDays) && (() => {
+              const endDate = getBasicTrialEndDate(user.createdAt, billing.basicTrialDays);
+              if (!endDate) return null;
+              return (
+                <BasicTrialBanner
+                  daysRemaining={getBasicTrialDaysRemaining(user.createdAt, billing.basicTrialDays)}
+                  trialEndDate={endDate}
+                  basicTierName={billing.basicTierName}
+                  basicPriceFormatted={basicPriceFormatted}
+                />
+              );
+            })()}
           <MemberProfileSection session={session} />
         </div>
       )}
