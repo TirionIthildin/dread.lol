@@ -11,6 +11,21 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Page themes",
+    description: "Choose Classic or Minimalist with light or dark mode for your profile.",
+  },
+  {
+    date: "2026-02",
+    title: "Paste history & raw",
+    description: "View, edit, and delete your pastes. Copy raw URL or open raw content directly.",
+  },
+  {
+    date: "2026-02",
+    title: "Paste: Markdown by default",
+    description: "Pastes now default to Markdown and render formatted when viewed.",
+  },
+  {
+    date: "2026-02",
     title: "Themed embed images",
     description: "Twitter, Discord, and other platforms now show a custom preview with your profile picture, grid background, and description.",
   },

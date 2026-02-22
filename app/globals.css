@@ -29,6 +29,253 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* ========== CLASSIC LIGHT ========== */
+[data-page-theme="classic-light"] {
+  --bg: #f1f5f9;
+  --bg-grid: #e2e8f0;
+  --surface: #ffffff;
+  --border: #cbd5e1;
+  --border-bright: #94a3b8;
+  --text: #0f172a;
+  --muted: #64748b;
+  --terminal: #16a34a;
+  --terminal-dim: #15803d;
+  --accent: #0891b2;
+  --accent-dim: #0e7490;
+  --surface-hover: #e2e8f0;
+  --accent-muted: color-mix(in srgb, var(--accent) 15%, transparent);
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Classic light: softer grid, no scanlines */
+.grid-bg:has([data-page-theme="classic-light"]) {
+  background-color: #f1f5f9;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.2) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.scanlines:has([data-page-theme="classic-light"])::after {
+  display: none;
+}
+
+.grid-bg:has([data-page-theme="classic-light"]) .page-theme-minimalist-hide-ornament {
+  display: none;
+}
+
+/* ========== MINIMALIST LIGHT (Notion / Arc / Linear inspired) ========== */
+[data-page-theme="minimalist-light"] {
+  --bg: #f8f7f4;
+  --bg-grid: #f0efe9;
+  --surface: #ffffff;
+  --border: #e8e6e1;
+  --border-bright: #dad8d2;
+  --text: #1c1917;
+  --muted: #78716c;
+  --terminal: #6366f1;
+  --terminal-dim: #4f46e5;
+  --accent: #6366f1;
+  --accent-dim: #4f46e5;
+  --surface-hover: #f5f5f0;
+  --accent-muted: color-mix(in srgb, var(--accent) 8%, transparent);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.03);
+  --shadow: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 2px 6px rgba(28, 25, 23, 0.04), 0 12px 24px -8px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 4px 12px rgba(28, 25, 23, 0.06), 0 24px 48px -12px rgba(28, 25, 23, 0.12);
+  --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.02em;
+}
+
+/* Minimalist light: warm paper-like background */
+.grid-bg:has([data-page-theme="minimalist-light"]) {
+  background: radial-gradient(ellipse 100% 80% at 50% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 50%),
+    linear-gradient(180deg, #f8f7f4 0%, #f0efe9 100%);
+}
+
+/* ========== MINIMALIST DARK (Arc / Vercel inspired) ========== */
+[data-page-theme="minimalist-dark"] {
+  --bg: #050505;
+  --bg-grid: #0a0a0a;
+  --surface: #0f0f0f;
+  --border: #1f1f1f;
+  --border-bright: #2a2a2a;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --terminal: #a5b4fc;
+  --terminal-dim: #818cf8;
+  --accent: #a5b4fc;
+  --accent-dim: #818cf8;
+  --surface-hover: #171717;
+  --accent-muted: color-mix(in srgb, var(--accent) 12%, transparent);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.02em;
+}
+
+/* Minimalist dark: subtle radial glow, hide scanlines */
+.grid-bg:has([data-page-theme="minimalist-dark"]) {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.04) 0%, transparent 50%), #050505;
+}
+
+
+.scanlines:has([data-page-theme="minimalist-light"])::after,
+.scanlines:has([data-page-theme="minimalist-dark"])::after {
+  display: none;
+}
+
+.grid-bg:has([data-page-theme="minimalist-light"]) .page-theme-minimalist-hide-ornament,
+.grid-bg:has([data-page-theme="minimalist-dark"]) .page-theme-minimalist-hide-ornament {
+  display: none;
+}
+
+/* Minimalist: profile built-in backgrounds become solid */
+[data-page-theme="minimalist-light"] .profile-bg-grid,
+[data-page-theme="minimalist-light"] .profile-bg-gradient,
+[data-page-theme="minimalist-light"] .profile-bg-dither {
+  background: linear-gradient(180deg, #f8f7f4 0%, #f0efe9 100%) !important;
+}
+
+[data-page-theme="minimalist-dark"] .profile-bg-grid,
+[data-page-theme="minimalist-dark"] .profile-bg-gradient,
+[data-page-theme="minimalist-dark"] .profile-bg-dither {
+  background: #050505 !important;
+}
+
+[data-page-theme="minimalist-light"] .profile-bg-dither::after,
+[data-page-theme="minimalist-dark"] .profile-bg-dither::after {
+  display: none !important;
+}
+
+/* Minimalist: use body font (override profile mono fonts) */
+[data-page-theme="minimalist-light"] .profile-font-jetbrains-mono,
+[data-page-theme="minimalist-light"] .profile-font-fira-code,
+[data-page-theme="minimalist-light"] .profile-font-space-mono,
+[data-page-theme="minimalist-dark"] .profile-font-jetbrains-mono,
+[data-page-theme="minimalist-dark"] .profile-font-fira-code,
+[data-page-theme="minimalist-dark"] .profile-font-space-mono {
+  font-family: var(--font-body) !important;
+}
+
+/* ========== MINIMALIST CARD & CONTENT REFINEMENTS ========== */
+.profile-minimalist-card {
+  max-width: 28rem;
+}
+
+.profile-minimalist a {
+  text-underline-offset: 4px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.profile-minimalist a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+}
+
+/* Minimalist: tags as Notion-style pills (spans that contain #) */
+.profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) {
+  border: none !important;
+  background: var(--accent-muted) !important;
+  color: var(--muted) !important;
+  padding: 0.35rem 0.75rem !important;
+  border-radius: 9999px !important;
+  font-size: 0.8125rem !important;
+  box-shadow: none !important;
+}
+
+.profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) span {
+  color: var(--accent) !important;
+}
+
+/* Minimalist: skills as refined chips (no nested span) */
+.profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:not(:has(span)) {
+  border-color: var(--border) !important;
+  background: var(--surface-hover) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0.4rem 0.875rem !important;
+  font-size: 0.875rem !important;
+}
+
+/* Minimalist: Links section header */
+.profile-minimalist .border-t .text-xs.font-medium.uppercase {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  opacity: 0.8;
+}
+
+/* Minimalist: section dividers softer */
+.profile-minimalist .border-t {
+  border-color: var(--border) !important;
+  border-top-width: 1px;
+  opacity: 0.6;
+}
+
+/* Minimalist: description block more readable */
+.profile-minimalist [class*="whitespace-pre-wrap"] {
+  line-height: 1.8;
+}
+
+/* Minimalist: metadata row refined */
+.profile-minimalist .profile-name-block p.text-xs {
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+/* Minimalist: quote as subtle callout */
+.profile-minimalist blockquote {
+  border-left-width: 3px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 1rem 1.25rem;
+  font-size: 0.9375rem;
+  font-style: italic;
+}
+
+/* Legacy: minimalist (no variant) → minimalist-light */
+[data-page-theme="minimalist"] {
+  --bg: #f8f7f4;
+  --bg-grid: #f0efe9;
+  --surface: #ffffff;
+  --border: #e8e6e1;
+  --border-bright: #dad8d2;
+  --text: #1c1917;
+  --muted: #78716c;
+  --terminal: #6366f1;
+  --terminal-dim: #4f46e5;
+  --accent: #6366f1;
+  --accent-dim: #4f46e5;
+  --surface-hover: #f5f5f0;
+  --accent-muted: color-mix(in srgb, var(--accent) 8%, transparent);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.03);
+  --shadow: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 2px 6px rgba(28, 25, 23, 0.04), 0 12px 24px -8px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 0 0 1px rgba(28, 25, 23, 0.04), 0 4px 12px rgba(28, 25, 23, 0.06), 0 24px 48px -12px rgba(28, 25, 23, 0.12);
+  --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.02em;
+}
+
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text);
@@ -484,16 +731,40 @@
   }
 
   /* Profile fun customization: accent theme (member profiles) */
-  .profile-theme-cyan { --accent: #06b6d4; --terminal: #22c55e; }
-  .profile-theme-green { --accent: #22c55e; --terminal: #16a34a; }
-  .profile-theme-purple { --accent: #a855f7; --terminal: #c084fc; }
-  .profile-theme-orange { --accent: #f97316; --terminal: #fb923c; }
-  .profile-theme-rose { --accent: #f43f5e; --terminal: #fb7185; }
-  .profile-theme-amber { --accent: #f59e0b; --terminal: #fbbf24; }
-  .profile-theme-blue { --accent: #3b82f6; --terminal: #60a5fa; }
-  .profile-theme-indigo { --accent: #6366f1; --terminal: #818cf8; }
-  .profile-theme-teal { --accent: #14b8a6; --terminal: #2dd4bf; }
-  .profile-theme-sky { --accent: #0ea5e9; --terminal: #38bdf8; }
+  .profile-theme-cyan { --accent: #06b6d4; --accent-dim: #0891b2; --terminal: #22c55e; }
+  .profile-theme-green { --accent: #22c55e; --accent-dim: #16a34a; --terminal: #16a34a; }
+  .profile-theme-purple { --accent: #a855f7; --accent-dim: #9333ea; --terminal: #c084fc; }
+  .profile-theme-orange { --accent: #f97316; --accent-dim: #ea580c; --terminal: #fb923c; }
+  .profile-theme-rose { --accent: #f43f5e; --accent-dim: #e11d48; --terminal: #fb7185; }
+  .profile-theme-amber { --accent: #f59e0b; --accent-dim: #d97706; --terminal: #fbbf24; }
+  .profile-theme-blue { --accent: #3b82f6; --accent-dim: #2563eb; --terminal: #60a5fa; }
+  .profile-theme-indigo { --accent: #6366f1; --accent-dim: #4f46e5; --terminal: #818cf8; }
+  .profile-theme-teal { --accent: #14b8a6; --accent-dim: #0d9488; --terminal: #2dd4bf; }
+  .profile-theme-sky { --accent: #0ea5e9; --accent-dim: #0284c7; --terminal: #38bdf8; }
+
+  /* Minimalist light: refined, slightly deeper accents that sit well on warm paper */
+  [data-page-theme="minimalist-light"].profile-theme-cyan { --accent: #0e7490; --accent-dim: #0b5a6b; --terminal: #0d9488; }
+  [data-page-theme="minimalist-light"].profile-theme-green { --accent: #15803d; --accent-dim: #166534; --terminal: #16a34a; }
+  [data-page-theme="minimalist-light"].profile-theme-purple { --accent: #7c3aed; --accent-dim: #6d28d9; --terminal: #a78bfa; }
+  [data-page-theme="minimalist-light"].profile-theme-orange { --accent: #ea580c; --accent-dim: #c2410c; --terminal: #f97316; }
+  [data-page-theme="minimalist-light"].profile-theme-rose { --accent: #e11d48; --accent-dim: #be123c; --terminal: #fb7185; }
+  [data-page-theme="minimalist-light"].profile-theme-amber { --accent: #d97706; --accent-dim: #b45309; --terminal: #f59e0b; }
+  [data-page-theme="minimalist-light"].profile-theme-blue { --accent: #2563eb; --accent-dim: #1d4ed8; --terminal: #3b82f6; }
+  [data-page-theme="minimalist-light"].profile-theme-indigo { --accent: #4f46e5; --accent-dim: #4338ca; --terminal: #6366f1; }
+  [data-page-theme="minimalist-light"].profile-theme-teal { --accent: #0d9488; --accent-dim: #0f766e; --terminal: #14b8a6; }
+  [data-page-theme="minimalist-light"].profile-theme-sky { --accent: #0284c7; --accent-dim: #0369a1; --terminal: #0ea5e9; }
+
+  /* Minimalist dark: softer accents with better visibility on near-black */
+  [data-page-theme="minimalist-dark"].profile-theme-cyan { --accent: #22d3ee; --accent-dim: #06b6d4; --terminal: #67e8f9; }
+  [data-page-theme="minimalist-dark"].profile-theme-green { --accent: #4ade80; --accent-dim: #22c55e; --terminal: #86efac; }
+  [data-page-theme="minimalist-dark"].profile-theme-purple { --accent: #c084fc; --accent-dim: #a855f7; --terminal: #e879f9; }
+  [data-page-theme="minimalist-dark"].profile-theme-orange { --accent: #fb923c; --accent-dim: #f97316; --terminal: #fdba74; }
+  [data-page-theme="minimalist-dark"].profile-theme-rose { --accent: #fb7185; --accent-dim: #f43f5e; --terminal: #fda4af; }
+  [data-page-theme="minimalist-dark"].profile-theme-amber { --accent: #fbbf24; --accent-dim: #f59e0b; --terminal: #fcd34d; }
+  [data-page-theme="minimalist-dark"].profile-theme-blue { --accent: #60a5fa; --accent-dim: #3b82f6; --terminal: #93c5fd; }
+  [data-page-theme="minimalist-dark"].profile-theme-indigo { --accent: #818cf8; --accent-dim: #6366f1; --terminal: #a5b4fc; }
+  [data-page-theme="minimalist-dark"].profile-theme-teal { --accent: #2dd4bf; --accent-dim: #14b8a6; --terminal: #5eead4; }
+  [data-page-theme="minimalist-dark"].profile-theme-sky { --accent: #38bdf8; --accent-dim: #0ea5e9; --terminal: #7dd3fc; }
 
   .profile-card-sharp {
     border-radius: 4px;

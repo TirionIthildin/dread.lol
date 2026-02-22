@@ -139,6 +139,10 @@ export async function updateProfileAction(
       terminalPrompt: (formData.get("terminalPrompt") as string)?.trim() || undefined,
       nameGreeting: (formData.get("nameGreeting") as string)?.trim() || undefined,
       cardStyle: (formData.get("cardStyle") as string)?.trim() || undefined,
+      pageTheme: (() => {
+        const t = (formData.get("pageTheme") as string)?.trim();
+        return ["classic-dark", "classic-light", "minimalist-light", "minimalist-dark"].includes(t) ? t : undefined;
+      })(),
       cardOpacity: (() => {
         const v = formData.get("cardOpacity");
         if (v == null || v === "") return undefined;

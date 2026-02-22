@@ -51,6 +51,8 @@ export interface Profile {
   nameGreeting?: string;
   /** Card style: default, sharp, glass, neon, minimal, elevated. */
   cardStyle?: string;
+  /** Page theme: classic-dark, classic-light, minimalist-light, minimalist-dark. */
+  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark";
   /** Box opacity (50–100). Controls profile card transparency. */
   cardOpacity?: number;
   /** Pronouns (e.g. they/them). */

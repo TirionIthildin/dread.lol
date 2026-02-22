@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CopyButton from "@/app/components/CopyButton";
 
 const LANGUAGES = [
+  { value: "markdown", label: "Markdown" },
   { value: "", label: "Plain text" },
   { value: "javascript", label: "JavaScript" },
   { value: "typescript", label: "TypeScript" },
@@ -15,7 +16,6 @@ const LANGUAGES = [
   { value: "json", label: "JSON" },
   { value: "html", label: "HTML" },
   { value: "css", label: "CSS" },
-  { value: "markdown", label: "Markdown" },
   { value: "sql", label: "SQL" },
   { value: "yaml", label: "YAML" },
   { value: "rust", label: "Rust" },
@@ -27,14 +27,33 @@ const LANGUAGES = [
 
 interface PasteCreateFormProps {
   isLoggedIn?: boolean;
+  /** When set, form is in edit mode. Pass slug, content, language. */
+  editing?: { slug: string; content: string; language: string } | null;
+  onEditCancel?: () => void;
+  onEditSuccess?: () => void;
+  onCreated?: () => void;
 }
 
-export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormProps) {
+export default function PasteCreateForm({
+  isLoggedIn = false,
+  editing = null,
+  onEditCancel,
+  onEditSuccess,
+  onCreated,
+}: PasteCreateFormProps) {
   const router = useRouter();
-  const [content, setContent] = useState("");
-  const [language, setLanguage] = useState("");
+  const [content, setContent] = useState(editing?.content ?? "");
+  const [language, setLanguage] = useState(editing?.language || "markdown");
   const [result, setResult] = useState<{ url: string; slug: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (editing) {
+      setContent(editing.content);
+      setLanguage(editing.language || "markdown");
+      setResult(null);
+    }
+  }, [editing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,22 +68,38 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
     setIsSubmitting(true);
     setResult(null);
     try {
-      const res = await fetch("/api/paste", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: content.trim(),
-          language: language || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create paste");
+      if (editing) {
+        const res = await fetch(`/api/paste/${editing.slug}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: content.trim(),
+            language: language || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to update paste");
+        toast.success("Paste updated");
+        onEditSuccess?.();
+        setContent("");
+        setLanguage("markdown");
+      } else {
+        const res = await fetch("/api/paste", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: content.trim(),
+            language: language || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to create paste");
+        setResult({ url: data.url, slug: data.slug });
+        toast.success("Paste created");
+        onCreated?.();
       }
-      setResult({ url: data.url, slug: data.slug });
-      toast.success("Paste created");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create paste";
+      const msg = err instanceof Error ? err.message : "Failed to save paste";
       if (msg.toLowerCase().includes("log in")) {
         window.location.href = "/api/auth/discord";
       } else {
@@ -76,6 +111,7 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
   };
 
   if (result) {
+    const rawUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/api/paste/${result.slug}?raw=1`;
     return (
       <div className="space-y-4">
         <p className="text-[var(--muted)] text-sm">
@@ -93,7 +129,18 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
             Copy
           </CopyButton>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={`/api/paste/${result.slug}?raw=1`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 rounded border border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-sm transition-colors"
+          >
+            Raw
+          </a>
+          <CopyButton copyValue={rawUrl} ariaLabel="Copy raw URL" className="shrink-0">
+            Copy raw
+          </CopyButton>
           <button
             type="button"
             onClick={() => router.push(`/p/${result.slug}`)}
@@ -106,7 +153,7 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
             onClick={() => {
               setResult(null);
               setContent("");
-              setLanguage("");
+              setLanguage("markdown");
             }}
             className="px-4 py-2 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-bright)] text-sm transition-colors"
           >
@@ -154,7 +201,7 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
           id="paste-content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Paste your code or text here..."
+          placeholder={language === "markdown" ? "Write markdown… **bold**, *italic*, [links](url), `code`" : "Paste your code or text here..."}
           rows={14}
           className="w-full px-3 py-2 rounded border border-[var(--border)] bg-[var(--bg)] text-[var(--foreground)] text-sm font-mono placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] focus:outline-none resize-y min-h-[200px]"
           spellCheck={false}
@@ -164,17 +211,32 @@ export default function PasteCreateForm({ isLoggedIn = false }: PasteCreateFormP
       <p className="text-xs text-[var(--muted)]">
         Max 1MB. Pastes are attributed to your account.
       </p>
-      <button
-        type="submit"
-        disabled={isSubmitting || !isLoggedIn}
-        className="px-4 py-2 rounded border border-[var(--terminal)] bg-[var(--terminal)]/10 text-[var(--terminal)] hover:bg-[var(--terminal)]/20 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {!isLoggedIn
-          ? "Log in to create"
-          : isSubmitting
-            ? "Creating…"
-            : "Create paste"}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={isSubmitting || !isLoggedIn}
+          className="px-4 py-2 rounded border border-[var(--terminal)] bg-[var(--terminal)]/10 text-[var(--terminal)] hover:bg-[var(--terminal)]/20 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {!isLoggedIn
+            ? "Log in to create"
+            : isSubmitting
+              ? editing
+                ? "Updating…"
+                : "Creating…"
+              : editing
+                ? "Update paste"
+                : "Create paste"}
+        </button>
+        {editing && (
+          <button
+            type="button"
+            onClick={onEditCancel}
+            className="px-4 py-2 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border-bright)] text-sm transition-colors"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }

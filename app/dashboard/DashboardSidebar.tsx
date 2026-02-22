@@ -44,6 +44,14 @@ const mainNavItems = [
     ),
   },
   {
+    href: "/dashboard/marketplace",
+    label: "Marketplace",
+    icon: <Storefront size={20} weight="regular" className="shrink-0" aria-hidden />,
+  },
+] as const;
+
+const contentNavItems = [
+  {
     href: "/dashboard/gallery",
     label: "Gallery",
     icon: <ImagesSquare size={20} weight="regular" className="shrink-0" aria-hidden />,
@@ -52,11 +60,6 @@ const mainNavItems = [
     href: "/dashboard/paste",
     label: "Paste",
     icon: <ClipboardText size={20} weight="regular" className="shrink-0" aria-hidden />,
-  },
-  {
-    href: "/dashboard/marketplace",
-    label: "Marketplace",
-    icon: <Storefront size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
 ] as const;
 
@@ -97,7 +100,7 @@ export default function DashboardSidebar({ isAdmin, session }: Props) {
     sectionLabel,
     itemOffset = 0,
   }: {
-    items: typeof mainNavItems | typeof discoverNavItems;
+    items: typeof mainNavItems | typeof discoverNavItems | typeof contentNavItems;
     sectionLabel?: string;
     itemOffset?: number;
   }) => (
@@ -145,8 +148,18 @@ export default function DashboardSidebar({ isAdmin, session }: Props) {
       <nav className="flex md:flex-col gap-1 p-2 md:p-3 overflow-x-auto md:overflow-x-visible overflow-y-auto flex-1 min-h-0">
         {/* Main nav */}
         <NavSection items={mainNavItems} sectionLabel="Nav" itemOffset={0} />
+        {/* Content: Gallery & Paste */}
+        <NavSection
+          items={contentNavItems}
+          sectionLabel="Content"
+          itemOffset={mainNavItems.length}
+        />
         {/* Discover */}
-        <NavSection items={discoverNavItems} sectionLabel="Discover" itemOffset={mainNavItems.length} />
+        <NavSection
+          items={discoverNavItems}
+          sectionLabel="Discover"
+          itemOffset={mainNavItems.length + contentNavItems.length}
+        />
         {/* Admin */}
         {isAdmin && (
           <div className="md:mt-3 md:pt-3 md:border-t border-[var(--border)] space-y-0.5">
@@ -155,7 +168,7 @@ export default function DashboardSidebar({ isAdmin, session }: Props) {
             </p>
             <div
               className="sidebar-item"
-              style={{ animationDelay: `${20 + (mainNavItems.length + discoverNavItems.length) * 25}ms` } as React.CSSProperties}
+              style={{ animationDelay: `${20 + (mainNavItems.length + contentNavItems.length + discoverNavItems.length) * 25}ms` } as React.CSSProperties}
             >
               <DashboardNavAdmin isAdmin={isAdmin} variant="sidebar" />
             </div>

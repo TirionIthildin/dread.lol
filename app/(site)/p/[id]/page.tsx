@@ -55,7 +55,7 @@ export default async function PasteViewPage({ params }: Props) {
                 {" · "}
               </>
             )}
-            {paste.createdAt.toLocaleDateString(undefined, {
+            {paste.createdAt.toLocaleString(undefined, {
               dateStyle: "medium",
               timeStyle: "short",
             })}
@@ -73,6 +73,7 @@ export default async function PasteViewPage({ params }: Props) {
         content={paste.content}
         language={paste.language}
         slug={id}
+        baseUrl={SITE_URL}
       />
 
       <footer className="text-center">

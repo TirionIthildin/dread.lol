@@ -95,6 +95,8 @@ export interface ProfileDoc {
   /** Audio visualizer animation: default, smooth, bounce, glow, pulse */
   audioVisualizerAnimation?: string | null;
   audioTracks?: string | null;
+  /** Page theme: classic-dark, classic-light, minimalist-light, minimalist-dark. */
+  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark" | null;
   createdAt: Date;
   updatedAt: Date;
 }

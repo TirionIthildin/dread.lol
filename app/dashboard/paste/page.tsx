@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import PasteCreateForm from "@/app/components/PasteCreateForm";
+import PasteSection from "@/app/components/PasteSection";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-import TerminalWindow from "@/app/components/TerminalWindow";
 import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
@@ -24,12 +23,7 @@ export default async function DashboardPastePage() {
         </p>
       </div>
 
-      <TerminalWindow
-        title="user@dread:~ — new paste"
-        className="animate-fade-in"
-      >
-        <PasteCreateForm isLoggedIn={!!session} />
-      </TerminalWindow>
+      <PasteSection isLoggedIn={!!session} />
     </div>
   );
 }

@@ -42,6 +42,8 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   const { cursorClass, cursorStyle } = getProfileCursorProps(profile, resolveMediaUrl);
   const hasVisualBackground = customBgType === "image" || customBgType === "video" || !!builtInBg;
   const needsUnlock = (customBgType === "video") || !!backgroundAudioUrl;
+  const pageTheme = profile.pageTheme ?? "classic-dark";
+  const isLightTheme = pageTheme === "minimalist-light" || pageTheme === "classic-light";
 
   const handleUnlock = useCallback(() => {
     if (customBgType === "video" && videoRef.current) {
@@ -64,7 +66,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     <button
       type="button"
       onClick={handleUnlock}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
+      className={`fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset ${isLightTheme ? "bg-white/70 hover:bg-white/60" : "bg-black/60 hover:bg-black/50"}`}
       aria-label="Click to view profile and play media"
     >
       <span className="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)]/95 px-7 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all duration-200 hover:border-[var(--accent)]/70 hover:bg-[var(--surface)]">
@@ -78,12 +80,21 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     <div
       className="pointer-events-none fixed inset-0 z-[1]"
       aria-hidden
-      style={{
-        background: `
-          radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, rgba(8,9,10,0.5) 70%, rgba(8,9,10,0.85) 100%),
-          linear-gradient(180deg, rgba(8,9,10,0.3) 0%, transparent 25%, transparent 75%, rgba(8,9,10,0.4) 100%)
-        `,
-      }}
+      style={
+        isLightTheme
+          ? {
+              background: `
+                radial-gradient(ellipse 80% 70% at 50% 50%, transparent 40%, rgba(250,250,250,0.6) 70%, rgba(250,250,250,0.92) 100%),
+                linear-gradient(180deg, rgba(250,250,250,0.4) 0%, transparent 30%, transparent 70%, rgba(250,250,250,0.5) 100%)
+              `,
+            }
+          : {
+              background: `
+                radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, rgba(8,9,10,0.5) 70%, rgba(8,9,10,0.85) 100%),
+                linear-gradient(180deg, rgba(8,9,10,0.3) 0%, transparent 25%, transparent 75%, rgba(8,9,10,0.4) 100%)
+              `,
+            }
+      }
     />
   );
 
@@ -105,7 +116,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
           ? "profile-bg-gradient"
           : "profile-bg-dither";
     return (
-      <div className={wrapperClassName} style={cursorStyle}>
+      <div className={wrapperClassName} style={cursorStyle} data-page-theme={pageTheme}>
         <div
           className={`fixed inset-0 z-0 overflow-hidden ${bgClass}`}
           aria-hidden
@@ -129,7 +140,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   if (customBgType === "image" && backgroundUrl) {
     const resolvedImageUrl = resolveMediaUrl(backgroundUrl);
     return (
-      <div className={wrapperClassName} style={cursorStyle}>
+      <div className={wrapperClassName} style={cursorStyle} data-page-theme={pageTheme}>
         <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden>
           <img
             src={resolvedImageUrl}
@@ -163,7 +174,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     if (!resolvedUrl) return <>{children}</>;
 
     return (
-      <div className={wrapperClassName} style={cursorStyle}>
+      <div className={wrapperClassName} style={cursorStyle} data-page-theme={pageTheme}>
         <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden>
           <video
             ref={videoRef}
@@ -203,7 +214,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
     if (!resolvedUrl) return <>{children}</>;
 
     return (
-      <div className={wrapperClassName} style={cursorStyle}>
+      <div className={wrapperClassName} style={cursorStyle} data-page-theme={pageTheme}>
         <audio ref={audioRef} src={resolvedUrl} loop preload="metadata" className="sr-only" aria-hidden />
         {unlockOverlay}
         {content}
@@ -212,7 +223,7 @@ export default function ProfileBackground({ profile, children }: ProfileBackgrou
   }
 
   return (
-    <div className={wrapperClassName} style={cursorStyle}>
+    <div className={wrapperClassName} style={cursorStyle} data-page-theme={pageTheme}>
       {children}
     </div>
   );

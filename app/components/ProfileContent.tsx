@@ -185,6 +185,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
       : "";
   const useTerminalLayout = Boolean(profile.useTerminalLayout && (profile.terminalCommands?.length || profile.terminalTitle != null));
   const cardOpacity = profile.cardOpacity != null ? Math.max(50, Math.min(100, profile.cardOpacity)) : 95;
+  const isMinimalist = profile.pageTheme === "minimalist-light" || profile.pageTheme === "minimalist-dark";
 
   return (
     <>
@@ -196,58 +197,76 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
         />
       )}
     <div
-      className={`relative z-10 w-full max-w-2xl max-h-[calc(100vh-1.5rem)] overflow-auto ${themeClass} ${fontClass}`}
+      className={`relative z-10 w-full max-h-[calc(100vh-1.5rem)] overflow-auto ${isMinimalist ? "max-w-md" : "max-w-2xl"} ${themeClass} ${fontClass}`}
     >
       <article
-        className={`rounded-xl border border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm overflow-hidden transition-shadow duration-300 hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)] ${cardClass} ${densityClass} ${animationClass}`}
+        className={`rounded-2xl border overflow-hidden transition-all duration-300 ${isMinimalist ? "profile-minimalist-card border-[var(--border)]/60 shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)]" : "rounded-xl border-[var(--border)] shadow-2xl shadow-black/50 backdrop-blur-sm hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]"} ${!isMinimalist ? cardClass : ""} ${densityClass} ${animationClass}`}
         style={{ backgroundColor: `color-mix(in srgb, var(--surface) ${cardOpacity}%, transparent)` }}
         aria-labelledby="profile-name"
       >
-        <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--bg)]/90 px-3 py-2.5 sm:px-4">
-          <div className="flex gap-1.5 items-center shrink-0">
-            <Link
-              href="/"
-              className="h-2.5 w-2.5 min-w-[10px] min-h-[10px] rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)] transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] cursor-pointer block"
-              aria-label="Back to home"
-            />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#eab308] shadow-[0_0_6px_rgba(234,179,8,0.4)]" aria-hidden />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_rgba(34,197,94,0.4)]" aria-hidden />
-          </div>
-          <span className="ml-2 font-mono text-xs text-[var(--muted)] truncate flex-1 min-w-0">
-            {profile.slug}.txt
-          </span>
-          {canReport !== false && <ProfileReportButton slug={profile.slug} canSubmit={canSubmitReport ?? false} />}
+        <div className={`flex items-center gap-2 px-3 py-2.5 sm:px-4 ${isMinimalist ? "border-b border-[var(--border)]/40 bg-transparent" : "border-b border-[var(--border)] bg-[var(--bg)]/90"}`}>
+          {isMinimalist ? (
+            <>
+              <Link
+                href="/"
+                className="text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                aria-label="Back to home"
+              >
+                ← Back
+              </Link>
+              <span className="flex-1 min-w-0" />
+              {canReport !== false && <ProfileReportButton slug={profile.slug} canSubmit={canSubmitReport ?? false} />}
+            </>
+          ) : (
+            <>
+              <div className="flex gap-1.5 items-center shrink-0">
+                <Link
+                  href="/"
+                  className="h-2.5 w-2.5 min-w-[10px] min-h-[10px] rounded-full bg-[#ef4444] shadow-[0_0_6px_rgba(239,68,68,0.4)] transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] cursor-pointer block"
+                  aria-label="Back to home"
+                />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#eab308] shadow-[0_0_6px_rgba(234,179,8,0.4)]" aria-hidden />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_rgba(34,197,94,0.4)]" aria-hidden />
+              </div>
+              <span className="ml-2 font-mono text-xs text-[var(--muted)] truncate flex-1 min-w-0">
+                {profile.slug}.txt
+              </span>
+              {canReport !== false && <ProfileReportButton slug={profile.slug} canSubmit={canSubmitReport ?? false} />}
+            </>
+          )}
         </div>
-        <div className="p-3 font-mono text-sm sm:p-4 sm:text-sm border-t border-[var(--border)]/50 profile-content-inner">
-          <p className="text-[var(--terminal)]">
-            <span className="text-[var(--muted)]">{prompt}</span> cat {profile.slug}.txt
-          </p>
+        <div className={`profile-content-inner border-t ${isMinimalist ? "profile-minimalist p-8 sm:p-10 text-[16px] border-[var(--border)]/30" : "p-3 sm:p-4 border-[var(--border)]/50 font-mono text-sm sm:text-sm"}`}>
+          {!isMinimalist && (
+            <p className="text-[var(--terminal)]">
+              <span className="text-[var(--muted)]">{prompt}</span> cat {profile.slug}.txt
+            </p>
+          )}
           {profile.banner && (
             <BannerPre banner={profile.banner} bannerClass={bannerClass} bannerSmall={profile.bannerSmall} />
           )}
-          <div className="mt-4 flex items-center gap-4">
+          <div className={`flex items-center ${isMinimalist ? "mt-8 gap-8" : "mt-4 gap-4"}`}>
             {profile.avatar && (
               profile.avatar.includes("cdn.discordapp.com") ? (
                 <Image
                   src={profile.avatar}
                   alt=""
-                  width={64}
-                  height={64}
-                  className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
+                  width={isMinimalist ? 96 : 64}
+                  height={isMinimalist ? 96 : 64}
+                  className={`profile-avatar shrink-0 border object-cover transition-all duration-300 ${isMinimalist ? "h-20 w-20 sm:h-24 sm:w-24 border-[var(--border)]/40 ring-2 ring-[var(--surface)]/80 rounded-2xl hover:ring-[var(--accent)]/20" : "h-16 w-16 border-2 border-[var(--border)] ring-2 ring-[var(--surface)] shadow-lg hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40"} ${avatarClass}`}
                 />
               ) : (
                 <Image
                   src={profile.avatar}
                   alt=""
-                  width={64}
-                  height={64}
-                  className={`profile-avatar h-16 w-16 shrink-0 border-2 border-[var(--border)] object-cover ring-2 ring-[var(--surface)] shadow-lg transition-all duration-200 hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40 ${avatarClass}`}
+                  width={isMinimalist ? 96 : 64}
+                  height={isMinimalist ? 96 : 64}
+                  className={`profile-avatar shrink-0 border object-cover transition-all duration-300 ${isMinimalist ? "h-20 w-20 sm:h-24 sm:w-24 border-[var(--border)]/40 ring-2 ring-[var(--surface)]/80 rounded-2xl hover:ring-[var(--accent)]/20" : "h-16 w-16 border-2 border-[var(--border)] ring-2 ring-[var(--surface)] shadow-lg hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40"} ${avatarClass}`}
                   unoptimized
                 />
               )
             )}
             <div className="profile-name-block min-w-0 flex-1">
-              <h1 id="profile-name" className="text-xl font-semibold text-[var(--foreground)] tracking-tight flex items-center gap-2 flex-wrap">
+              <h1 id="profile-name" className={`text-[var(--foreground)] tracking-tight flex items-center gap-2 flex-wrap ${isMinimalist ? "text-2xl sm:text-3xl font-medium tracking-[-0.03em]" : "text-xl font-semibold"}`}>
                 {profile.nameGreeting?.trim() && (
                   <span className="text-[var(--muted)] font-normal">{profile.nameGreeting.trim()} </span>
                 )}

@@ -768,6 +768,10 @@ export default function DashboardMyProfile({
               <p className="text-xs text-[var(--muted)]">
                 When enabled and you’re in our Discord server, your live status (online/idle/busy) and Rich Presence (e.g. “Playing X”) appear on your profile.
               </p>
+              <p className="inline-flex items-center gap-1.5 text-xs text-[var(--warning)] rounded-lg border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-2.5 py-1.5" role="note">
+                <span aria-hidden>⚠️</span>
+                You must be in the same Discord server as the bot for this to work.
+              </p>
               <label className="block pt-2 text-xs font-medium text-[var(--muted)]">
                 Display style
                 <select
@@ -1227,7 +1231,20 @@ export default function DashboardMyProfile({
             </div>
 
             <div className={activeEditorSection === "fun" ? "block space-y-3" : "hidden"}>
-              <p className="text-xs font-medium text-[var(--muted)] mb-1">Accent color, terminal prompt, greeting, card look</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-1">Page theme, accent color, terminal prompt, greeting, card look</p>
+              <label className="block text-xs font-medium text-[var(--muted)]">
+                Page theme
+                <select
+                  name="pageTheme"
+                  defaultValue={(profile as { pageTheme?: string }).pageTheme ?? "classic-dark"}
+                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                >
+                  <option value="classic-dark">Classic — dark</option>
+                  <option value="classic-light">Classic — light</option>
+                  <option value="minimalist-light">Minimalist — light</option>
+                  <option value="minimalist-dark">Minimalist — dark</option>
+                </select>
+              </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Accent color
                 <select

@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
-import { createPaste } from "@/lib/paste";
+import { createPaste, listPastesByUserId } from "@/lib/paste";
 import { getSession } from "@/lib/auth/session";
 import { getProfileSlugByUserId } from "@/lib/member-profiles";
+
+export async function GET() {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Log in to view pastes" }, { status: 401 });
+    }
+    const pastes = await listPastesByUserId(session.sub);
+    return NextResponse.json({ pastes });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to list pastes";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
 
 export async function POST(request: Request) {
   try {

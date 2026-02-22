@@ -22,7 +22,7 @@ export default async function DashboardLayout({
         Skip to content
       </a>
       <div
-        className="fixed inset-0 -z-10 overflow-hidden pointer-events-none"
+        className="fixed inset-0 -z-10 overflow-hidden pointer-events-none page-theme-minimalist-hide-ornament"
         aria-hidden
       >
         <div

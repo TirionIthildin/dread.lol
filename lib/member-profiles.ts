@@ -1125,6 +1125,13 @@ export function memberProfileToProfile(
     nameGreeting: row.nameGreeting ?? undefined,
     cardStyle: row.cardStyle ?? undefined,
     cardOpacity: row.cardOpacity ?? undefined,
+    pageTheme: (() => {
+      const t = (row.pageTheme ?? "") as string;
+      if (t === "classic") return "classic-dark" as const;
+      if (t === "minimalist") return "minimalist-light" as const;
+      if (["classic-dark", "classic-light", "minimalist-light", "minimalist-dark"].includes(t)) return t as "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark";
+      return "classic-dark" as const;
+    })(),
     pronouns: row.pronouns ?? undefined,
     location: row.location ?? undefined,
     timezone: row.timezone ?? undefined,
