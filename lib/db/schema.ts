@@ -17,6 +17,8 @@ export interface UserDoc {
   staff: boolean;
   /** Admin-granted free Premium (bypasses Polar payment). */
   premiumGranted?: boolean;
+  /** Admin-granted custom badge slots (vouchers). Adds to purchased count. */
+  customBadgeVouchers?: number;
   /** Profile restricted: billing issue or terminated. When true, profile shows restricted message. */
   restricted?: boolean;
   discordPublicFlags?: number | null;
@@ -265,6 +267,17 @@ export interface PolarOrderDoc {
   metadata?: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** One-time-use link to redeem a user-created badge. Creator shares link; redeemer gets a copy of the badge. */
+export interface BadgeRedemptionLinkDoc {
+  _id: ObjectId;
+  token: string;
+  badgeId: ObjectId; // user_created_badges._id
+  createdBy: string; // userId (Discord ID)
+  usedAt: Date | null;
+  usedBy: string | null; // userId when redeemed
+  createdAt: Date;
 }
 
 export type User = UserDoc;

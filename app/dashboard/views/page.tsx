@@ -74,7 +74,7 @@ export default async function DashboardAnalyticsPage() {
             See who viewed your profile, traffic sources, views over time, and more.
           </p>
           <Link
-            href="/dashboard/shop"
+            href="/dashboard/premium"
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent)]/90"
           >
             Get Premium

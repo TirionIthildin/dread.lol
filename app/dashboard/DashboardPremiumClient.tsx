@@ -1,9 +1,6 @@
 "use client";
 
 import Link from "next/link";
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://dread.lol";
 import {
   CreditCard,
   CheckCircle,
@@ -18,7 +15,8 @@ import {
   Article,
   Copy,
   Stack,
-  ShieldCheck,
+  Medal,
+  ImagesSquare,
 } from "@phosphor-icons/react";
 import type { PremiumSource } from "@/lib/premium-permissions";
 
@@ -42,6 +40,7 @@ type Props = {
     status: string;
   } | null;
   ownedProductIds: string[];
+  ownedProductQuantities: Record<string, number>;
   hasPremiumAccess: boolean;
   premiumSource: PremiumSource;
 };
@@ -57,13 +56,13 @@ const PREMIUM_FEATURES = [
   { icon: Copy, label: "Unlimited pastes", desc: "Create pastes without monthly caps" },
 ];
 
-export default function DashboardBillingClient({
+export default function DashboardPremiumClient({
   billingEnabled,
   tierName,
   premiumProducts,
   hasActiveSubscription,
-  activeSubscription,
   ownedProductIds,
+  ownedProductQuantities,
   hasPremiumAccess,
   premiumSource,
 }: Props) {
@@ -84,7 +83,7 @@ export default function DashboardBillingClient({
           Premium not yet available
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[var(--muted)]">
-          Billing is not configured yet. Admins can enable it and add products in Admin → Billing.
+          Premium is not configured yet. Admins can enable it in Admin → Premium.
         </p>
       </div>
     );
@@ -100,8 +99,10 @@ export default function DashboardBillingClient({
           : null;
 
   return (
-    <div className="space-y-10">
-      {/* Hero status */}
+    <div className="space-y-8">
+      <h1 className="text-xl font-semibold text-[var(--foreground)]">Premium</h1>
+
+      {/* Premium hero */}
       <div
         className={`relative overflow-hidden rounded-2xl border p-6 md:p-8 transition-colors ${
           hasPremiumAccess
@@ -133,7 +134,7 @@ export default function DashboardBillingClient({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-xl font-semibold text-[var(--foreground)] md:text-2xl">
-                  {hasPremiumAccess ? `You have ${tierName}` : `Upgrade to ${tierName}`}
+                  {hasPremiumAccess ? `You have ${tierName}` : `${tierName}`}
                 </h2>
                 {statusLabel && (
                   <span className="inline-flex items-center rounded-full bg-[var(--accent)]/20 px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
@@ -148,91 +149,40 @@ export default function DashboardBillingClient({
               </p>
             </div>
           </div>
-          {hasPremiumAccess && hasActiveSubscription && (
+          {hasPremiumAccess && hasActiveSubscription ? (
             <Link
-              href={`${BASE_URL}/api/polar/customer-portal`}
+              href="/api/polar/customer-portal"
               prefetch={false}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/15 px-5 py-3 text-sm font-medium text-[var(--accent)] transition-all hover:bg-[var(--accent)]/25 hover:border-[var(--accent)]/70"
             >
               <CreditCard size={18} weight="regular" />
               Manage subscription
             </Link>
-          )}
+          ) : !hasPremiumAccess ? (
+            <Link
+              href="/api/polar/checkout-redirect"
+              prefetch={false}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-medium text-white transition-all hover:opacity-90"
+            >
+              <Plus size={18} weight="regular" />
+              Get {tierName}
+            </Link>
+          ) : null}
         </div>
       </div>
 
-      {/* Upgrade section – when no access or has one-time but no sub */}
-      {(!hasPremiumAccess || (ownedPremium && !hasActiveSubscription && hasSubscriptionProducts)) && (
-        <section>
-          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {hasPremiumAccess ? "Add recurring access" : "Choose your plan"}
-          </h3>
-          <p className="mb-4 text-xs text-[var(--muted)]">
-            Secure payments via Polar. Cancel anytime.
-          </p>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {subProducts.map((prod) => (
-              <PlanCard
-                key={prod.id}
-                name={tierName}
-                priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
-                period={null}
-                description="Cancel anytime. Full access to all features."
-                cta="Subscribe"
-                href={`${BASE_URL}/api/polar/checkout-redirect?prefer=recurring`}
-                icon={<Plus size={20} weight="regular" />}
-                featured
-              />
-            ))}
-            {oneTimeProducts.map((prod) => (
-              <PlanCard
-                key={prod.id}
-                name={prod.name}
-                priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
-                period="one-time"
-                description="Pay once, keep forever. No recurring charges."
-                cta="Buy lifetime"
-                href={`${BASE_URL}/api/polar/checkout-redirect?prefer=one_time`}
-                icon={<CreditCard size={20} weight="regular" />}
-              />
-            ))}
-            {!hasSubscriptionProducts && !hasOneTimeProducts && (
-              <PlanCard
-                name={tierName}
-                priceStr={null}
-                period={null}
-                description="Get started"
-                cta="Get Premium"
-                href={`${BASE_URL}/api/polar/checkout-redirect`}
-                icon={<Plus size={20} weight="regular" />}
-                featured
-              />
-            )}
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[var(--muted)]">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={14} weight="fill" className="text-[var(--accent)]" />
-              Secure checkout
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CreditCard size={14} weight="regular" />
-              Cancel anytime (subscriptions)
-            </span>
-          </div>
-        </section>
-      )}
-
-      {/* Owned products */}
+      {/* Your products */}
       {ownedProductIds.length > 0 && (
         <section>
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-            Your products
+            Your subscription
           </h3>
           <div className="flex flex-wrap gap-3">
             {ownedProductIds.map((id) => {
               const prod = premiumProducts.find((p) => p.id === id);
               const label = prod ? (prod.isRecurring ? tierName : prod.name) : id;
               const priceStr = prod?.priceFormatted ?? prod?.pricesFormatted[0];
+              const qty = ownedProductQuantities[id] ?? 1;
               return (
                 <div
                   key={id}
@@ -243,6 +193,9 @@ export default function DashboardBillingClient({
                   </div>
                   <div>
                     <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
+                    {qty > 1 && (
+                      <span className="ml-2 text-xs text-[var(--muted)]">×{qty}</span>
+                    )}
                     {priceStr && (
                       <span className="ml-2 text-xs text-[var(--muted)]">({priceStr})</span>
                     )}
@@ -254,15 +207,83 @@ export default function DashboardBillingClient({
         </section>
       )}
 
-      {/* Features */}
+      {/* Premium plans */}
+      {(!hasPremiumAccess || (ownedPremium && !hasActiveSubscription && hasSubscriptionProducts)) && (
+        <section>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {subProducts.map((prod) => (
+              <PlanCard
+                key={prod.id}
+                name={tierName}
+                priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
+                period={null}
+                description="Full access to all features. Cancel anytime."
+                cta="Subscribe"
+                href="/api/polar/checkout-redirect?prefer=recurring"
+                icon={<Plus size={20} weight="regular" />}
+                featured
+              />
+            ))}
+            {oneTimeProducts.map((prod) => (
+              <PlanCard
+                key={prod.id}
+                name={prod.name}
+                priceStr={prod.priceFormatted ?? prod.pricesFormatted[0] ?? null}
+                period="one-time"
+                description="Pay once, keep forever."
+                cta="Buy lifetime"
+                href="/api/polar/checkout-redirect?prefer=one_time"
+                icon={<CreditCard size={20} weight="regular" />}
+              />
+            ))}
+            {!hasSubscriptionProducts && !hasOneTimeProducts && (
+              <PlanCard
+                name={tierName}
+                priceStr={null}
+                period={null}
+                description="Get started"
+                cta="Get Premium"
+                href="/api/polar/checkout-redirect"
+                icon={<Plus size={20} weight="regular" />}
+                featured
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Add-ons – links to dedicated pages */}
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 md:p-8">
-        <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-[var(--foreground)]">
-          <Lock size={20} weight="regular" className="text-[var(--muted)]" />
-          What {tierName} unlocks
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+          Add-ons
         </h3>
-        <p className="mb-5 text-sm text-[var(--muted)]">
-          Everything you need to make your profile stand out.
+        <p className="mb-4 text-sm text-[var(--muted)]">
+          Extend your profile with custom badges and gallery. Each is managed on its own page.
         </p>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/dashboard/badges"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/5 transition-colors"
+          >
+            <Medal size={18} weight="regular" />
+            Custom badges
+          </Link>
+          <Link
+            href="/dashboard/gallery"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/5 transition-colors"
+          >
+            <ImagesSquare size={18} weight="regular" />
+            Gallery
+          </Link>
+        </div>
+      </section>
+
+      {/* What's included */}
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 md:p-8">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+          <Lock size={18} weight="regular" />
+          What {tierName} includes
+        </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {PREMIUM_FEATURES.map(({ icon: Icon, label, desc }) => (
             <div

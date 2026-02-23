@@ -5,7 +5,7 @@ import { X } from "@phosphor-icons/react";
 import { useState, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { approveUserAction, setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction, wipeUserSubscriptionAction } from "@/app/dashboard/actions";
+import { approveUserAction, setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction, setCustomBadgeVouchersAction, wipeUserSubscriptionAction } from "@/app/dashboard/actions";
 import type { CustomBadge } from "@/app/dashboard/AdminBadgesPanel";
 
 export type AdminUser = {
@@ -18,6 +18,7 @@ export type AdminUser = {
   staff: boolean;
   premiumGranted: boolean;
   restricted?: boolean;
+  customBadgeVouchers?: number;
   createdAt: string;
 };
 
@@ -38,6 +39,8 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [wipePending, setWipePending] = useState(false);
+  const [customBadgeVouchers, setCustomBadgeVouchers] = useState(user.customBadgeVouchers ?? 0);
+  const [vouchersPending, setVouchersPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,7 +49,8 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     setStaff(user.staff);
     setPremiumGranted(user.premiumGranted);
     setRestricted(user.restricted ?? false);
-  }, [user.id, user.approved, user.verified, user.staff, user.premiumGranted, user.restricted]);
+    setCustomBadgeVouchers(user.customBadgeVouchers ?? 0);
+  }, [user.id, user.approved, user.verified, user.staff, user.premiumGranted, user.restricted, user.customBadgeVouchers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +131,20 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
         onClose();
       }
     });
+  }
+
+  async function handleSetVouchers() {
+    const count = Math.max(0, Math.round(customBadgeVouchers));
+    setError(null);
+    setVouchersPending(true);
+    const result = await setCustomBadgeVouchersAction(user.id, count);
+    setVouchersPending(false);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setCustomBadgeVouchers(count);
+      onUpdate({ ...user, customBadgeVouchers: count });
+    }
   }
 
   function handleCustomBadgeToggle(badgeId: string, checked: boolean) {
@@ -274,6 +292,28 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
                 />
                 <span className="text-[var(--foreground)]">Premium (free)</span>
               </label>
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <span className="text-sm text-[var(--muted)]">Custom badge vouchers</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={customBadgeVouchers}
+                  onChange={(e) => setCustomBadgeVouchers(Number(e.target.value) || 0)}
+                  disabled={vouchersPending}
+                  className="w-16 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={handleSetVouchers}
+                  disabled={vouchersPending}
+                  className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-2 py-1 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 transition-colors"
+                >
+                  {vouchersPending ? "Saving…" : "Save"}
+                </button>
+              </div>
             </div>
             {customBadges.length > 0 && (
               <div className="pt-2 border-t border-[var(--border)]/50">

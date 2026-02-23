@@ -11,18 +11,33 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Badge redemption links",
+    description: "Share your badges with one-time-use redemption links. Create a link per person.",
+  },
+  {
+    date: "2026-02",
+    title: "Custom badge vouchers",
+    description: "Admins can grant extra custom badge slots from the user modal—no Polar purchase required.",
+  },
+  {
+    date: "2026-02",
     title: "Open signup & access model",
     description: "Anyone can sign up and get access. Free: no gallery, no paste. Gallery and paste are addons or included in Premium.",
   },
   {
     date: "2026-02",
-    title: "Gallery addon",
-    description: "Image hosting is now a separate purchasable addon. Get it standalone or as part of Premium. Configure product IDs in Admin → Shop.",
+    title: "Badges page",
+    description: "Custom badges now have their own page. Create badges with live preview, better form layout, and a dedicated navigation.",
   },
   {
     date: "2026-02",
-    title: "Shop: Premium + addons",
-    description: "Billing is now the Shop. Premium unlocks all features. Custom badge addon lets you create your own badge with full design control (label, color, icon, image).",
+    title: "Gallery addon",
+    description: "Image hosting is now a separate purchasable addon. Get it standalone or as part of Premium. Configure product IDs in Admin → Premium.",
+  },
+  {
+    date: "2026-02",
+    title: "Premium + addons",
+    description: "Premium unlocks all features. Custom badge and Gallery addons are managed on their own pages.",
   },
   {
     date: "2026-02",
@@ -32,7 +47,7 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
     title: "Configurable Premium limits",
-    description: "Gallery addon product IDs, microblog Premium-only, and paste limit are configurable in Admin → Shop.",
+    description: "Gallery addon product IDs, microblog Premium-only, and paste limit are configurable in Admin → Premium.",
   },
   {
     date: "2026-02",

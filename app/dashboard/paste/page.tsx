@@ -29,7 +29,7 @@ export default async function DashboardPastePage() {
         <p className="text-sm text-[var(--muted)] mt-1">
           {canCreatePaste
             ? "Create and share pastes."
-            : "Paste requires Premium. Log in and upgrade at the Shop to create pastes."}
+            : "Paste requires Premium. Log in and upgrade at Premium to create pastes."}
         </p>
       </div>
 

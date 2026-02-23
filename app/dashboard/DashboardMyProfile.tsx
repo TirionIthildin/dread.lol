@@ -1455,7 +1455,7 @@ export default function DashboardMyProfile({
                   <Crown size={20} weight="fill" className="text-[var(--accent)] shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-[var(--foreground)]">Premium feature</p>
-                    <p className="text-xs text-[var(--muted)]">Custom colors require Premium. <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Upgrade</Link></p>
+                    <p className="text-xs text-[var(--muted)]">Custom colors require Premium. <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">Upgrade</Link></p>
                   </div>
                 </div>
               )}
@@ -1872,7 +1872,7 @@ export default function DashboardMyProfile({
                 {!hasPremiumAccess && (
                   <div className="mt-1 mb-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-2 flex items-center gap-2">
                     <Lock size={16} weight="regular" className="text-[var(--accent)] shrink-0" />
-                    <p className="text-xs text-[var(--muted)]">Typewriter, sparkle, and tagline/description animations require <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Premium</Link>.</p>
+                    <p className="text-xs text-[var(--muted)]">Typewriter, sparkle, and tagline/description animations require <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">Premium</Link>.</p>
                   </div>
                 )}
                 <div className="mt-1 space-y-2">
@@ -1970,7 +1970,7 @@ export default function DashboardMyProfile({
                       {!hasPremiumAccess && (
                         <div className="mb-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-2 flex items-center gap-2">
                           <Lock size={16} weight="regular" className="text-[var(--accent)] shrink-0" />
-                          <p className="text-xs text-[var(--muted)]">Snow, rain, blur, and retro effects require <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Premium</Link>.</p>
+                          <p className="text-xs text-[var(--muted)]">Snow, rain, blur, and retro effects require <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">Premium</Link>.</p>
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2">

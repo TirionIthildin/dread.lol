@@ -66,7 +66,7 @@ export default function PasteCreateForm({
       return;
     }
     if (!canCreatePaste) {
-      toast.error("Paste requires Premium. Upgrade at the Shop.");
+      toast.error("Paste requires Premium. Upgrade at Premium.");
       return;
     }
     if (!content.trim()) {
@@ -188,10 +188,10 @@ export default function PasteCreateForm({
         <div className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3 text-sm text-[var(--foreground)]">
           Paste requires Premium.{" "}
           <Link
-            href="/dashboard/shop"
+            href="/dashboard/premium"
             className="inline-flex items-center gap-2 font-medium text-[var(--accent)] hover:underline"
           >
-            Upgrade at the Shop
+            Upgrade at Premium
           </Link>{" "}
           to create pastes.
         </div>

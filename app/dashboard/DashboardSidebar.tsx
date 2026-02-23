@@ -10,6 +10,7 @@ import {
   CreditCard,
   DiscordLogo,
   ImagesSquare,
+  Medal,
   SignOut,
   Storefront,
   Trophy,
@@ -38,9 +39,14 @@ const mainNavItems = [
     icon: <Storefront size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
   {
-    href: "/dashboard/shop",
-    label: "Shop",
+    href: "/dashboard/premium",
+    label: "Premium",
     icon: <CreditCard size={20} weight="regular" className="shrink-0" aria-hidden />,
+  },
+  {
+    href: "/dashboard/badges",
+    label: "Badges",
+    icon: <Medal size={20} weight="regular" className="shrink-0" aria-hidden />,
   },
 ] as const;
 

@@ -335,6 +335,18 @@ export async function setUserRestricted(userId: string, restricted: boolean): Pr
   return result.matchedCount > 0;
 }
 
+/** Set admin-granted custom badge voucher count. */
+export async function setCustomBadgeVouchers(userId: string, count: number): Promise<boolean> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const value = Math.max(0, Math.round(count));
+  const result = await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).updateOne(
+    { _id: userId },
+    { $set: { customBadgeVouchers: value === 0 ? 0 : value, updatedAt: new Date() } }
+  );
+  return result.matchedCount > 0;
+}
+
 export interface CustomBadge {
   id: string;
   key: string;
@@ -525,6 +537,7 @@ export type AdminUserRow = {
   staff: boolean;
   premiumGranted: boolean;
   restricted?: boolean;
+  customBadgeVouchers?: number;
   createdAt: Date;
 };
 
@@ -536,7 +549,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
     .collection<UserDoc>(COLLECTIONS.users)
     .findOne(
       { _id: userId },
-      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, createdAt: 1 } }
+      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 } }
     );
   return doc
     ? {
@@ -549,6 +562,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
         staff: doc.staff ?? false,
         premiumGranted: doc.premiumGranted ?? false,
         restricted: doc.restricted ?? false,
+        customBadgeVouchers: (doc as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
         createdAt: doc.createdAt,
       }
     : null;
@@ -561,7 +575,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find()
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -574,6 +588,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     staff: d.staff ?? false,
     premiumGranted: d.premiumGranted ?? false,
     restricted: d.restricted ?? false,
+    customBadgeVouchers: (d as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
     createdAt: d.createdAt,
   }));
 }
@@ -596,7 +611,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find(filter)
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -609,6 +624,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     staff: d.staff ?? false,
     premiumGranted: d.premiumGranted ?? false,
     restricted: d.restricted ?? false,
+    customBadgeVouchers: (d as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
     createdAt: d.createdAt,
   }));
 }

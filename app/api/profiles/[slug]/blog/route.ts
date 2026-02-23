@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       getPremiumAccess(session.sub),
     ]);
     if (billing.blogPremiumOnly && !premiumAccess.hasAccess) {
-      return NextResponse.json({ error: "Microblog requires Premium. Upgrade at /dashboard/shop" }, { status: 403 });
+      return NextResponse.json({ error: "Microblog requires Premium. Upgrade at /dashboard/premium" }, { status: 403 });
     }
     const body = await request.json();
     const title = typeof body.title === "string" ? body.title : "";

@@ -36,6 +36,7 @@ import {
 import { getBillingSettings } from "@/lib/settings";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { wipeUserSubscriptionData } from "@/lib/polar-subscription";
+import { setCustomBadgeVouchers } from "@/lib/member-profiles";
 import { hasGalleryAddon } from "@/lib/gallery-addon";
 
 function parseAudioTracksValue(raw: string | null | undefined): string | null {
@@ -380,7 +381,7 @@ export async function addGalleryItemAction(
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const hasGalleryAccess = premiumAccess.hasAccess || galleryAddon;
   if (!hasGalleryAccess) {
-    return { error: "Image hosting requires Premium or the Gallery addon. Get it in the Shop." };
+    return { error: "Image hosting requires Premium or the Gallery addon. Get it at /dashboard/gallery or /dashboard/premium." };
   }
   if (!data.imageUrl?.trim()) return { error: "Image URL required" };
   try {
@@ -609,6 +610,24 @@ export async function setUserCustomBadgesAction(userId: string, badgeIds: string
   return {};
 }
 
+/** Grant custom badge voucher slots to a user (admin only). */
+export async function setCustomBadgeVouchersAction(
+  userId: string,
+  count: number
+): Promise<{ error?: string }> {
+  const err = await requireAdmin();
+  if (err) return { error: err };
+  const id = userId?.trim();
+  if (!id) return { error: "Missing user" };
+  const ok = await setCustomBadgeVouchers(id, count);
+  if (!ok) return { error: "User not found" };
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/badges");
+  const slug = await getProfileSlugByUserId(id);
+  if (slug) revalidatePath(`/${slug}`);
+  return {};
+}
+
 /** Wipe user's subscription and order data from local DB (admin only). Clears Polar cache and user-created badges. */
 export async function wipeUserSubscriptionAction(
   userId: string
@@ -619,7 +638,7 @@ export async function wipeUserSubscriptionAction(
   if (!id) return { error: "Missing user" };
   const result = await wipeUserSubscriptionData(id);
   revalidatePath("/dashboard/admin");
-  revalidatePath("/dashboard/shop");
+  revalidatePath("/dashboard/premium");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
   return {

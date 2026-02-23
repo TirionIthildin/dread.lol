@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     ]);
     if (billing.pastePremiumOnly && !premiumAccess.hasAccess) {
       return NextResponse.json(
-        { error: "Paste requires Premium. Upgrade at /dashboard/shop to create pastes." },
+        { error: "Paste requires Premium. Upgrade at /dashboard/premium to create pastes." },
         { status: 403 }
       );
     }

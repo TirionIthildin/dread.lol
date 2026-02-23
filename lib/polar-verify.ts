@@ -4,6 +4,7 @@
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { getPolarClient } from "@/lib/polar";
+import { getBillingSettings } from "@/lib/settings";
 
 export interface VerifyResult {
   ok: boolean;
@@ -14,6 +15,7 @@ export interface VerifyResult {
 /**
  * Verify a checkout by ID with Polar API. If succeeded and not already processed,
  * records it in DB. Idempotent.
+ * Uses billing.sandbox so we hit the same Polar environment the checkout was created in.
  */
 export async function verifyCheckout(
   checkoutId: string,
@@ -34,7 +36,8 @@ export async function verifyCheckout(
   }
 
   try {
-    const polar = getPolarClient();
+    const billing = await getBillingSettings();
+    const polar = getPolarClient(billing.sandbox ? "sandbox" : "production");
     const checkout = await polar.checkouts.get({ id: checkoutId });
     const status = (checkout.status ?? "").toLowerCase();
 

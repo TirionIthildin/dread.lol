@@ -11,9 +11,10 @@ type Props = {
   profileOwnerUserId: string;
 };
 
-function normalizeUser(u: AdminUser & { createdAt?: Date }): AdminUser {
+function normalizeUser(u: AdminUser & { createdAt?: Date; customBadgeVouchers?: number }): AdminUser {
   return {
     ...u,
+    customBadgeVouchers: u.customBadgeVouchers ?? 0,
     createdAt: typeof u.createdAt === "string" ? u.createdAt : (u.createdAt as Date)?.toISOString?.() ?? "",
   };
 }

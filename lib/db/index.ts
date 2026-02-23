@@ -43,6 +43,7 @@ export const COLLECTIONS = {
   polarOrders: "polar_orders",
   settings: "settings",
   userCreatedBadges: "user_created_badges",
+  badgeRedemptionLinks: "badge_redemption_links",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

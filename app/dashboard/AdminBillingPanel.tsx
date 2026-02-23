@@ -124,7 +124,7 @@ export default function AdminBillingPanel() {
           pasteMaxFreePerMonth: data.billing.pasteMaxFreePerMonth ?? 10,
           customBadgeProductIds: Array.isArray(data.billing.customBadgeProductIds) ? data.billing.customBadgeProductIds : [],
         });
-        toast.success("Shop settings saved");
+        toast.success("Premium settings saved");
       } catch {
         toast.error("Failed to save");
       }
@@ -153,7 +153,7 @@ export default function AdminBillingPanel() {
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-4">
           <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2 mb-3">
             <CreditCard size={18} weight="regular" className="text-[var(--accent)]" />
-            Shop (Premium + addons)
+            Premium (subscription + addons)
           </h3>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-[var(--muted)]">Connection:</span>
@@ -180,7 +180,7 @@ export default function AdminBillingPanel() {
                 className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
               />
               <span className="text-sm font-medium text-[var(--foreground)]">
-                Shop enabled
+                Premium enabled
               </span>
             </label>
             <p className="text-xs text-[var(--muted)] -mt-2">
@@ -266,7 +266,7 @@ export default function AdminBillingPanel() {
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono"
               />
               <p className="text-xs text-[var(--muted)] mt-1">
-                Polar product IDs that grant image hosting (gallery). Premium includes gallery; this addon is for users who want just gallery.
+                Polar product IDs for image hosting (gallery). Premium includes gallery. Each purchase counts; users can buy multiple.
               </p>
             </div>
 
@@ -328,7 +328,7 @@ export default function AdminBillingPanel() {
               disabled={isPending}
               className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 transition-colors"
             >
-              {isPending ? "Saving…" : "Save shop settings"}
+              {isPending ? "Saving…" : "Save Premium settings"}
             </button>
           </form>
         </div>
@@ -342,7 +342,7 @@ export default function AdminBillingPanel() {
             </li>
             <li>
               <code className="rounded bg-[var(--surface)] px-1.5 py-0.5">/api/polar/checkout-redirect</code>
-              {" "}— Redirects signed-in user with default product
+              {" "}— Redirects signed-in user to checkout
             </li>
             <li>
               <code className="rounded bg-[var(--surface)] px-1.5 py-0.5">/api/polar/customer-portal</code>

@@ -143,7 +143,7 @@ export default function DashboardBlog({ profileSlug, initialPosts, blogPremiumOn
         <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)]/40 p-4 space-y-4">
           {!canCreatePost ? (
             <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3 text-sm text-[var(--muted)]">
-              Microblog requires Premium. <Link href="/dashboard/shop" className="text-[var(--accent)] hover:underline">Upgrade</Link> to create posts.
+              Microblog requires Premium. <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">Upgrade</Link> to create posts.
             </div>
           ) : (
           <>

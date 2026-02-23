@@ -87,6 +87,8 @@ try {
 
   await db.collection("settings").createIndex({ key: 1 }, { unique: true });
 
+  await db.collection("badge_redemption_links").createIndex({ token: 1 }, { unique: true });
+
   console.log("MongoDB indexes created.");
 } catch (err) {
   console.error("Migration failed:", err.message);
