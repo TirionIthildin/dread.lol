@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Security hardening",
+    description: "OG open redirect fix, font URL CSS injection prevention, template payload limits, auth rate limiting, debug header redaction.",
+  },
+  {
+    date: "2026-02",
     title: "Security & quality improvements",
     description: "API rate limiting, Zod validation, centralized auth helpers, structured logging, and test suite (Vitest + Playwright).",
   },

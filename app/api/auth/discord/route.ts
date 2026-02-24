@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateState, getAuthorizeUrl } from "@/lib/auth/discord";
 import { setOAuthState } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
+import { rateLimitByIp } from "@/lib/rate-limit";
+
+const AUTH_START_LIMIT = 10;
+const AUTH_START_WINDOW = 60;
 
 function getBaseUrl(request: NextRequest): string {
   const host = request.headers.get("host");
@@ -11,6 +15,9 @@ function getBaseUrl(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
+  const limit = await rateLimitByIp(request, "auth-discord", AUTH_START_LIMIT, AUTH_START_WINDOW);
+  if (!limit.allowed) return limit.response;
+
   try {
     const state = generateState();
     await setOAuthState(state, "");

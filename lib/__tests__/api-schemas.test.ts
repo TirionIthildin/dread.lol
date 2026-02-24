@@ -3,6 +3,7 @@ import {
   pasteCreateSchema,
   reportSchema,
   marketplaceApplySchema,
+  marketplaceTemplateCreateSchema,
 } from "@/lib/api-schemas";
 
 describe("pasteCreateSchema", () => {
@@ -48,5 +49,30 @@ describe("marketplaceApplySchema", () => {
 
   it("rejects empty profileId after trim", () => {
     expect(marketplaceApplySchema.safeParse({ profileId: "   " }).success).toBe(false);
+  });
+});
+
+describe("marketplaceTemplateCreateSchema", () => {
+  it("accepts fromProfileId path", () => {
+    const r = marketplaceTemplateCreateSchema.safeParse({
+      fromProfileId: "507f1f77bcf86cd799439011",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("accepts raw template with name", () => {
+    const r = marketplaceTemplateCreateSchema.safeParse({
+      name: "My Template",
+      data: { accentColor: "cyan" },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects template data over 500KB", () => {
+    const r = marketplaceTemplateCreateSchema.safeParse({
+      name: "Big",
+      data: { x: "y".repeat(600_000) },
+    });
+    expect(r.success).toBe(false);
   });
 });

@@ -424,7 +424,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
       {customFontUrlResolved && (
         <style
           dangerouslySetInnerHTML={{
-            __html: `@font-face{font-family:profile-custom-font;src:url("${customFontUrlResolved.replace(/"/g, "%22")}");}.profile-font-custom{font-family:profile-custom-font,ui-monospace,monospace}`,
+            __html: `@font-face{font-family:profile-custom-font;src:url("${customFontUrlResolved.replace(/\\/g, "\\\\").replace(/"/g, "%22").replace(/\)/g, "%29")}");}.profile-font-custom{font-family:profile-custom-font,ui-monospace,monospace}`,
           }}
         />
       )}

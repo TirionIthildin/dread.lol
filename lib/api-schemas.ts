@@ -19,3 +19,26 @@ export const marketplaceApplySchema = z.object({
     .pipe(z.string().min(1))
     .optional(),
 });
+
+const MAX_TEMPLATE_DATA_BYTES = 500_000;
+
+/** Template creation schema. Validates name, optional data, and limits payload size. */
+export const marketplaceTemplateCreateSchema = z
+  .object({
+    fromProfileId: z.string().min(1).optional(),
+    name: z.string().max(200).optional(),
+    description: z.string().max(2000).optional(),
+    previewUrl: z.string().max(2048).optional(),
+    data: z.record(z.unknown()).optional(),
+  })
+  .refine(
+    (val) => {
+      if (!val.data || typeof val.data !== "object") return true;
+      try {
+        return new TextEncoder().encode(JSON.stringify(val.data)).length <= MAX_TEMPLATE_DATA_BYTES;
+      } catch {
+        return false;
+      }
+    },
+    { message: `Template data exceeds ${MAX_TEMPLATE_DATA_BYTES / 1024}KB limit` }
+  );

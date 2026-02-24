@@ -6,13 +6,23 @@ import { NextResponse } from "next/server";
 import { getProfileSlugFromHost } from "@/lib/request";
 import { requireAdmin } from "@/app/dashboard/actions";
 
+const SENSITIVE_HEADERS = new Set([
+  "authorization", "cookie", "x-api-key", "x-auth-token",
+  "proxy-authorization", "set-cookie",
+]);
+
+function redactHeaders(headers: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    const lower = key.toLowerCase();
+    out[key] = SENSITIVE_HEADERS.has(lower) ? "[redacted]" : value;
+  });
+  return out;
+}
+
 export async function GET(request: Request) {
   const err = await requireAdmin();
   if (err) return NextResponse.json({ error: err }, { status: 401 });
-  const headers: Record<string, string> = {};
-  request.headers.forEach((value, key) => {
-    headers[key] = value;
-  });
 
   const slug = getProfileSlugFromHost(request.headers);
 
@@ -25,6 +35,6 @@ export async function GET(request: Request) {
     "cf-connecting-ip": request.headers.get("cf-connecting-ip"),
     "cf-ipcountry": request.headers.get("cf-ipcountry"),
     extractedSlug: slug,
-    allHeaders: headers,
+    allHeaders: redactHeaders(request.headers),
   });
 }

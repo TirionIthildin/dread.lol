@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { marketplaceTemplateCreateSchema } from "@/lib/api-schemas";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import {
   listPublishedTemplates,
@@ -57,25 +58,32 @@ export async function POST(request: Request) {
   await getOrCreateUser(session);
 
   try {
-    const body = await request.json();
-    const fromProfile = body.fromProfileId as string | undefined;
+    const body = await request.json().catch(() => ({}));
+    const parsed = marketplaceTemplateCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      const msg = parsed.error.errors[0]?.message ?? "Invalid request";
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+
+    const { fromProfileId, name: rawName, description: rawDesc, previewUrl: rawPreviewUrl, data: rawData } = parsed.data;
+    const fromProfile = fromProfileId?.trim();
 
     let data: { name: string; description?: string; previewUrl?: string; data: TemplateData };
 
-    if (fromProfile?.trim()) {
-      const profile = await getMemberProfileById(fromProfile.trim());
+    if (fromProfile) {
+      const profile = await getMemberProfileById(fromProfile);
       if (!profile || profile.userId !== session.sub) {
         return NextResponse.json({ error: "Profile not found or access denied" }, { status: 404 });
       }
       const templateData = await buildTemplateDataFromProfile(fromProfile, profile);
-      const name = (body.name as string)?.trim() || `${profile.name}'s template`;
-      const description = (body.description as string)?.trim();
+      const name = rawName?.trim() || `${profile.name}'s template`;
+      const description = rawDesc?.trim();
       data = { name, description, data: templateData };
     } else {
-      const name = (body.name as string)?.trim();
-      const description = (body.description as string)?.trim();
-      const previewUrl = (body.previewUrl as string)?.trim();
-      const templateData = (body.data as TemplateData) ?? {};
+      const name = rawName?.trim();
+      const description = rawDesc?.trim();
+      const previewUrl = rawPreviewUrl?.trim();
+      const templateData = (rawData as TemplateData) ?? {};
       if (!name) {
         return NextResponse.json({ error: "Name is required" }, { status: 400 });
       }

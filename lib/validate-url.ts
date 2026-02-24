@@ -46,3 +46,24 @@ export function validateBackgroundUrl(url: string | null | undefined): string | 
   if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
   return undefined;
 }
+
+/**
+ * Validates URL for safe redirects (OG image, etc.). Only allows same-origin URLs or
+ * relative paths to prevent open redirect / phishing.
+ */
+export function validateRedirectUrl(
+  url: string | null | undefined,
+  origin?: string
+): string | undefined {
+  const trimmed = (url ?? "").toString().trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (!SAFE_PROTOCOLS.includes(parsed.protocol.toLowerCase())) return undefined;
+    const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "https://dread.lol");
+    return parsed.origin === new URL(base).origin ? trimmed : undefined;
+  } catch {
+    return undefined;
+  }
+}

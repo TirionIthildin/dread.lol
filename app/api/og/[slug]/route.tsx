@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextResponse } from "next/server";
+import { validateRedirectUrl } from "@/lib/validate-url";
+import { getCanonicalOrigin } from "@/lib/site";
 import {
   getMemberProfileBySlug,
   memberProfileToProfile,
@@ -70,9 +72,11 @@ export async function GET(
   ]);
   const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
 
-  // User has a custom OG image – redirect crawlers to it
-  if (profile.ogImageUrl?.trim()) {
-    return NextResponse.redirect(profile.ogImageUrl.trim(), 302);
+  // User has a custom OG image – redirect crawlers to it (same-origin or path only)
+  const ogUrl = profile.ogImageUrl?.trim();
+  if (ogUrl) {
+    const safe = validateRedirectUrl(ogUrl, getCanonicalOrigin());
+    if (safe) return NextResponse.redirect(safe, 302);
   }
 
   const accent = getAccentHex(profile.accentColor);

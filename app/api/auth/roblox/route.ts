@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateState, getAuthorizeUrl } from "@/lib/auth/roblox";
 import { setOAuthState } from "@/lib/auth/session";
+import { rateLimitByIp } from "@/lib/rate-limit";
+
+const AUTH_START_LIMIT = 10;
+const AUTH_START_WINDOW = 60;
 
 function getBaseUrl(request: NextRequest): string {
   const host = request.headers.get("host");
@@ -12,6 +16,9 @@ function getBaseUrl(request: NextRequest): string {
 
 /** GET: Redirect to Roblox OAuth to link account. */
 export async function GET(request: NextRequest) {
+  const limit = await rateLimitByIp(request, "auth-roblox", AUTH_START_LIMIT, AUTH_START_WINDOW);
+  if (!limit.allowed) return limit.response;
+
   try {
     const state = generateState();
     await setOAuthState(state, "", "roblox");

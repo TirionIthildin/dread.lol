@@ -20,6 +20,7 @@ import {
 } from "@/lib/premium-features";
 import type { SessionUser } from "@/lib/auth/session";
 import { escapeRegex } from "@/lib/regex";
+import { normalizeSlug } from "@/lib/slug";
 import { getBaseDomain } from "@/lib/site";
 
 export interface MemberProfileWithViews {
@@ -1807,7 +1808,8 @@ export async function getShortLinkRedirect(
   const dbName = await getDbName();
   const db = client.db(dbName);
 
-  const profile = await db.collection(COLLECTIONS.profiles).findOne({ slug: profileSlug }, { projection: { _id: 1 } });
+  const normalizedProfileSlug = normalizeSlug(profileSlug) || profileSlug;
+  const profile = await db.collection(COLLECTIONS.profiles).findOne({ slug: normalizedProfileSlug }, { projection: { _id: 1 } });
   if (!profile) return null;
 
   const link = await db.collection(COLLECTIONS.profileShortLinks).findOne({

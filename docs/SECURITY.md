@@ -40,6 +40,14 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 
 `/api/files/[fid]` serves files from SeaweedFS. fids (`volumeId,fileId`) are public once generated—do not store sensitive content in SeaweedFS if exposure is a concern.
 
+## Recent Security Improvements
+
+- **OG open redirect fix**: Custom OG image URLs are validated (same-origin or path only) before redirect
+- **Font URL CSS injection fix**: Custom font URLs are escaped for safe use in CSS `url()`
+- **Template payload validation**: Marketplace template creation uses Zod schemas and a 500KB limit
+- **Debug route**: Sensitive headers (Authorization, Cookie, etc.) are redacted
+- **Auth rate limiting**: Discord and Roblox OAuth start endpoints limited to 10/min per IP
+
 ## Deployment Checklist
 
 - [ ] Set `DATABASE_URL` in production (app will not start without it)
