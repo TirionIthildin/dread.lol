@@ -12,7 +12,7 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
     title: "Profile card effects",
-    description: "Profile cards tilt and follow your cursor in 3D on hover, with a spotlight glow and subtle shine sweep.",
+    description: "Profile cards tilt in 3D, spotlight glow, glossy reflection, magnetic border, and shine sweep—like Linktree and Carrd.",
   },
   {
     date: "2026-02",

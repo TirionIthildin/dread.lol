@@ -992,6 +992,10 @@
   .profile-card-effect-wrapper {
     contain: layout;
   }
+  .profile-card-effect-wrapper[data-active="true"] {
+    box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 8%, transparent),
+      0 25px 60px -15px rgba(0, 0, 0, 0.35);
+  }
   .profile-card-effect-inner {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
@@ -999,6 +1003,13 @@
   .profile-card-spotlight {
     z-index: 0;
     mix-blend-mode: soft-light;
+  }
+  .profile-card-glare {
+    z-index: 1;
+    mix-blend-mode: overlay;
+  }
+  .profile-card-magnetic-border {
+    z-index: 2;
   }
   .profile-card-hover-effects {
     position: relative;

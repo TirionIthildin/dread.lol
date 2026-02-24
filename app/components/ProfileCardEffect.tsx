@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface ProfileCardEffectProps {
   children: React.ReactNode;
@@ -18,6 +18,7 @@ export default function ProfileCardEffect({
   const cardRef = useRef<HTMLDivElement>(null);
   const [transform, setTransform] = useState({ rotateX: 0, rotateY: 0, scale: 1 });
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [cardSize, setCardSize] = useState({ w: 1, h: 1 });
   const [isHovering, setIsHovering] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const rafRef = useRef<number | undefined>(undefined);
@@ -43,6 +44,7 @@ export default function ProfileCardEffect({
         const y = (e.clientY - rect.top) / rect.height - 0.5;
 
         setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        setCardSize({ w: rect.width, h: rect.height });
         setTransform({
           rotateX: -y * tiltIntensity,
           rotateY: x * tiltIntensity,
@@ -64,10 +66,19 @@ export default function ProfileCardEffect({
 
   const active = !disabled && !reducedMotion && isHovering;
 
+  // Conic gradient angle for magnetic border (toward mouse)
+  const borderAngle = useMemo(() => {
+    if (!mousePos || !cardSize.w || !cardSize.h) return 0;
+    const cx = cardSize.w / 2;
+    const cy = cardSize.h / 2;
+    return (Math.atan2(mousePos.x - cx, mousePos.y - cy) * 180) / Math.PI;
+  }, [mousePos, cardSize]);
+
   return (
     <div
       ref={cardRef}
       className="profile-card-effect-wrapper relative rounded-xl overflow-hidden"
+      data-active={active ? "true" : undefined}
       style={{ perspective: "1200px" }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -89,7 +100,7 @@ export default function ProfileCardEffect({
       >
         {children}
       </div>
-      {/* Spotlight glow that follows the mouse */}
+      {/* 1. Spotlight glow that follows the mouse */}
       {active && mousePos && (
         <div
           className="profile-card-spotlight pointer-events-none absolute inset-0 rounded-[inherit] opacity-60 transition-opacity duration-150"
@@ -104,6 +115,46 @@ export default function ProfileCardEffect({
           aria-hidden
         />
       )}
+
+      {/* 2. Glare / glossy reflection (like Card3d, VanillaTilt) */}
+      {active && mousePos && (
+        <div
+          className="profile-card-glare pointer-events-none absolute inset-0 rounded-[inherit] opacity-40"
+          style={{
+            background: `radial-gradient(
+              120px ellipse at ${mousePos.x}px ${mousePos.y}px,
+              rgba(255,255,255,0.35) 0%,
+              rgba(255,255,255,0.12) 30%,
+              transparent 60%
+            )`,
+          }}
+          aria-hidden
+        />
+      )}
+
+      {/* 3. Magnetic border glow - conic gradient follows cursor */}
+      {active && (
+        <div
+          className="profile-card-magnetic-border pointer-events-none absolute inset-0 rounded-[inherit] opacity-70"
+          style={{
+            background: `conic-gradient(
+              from ${borderAngle}deg at 50% 50%,
+              transparent 0deg,
+              color-mix(in srgb, var(--accent) 35%, transparent) 30deg,
+              transparent 60deg,
+              color-mix(in srgb, var(--accent) 20%, transparent) 90deg,
+              transparent 120deg
+            )`,
+            mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+            WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+            maskComposite: "exclude",
+            WebkitMaskComposite: "xor",
+            padding: "1px",
+          }}
+          aria-hidden
+        />
+      )}
+
     </div>
   );
 }
