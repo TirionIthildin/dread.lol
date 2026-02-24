@@ -683,7 +683,17 @@ export default function DashboardMyProfile({
         cardBlur: ["none", "sm", "md", "lg"].includes(cardBlurValue) ? (cardBlurValue as "none" | "sm" | "md" | "lg") : baseProfileForPreview.cardBlur,
         widgetsMatchAccent: widgetsMatchAccent,
         discordWidgets: widgetPreviewFiltered ?? undefined,
-        robloxWidgets: widgetRobloxAccountAge || widgetRobloxProfile ? baseProfileForPreview.robloxWidgets : undefined,
+        robloxWidgets:
+          widgetRobloxAccountAge || widgetRobloxProfile
+            ? {
+                ...(widgetRobloxAccountAge && baseProfileForPreview.robloxWidgets?.accountAge
+                  ? { accountAge: baseProfileForPreview.robloxWidgets.accountAge }
+                  : {}),
+                ...(widgetRobloxProfile && baseProfileForPreview.robloxWidgets?.profile
+                  ? { profile: baseProfileForPreview.robloxWidgets.profile }
+                  : {}),
+              }
+            : undefined,
         showAudioPlayer: showAudioPlayerValue,
         audioVisualizerStyle: audioVisualizerStyleValue || undefined,
         audioTracks: audioTracksValue.length > 0 ? audioTracksValue : undefined,
