@@ -262,7 +262,7 @@ export default function DashboardNavAdmin({ isAdmin, variant = "default" }: Prop
                   }`}
                 >
                   <CreditCard size={16} weight="regular" className="shrink-0" aria-hidden />
-                  Premium
+                  Shop
                 </button>
                 <button
                   type="button"

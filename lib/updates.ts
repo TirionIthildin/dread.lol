@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Improved Shop admin",
+    description: "Redesigned Admin → Shop with status overview, setup checklist, collapsible sections, product name resolution, and copy buttons for API links.",
+  },
+  {
+    date: "2026-02",
     title: "Badge redemption links",
     description: "Share your badges with one-time-use redemption links. Create a link per person.",
   },
