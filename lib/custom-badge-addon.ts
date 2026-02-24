@@ -4,6 +4,7 @@
  * Admins can also grant voucher slots (customBadgeVouchers on user doc).
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
+import type { UserDoc } from "@/lib/db/schema";
 import { getUserPolarState } from "@/lib/polar-subscription";
 import { getBillingSettings } from "@/lib/settings";
 
@@ -19,7 +20,7 @@ export async function getCustomBadgeAddonCount(userId: string): Promise<number> 
     (async () => {
       const client = await getDb();
       const dbName = await getDbName();
-      const doc = await client.db(dbName).collection(COLLECTIONS.users).findOne(
+      const doc = await client.db(dbName).collection<UserDoc>(COLLECTIONS.users).findOne(
         { _id: userId },
         { projection: { customBadgeVouchers: 1 } }
       );
