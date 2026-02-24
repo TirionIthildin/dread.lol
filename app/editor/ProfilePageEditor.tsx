@@ -330,14 +330,14 @@ export default function ProfilePageEditor({ profileId, baseProfile, profileRow, 
   const handleEdit = useCallback((id: string) => setSelectedSectionId(id as SectionEditPanelSectionId), []);
 
   const handleMoveUp = useCallback((id: string) => {
-    const idx = fullOrder.indexOf(id);
+    const idx = fullOrder.indexOf(id as ProfileSectionId);
     if (idx <= 0) return;
     const next = arrayMove(fullOrder, idx, idx - 1);
     setSectionOrder(next.filter((sectionId): sectionId is ProfileSectionId => PROFILE_SECTION_IDS.includes(sectionId as ProfileSectionId)));
   }, [fullOrder]);
 
   const handleMoveDown = useCallback((id: string) => {
-    const idx = fullOrder.indexOf(id);
+    const idx = fullOrder.indexOf(id as ProfileSectionId);
     if (idx < 0 || idx >= fullOrder.length - 1) return;
     const next = arrayMove(fullOrder, idx, idx + 1);
     setSectionOrder(next.filter((sectionId): sectionId is ProfileSectionId => PROFILE_SECTION_IDS.includes(sectionId as ProfileSectionId)));

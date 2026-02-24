@@ -1,6 +1,7 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import type { Icon } from "@phosphor-icons/react";
 import {
   TextT,
   User,
@@ -23,7 +24,7 @@ import {
   type SectionDefinition,
 } from "@/lib/profile-sections";
 
-export const SECTION_ICONS: Record<ProfileSectionId, React.ComponentType<{ size?: number; weight?: string; className?: string }>> = {
+export const SECTION_ICONS: Record<ProfileSectionId, Icon> = {
   banner: TextT,
   hero: User,
   description: FileText,
