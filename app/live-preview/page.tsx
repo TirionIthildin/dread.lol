@@ -39,9 +39,12 @@ function parseStoredProfile(): Profile | null {
 }
 
 export default function LivePreviewPage() {
-  // Always start with null to avoid hydration mismatch (server has no sessionStorage, client might have profile)
   const [profile, setProfile] = useState<Profile | null>(null);
   const [testOverlayVisible, setTestOverlayVisible] = useState(false);
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => {
+    setEmbedded(new URLSearchParams(window.location.search).get("embed") === "1");
+  }, []);
 
   const refreshFromStorage = useCallback(() => {
     const next = parseStoredProfile();
@@ -90,8 +93,8 @@ export default function LivePreviewPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {needsUnlock && (
+    <div className={`flex flex-col ${embedded ? "min-h-0 h-full" : "min-h-screen"}`}>
+      {needsUnlock && !embedded && (
         <div className="shrink-0 flex items-center justify-end gap-2 px-3 py-1.5 bg-[var(--surface)]/80 border-b border-[var(--border)]/50">
           <button
             type="button"
@@ -102,10 +105,12 @@ export default function LivePreviewPage() {
           </button>
         </div>
       )}
-      <div className="flex-1 min-h-0">
+      <div className={`flex-1 min-h-0 overflow-auto ${embedded ? "py-6 px-4 flex justify-center" : ""}`}>
+        <div className={embedded ? "w-full max-w-2xl" : "w-full"}>
         <ProfileBackground
           profile={profile}
           defaultUnlocked
+          muteBackgroundAudio
           testOverlayVisible={testOverlayVisible}
           onTestOverlayDismissed={() => setTestOverlayVisible(false)}
         >
@@ -117,6 +122,7 @@ export default function LivePreviewPage() {
             content
           )}
         </ProfileBackground>
+        </div>
       </div>
     </div>
   );

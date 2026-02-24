@@ -10,13 +10,16 @@ interface BackgroundEffectOverlayProps {
   isLightTheme?: boolean;
   /** When true, render effect above content (for snow/rain). Default: below content. */
   aboveContent?: boolean;
+  /** When true, use absolute positioning (scoped to container); otherwise fixed (viewport). */
+  scoped?: boolean;
 }
 
 /** Snow: falling snowflakes across the viewport. */
-function SnowEffect({ aboveContent }: { aboveContent?: boolean }) {
+function SnowEffect({ aboveContent, scoped }: { aboveContent?: boolean; scoped?: boolean }) {
   const count = 50;
+  const pos = scoped ? "absolute" : "fixed";
   return (
-    <div className={`background-effect-snow fixed inset-0 overflow-hidden pointer-events-none isolate ${aboveContent ? "z-[20]" : "z-[2]"}`} aria-hidden>
+    <div className={`background-effect-snow ${pos} inset-0 overflow-hidden pointer-events-none isolate ${aboveContent ? "z-[20]" : "z-[2]"}`} aria-hidden>
       {Array.from({ length: count }).map((_, i) => {
         const left = (i * 17.3 + 5) % 100;
         const delay = (i * 0.13) % 8;
@@ -44,10 +47,11 @@ function SnowEffect({ aboveContent }: { aboveContent?: boolean }) {
 }
 
 /** Rain: falling rain streaks. */
-function RainEffect({ aboveContent }: { aboveContent?: boolean }) {
+function RainEffect({ aboveContent, scoped }: { aboveContent?: boolean; scoped?: boolean }) {
   const count = 100;
+  const pos = scoped ? "absolute" : "fixed";
   return (
-    <div className={`background-effect-rain fixed inset-0 overflow-hidden pointer-events-none isolate ${aboveContent ? "z-[20]" : "z-[2]"}`} aria-hidden>
+    <div className={`background-effect-rain ${pos} inset-0 overflow-hidden pointer-events-none isolate ${aboveContent ? "z-[20]" : "z-[2]"}`} aria-hidden>
       {Array.from({ length: count }).map((_, i) => {
         const left = (i * 11.7 + 2) % 100;
         const delay = (i * 0.08) % 4;
@@ -76,10 +80,11 @@ function RainEffect({ aboveContent }: { aboveContent?: boolean }) {
 }
 
 /** Blur: frosted glass overlay for a soft diffused look. */
-function BlurEffect({ isLightTheme }: { isLightTheme?: boolean }) {
+function BlurEffect({ isLightTheme, scoped }: { isLightTheme?: boolean; scoped?: boolean }) {
+  const pos = scoped ? "absolute" : "fixed";
   return (
     <div
-      className="fixed inset-0 z-[2] pointer-events-none isolate"
+      className={`${pos} inset-0 z-[2] pointer-events-none isolate`}
       aria-hidden
       style={{
         background: isLightTheme
@@ -93,10 +98,11 @@ function BlurEffect({ isLightTheme }: { isLightTheme?: boolean }) {
 }
 
 /** Retro computer: old terminal CRT aesthetic - phosphor tint, scanlines, noise, curvature. */
-function RetroComputerEffect({ isLightTheme }: { isLightTheme?: boolean }) {
+function RetroComputerEffect({ isLightTheme, scoped }: { isLightTheme?: boolean; scoped?: boolean }) {
   const noiseId = useId();
+  const pos = scoped ? "absolute" : "fixed";
   return (
-    <div className="background-effect-retro fixed inset-0 z-[2] overflow-hidden pointer-events-none isolate" aria-hidden>
+    <div className={`background-effect-retro ${pos} inset-0 z-[2] overflow-hidden pointer-events-none isolate`} aria-hidden>
       {/* Phosphor tint - matches profile accent color */}
       <div
         className="background-effect-retro-phosphor absolute inset-0 mix-blend-multiply"
@@ -148,10 +154,10 @@ function RetroComputerEffect({ isLightTheme }: { isLightTheme?: boolean }) {
   );
 }
 
-export default function BackgroundEffectOverlay({ effect, isLightTheme = false, aboveContent = false }: BackgroundEffectOverlayProps) {
-  if (effect === "snow") return <SnowEffect aboveContent={aboveContent} />;
-  if (effect === "rain") return <RainEffect aboveContent={aboveContent} />;
-  if (effect === "blur") return <BlurEffect isLightTheme={isLightTheme} />;
-  if (effect === "retro-computer") return <RetroComputerEffect isLightTheme={isLightTheme} />;
+export default function BackgroundEffectOverlay({ effect, isLightTheme = false, aboveContent = false, scoped = false }: BackgroundEffectOverlayProps) {
+  if (effect === "snow") return <SnowEffect aboveContent={aboveContent} scoped={scoped} />;
+  if (effect === "rain") return <RainEffect aboveContent={aboveContent} scoped={scoped} />;
+  if (effect === "blur") return <BlurEffect isLightTheme={isLightTheme} scoped={scoped} />;
+  if (effect === "retro-computer") return <RetroComputerEffect isLightTheme={isLightTheme} scoped={scoped} />;
   return null;
 }

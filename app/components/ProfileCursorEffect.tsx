@@ -8,20 +8,26 @@ interface ProfileCursorEffectProps {
   children: React.ReactNode;
   cursorStyle?: string;
   accentColor?: string;
+  /** When true (e.g. in page editor), effect only shows when cursor is inside the container and is rendered inside it (not portaled). */
+  scoped?: boolean;
 }
 
 export default function ProfileCursorEffect({
   children,
   cursorStyle,
   accentColor,
+  scoped = false,
 }: ProfileCursorEffectProps) {
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [trail, setTrail] = useState<{ x: number; y: number; id: number }[]>([]);
   const [isHovering, setIsHovering] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const trailIdRef = useRef(0);
-  const rafRef = useRef<number | undefined>(undefined);
+  const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const trailDotRef = useRef<HTMLDivElement>(null);
+  const posRef = useRef({ x: 0, y: 0 });
+  const hasReceivedMoveRef = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -33,12 +39,35 @@ export default function ProfileCursorEffect({
 
   const color = getAccentHex(accentColor);
 
+  const updateCursorPosition = useCallback((x: number, y: number) => {
+    posRef.current = { x, y };
+    if (glowRef.current) {
+      glowRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+    }
+    if (trailDotRef.current) {
+      trailDotRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+    }
+  }, []);
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
+      if (leaveTimeoutRef.current) {
+        clearTimeout(leaveTimeoutRef.current);
+        leaveTimeoutRef.current = null;
+      }
+      requestAnimationFrame(() => {
+        if (scoped && containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const inside =
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom;
+          if (!inside) return;
+        }
+        hasReceivedMoveRef.current = true;
         setIsHovering(true);
-        setPos({ x: e.clientX, y: e.clientY });
+        updateCursorPosition(e.clientX, e.clientY);
         if (cursorStyle === "trail") {
           setTrail((prev) => [
             ...prev.slice(-5),
@@ -47,13 +76,33 @@ export default function ProfileCursorEffect({
         }
       });
     },
-    [cursorStyle]
+    [cursorStyle, scoped, updateCursorPosition]
   );
 
-  const handleMouseEnter = useCallback(() => setIsHovering(true), []);
+  const clearHover = useCallback(() => {
+    setIsHovering(false);
+    setTrail([]);
+    hasReceivedMoveRef.current = false;
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    setIsHovering(true);
+  }, []);
+
   const handleMouseLeave = useCallback(() => {
-    // Intentionally no-op: hide only when pointer leaves the window (document mouseout).
-    // Moving to the background area should keep our custom cursor visible.
+    if (scoped) {
+      leaveTimeoutRef.current = setTimeout(clearHover, 50);
+    }
+  }, [scoped, clearHover]);
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -61,16 +110,12 @@ export default function ProfileCursorEffect({
     const handleGlobalMouseOut = (e: MouseEvent) => {
       const to = (e as unknown as { relatedTarget: Node | null }).relatedTarget;
       if (!to || !document.body.contains(to)) {
-        setIsHovering(false);
-        setPos(null);
-        setTrail([]);
+        clearHover();
       }
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        setIsHovering(false);
-        setPos(null);
-        setTrail([]);
+        clearHover();
       }
     };
     window.addEventListener("mousemove", handleMouseMove);
@@ -80,9 +125,8 @@ export default function ProfileCursorEffect({
       window.removeEventListener("mousemove", handleMouseMove);
       document.documentElement.removeEventListener("mouseout", handleGlobalMouseOut);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [cursorStyle, handleMouseMove]);
+  }, [cursorStyle, handleMouseMove, scoped, clearHover]);
 
   useEffect(() => {
     if (cursorStyle !== "trail" || trail.length === 0) return;
@@ -93,29 +137,30 @@ export default function ProfileCursorEffect({
   const showEffect =
     !reducedMotion &&
     (cursorStyle === "glow" || cursorStyle === "trail") &&
-    isHovering;
+    isHovering &&
+    (scoped ? hasReceivedMoveRef.current : true);
 
   const cursorMarkup =
-    showEffect && cursorStyle === "glow" && pos ? (
+    showEffect && cursorStyle === "glow" ? (
       <div
-        className="fixed pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        ref={glowRef}
+        className="fixed left-0 top-0 pointer-events-none z-[9999] rounded-full will-change-transform"
         style={{
-          left: pos.x,
-          top: pos.y,
+          contain: "layout style paint",
           width: 96,
           height: 96,
           background: `radial-gradient(circle, ${color}35 0%, ${color}15 35%, transparent 65%)`,
+          transform: `translate3d(${posRef.current.x}px, ${posRef.current.y}px, 0) translate(-50%, -50%)`,
         }}
       />
-    ) : showEffect && cursorStyle === "trail" && pos ? (
+    ) : showEffect && cursorStyle === "trail" ? (
       <>
         {trail.map((t) => (
           <div
             key={t.id}
-            className="fixed pointer-events-none z-[9998] -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300"
+            className="fixed left-0 top-0 pointer-events-none z-[9998] rounded-full will-change-transform"
             style={{
-              left: t.x,
-              top: t.y,
+              transform: `translate3d(${t.x}px, ${t.y}px, 0) translate(-50%, -50%)`,
               width: 40,
               height: 40,
               background: `radial-gradient(circle, ${color}40 0%, ${color}15 50%, transparent 70%)`,
@@ -124,14 +169,15 @@ export default function ProfileCursorEffect({
           />
         ))}
         <div
-          className="fixed pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          ref={trailDotRef}
+          className="fixed left-0 top-0 pointer-events-none z-[9999] rounded-full will-change-transform"
           style={{
-            left: pos.x,
-            top: pos.y,
+            contain: "layout style paint",
             width: 10,
             height: 10,
             background: color,
             boxShadow: `0 0 16px ${color}90, 0 0 32px ${color}50`,
+            transform: `translate3d(${posRef.current.x}px, ${posRef.current.y}px, 0) translate(-50%, -50%)`,
           }}
         />
       </>
@@ -142,12 +188,14 @@ export default function ProfileCursorEffect({
       ref={containerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative"
+      className={scoped ? "relative overflow-hidden" : "relative"}
     >
       {children}
-      {typeof document !== "undefined" &&
-        document.body &&
-        createPortal(cursorMarkup, document.body)}
+      {scoped
+        ? cursorMarkup
+        : typeof document !== "undefined" &&
+          document.body &&
+          createPortal(cursorMarkup, document.body)}
     </div>
   );
 }

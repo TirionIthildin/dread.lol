@@ -65,6 +65,8 @@ export interface ProfileDoc {
   cardOpacity?: number | null;
   /** Backdrop blur: none, sm, md, lg. */
   cardBlur?: "none" | "sm" | "md" | "lg" | null;
+  /** Enable 3D tilt, spotlight, glare, magnetic border, etc. on profile card. Default: false. */
+  cardEffectsEnabled?: boolean | null;
   displayStatus?: string | null;
   pronouns?: string | null;
   location?: string | null;
@@ -122,8 +124,14 @@ export interface ProfileDoc {
   /** Audio visualizer animation: default, smooth, bounce, glow, pulse */
   audioVisualizerAnimation?: string | null;
   audioTracks?: string | null;
-  /** Page theme: classic-dark, classic-light, minimalist-light, minimalist-dark. */
-  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark" | null;
+  /** Page theme: classic-dark, classic-light, minimalist-light, minimalist-dark, professional-light, professional-dark. */
+  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark" | "professional-light" | "professional-dark" | null;
+  /** Ordered section IDs for drag-and-drop layout. When absent, uses default order. */
+  sectionOrder?: string[] | null;
+  /** Per-section visibility. When true, section is hidden. Default: visible. */
+  sectionVisibility?: Record<string, boolean> | null;
+  /** Section IDs explicitly removed from the profile. Can be re-added via element picker. */
+  removedSectionIds?: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }

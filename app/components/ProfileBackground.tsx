@@ -40,11 +40,19 @@ interface ProfileBackgroundProps {
   testOverlayVisible?: boolean;
   /** Called when user clicks the overlay in test mode. */
   onTestOverlayDismissed?: () => void;
+  /** When true (e.g. in page editor), scope all effects to the container—no fixed positioning, no viewport bleed. */
+  scoped?: boolean;
+  /** When true (e.g. in editor), show a still frame instead of playing video/animations. */
+  staticFrame?: boolean;
+  /** When true, disable custom cursor styles (e.g. editor preview toggle). */
+  disableCustomCursor?: boolean;
+  /** When true, never play background audio (e.g. editor, live preview). */
+  muteBackgroundAudio?: boolean;
 }
 
-const BUILT_IN_BACKGROUNDS = ["grid", "gradient", "dither"] as const;
+const BUILT_IN_BACKGROUNDS = ["grid", "gradient", "dither", "solid"] as const;
 
-export default function ProfileBackground({ profile, children, defaultUnlocked = false, testOverlayVisible = false, onTestOverlayDismissed }: ProfileBackgroundProps) {
+export default function ProfileBackground({ profile, children, defaultUnlocked = false, testOverlayVisible = false, onTestOverlayDismissed, scoped = false, staticFrame = false, disableCustomCursor = false, muteBackgroundAudio = false }: ProfileBackgroundProps) {
   const [unlocked, setUnlocked] = useState(defaultUnlocked);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -69,24 +77,24 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
   const hasVisualBackground = customBgType === "image" || customBgType === "video" || !!builtInBg;
   const needsUnlock = (customBgType === "video") || !!backgroundAudioUrl;
   const pageTheme = profile.pageTheme ?? "classic-dark";
-  const isLightTheme = pageTheme === "minimalist-light" || pageTheme === "classic-light";
+  const isLightTheme = pageTheme === "minimalist-light" || pageTheme === "classic-light" || pageTheme === "professional-light";
   const backgroundEffect = profile.backgroundEffect && BACKGROUND_EFFECTS.includes(profile.backgroundEffect as (typeof BACKGROUND_EFFECTS)[number])
     ? (profile.backgroundEffect as (typeof BACKGROUND_EFFECTS)[number])
     : null;
 
   const handleUnlock = useCallback(() => {
     if (customBgType === "video" && videoRef.current) {
-      videoRef.current.muted = false;
+      videoRef.current.muted = muteBackgroundAudio;
       videoRef.current.play().catch(() => {});
     }
-    if (backgroundAudioUrl && audioRef.current) {
+    if (backgroundAudioUrl && audioRef.current && !muteBackgroundAudio) {
       audioRef.current.play().catch(() => {});
     }
     setUnlocked(true);
-  }, [customBgType, backgroundAudioUrl]);
+  }, [customBgType, backgroundAudioUrl, muteBackgroundAudio]);
 
   useEffect(() => {
-    if (!backgroundAudioUrl) return;
+    if (!backgroundAudioUrl || muteBackgroundAudio) return;
     const handler = (e: Event) => {
       const audio = audioRef.current;
       if (!audio) return;
@@ -101,10 +109,10 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
     };
     window.addEventListener("dread:profile-audio-playing", handler as EventListener);
     return () => window.removeEventListener("dread:profile-audio-playing", handler as EventListener);
-  }, [backgroundAudioUrl, unlocked]);
+  }, [backgroundAudioUrl, unlocked, muteBackgroundAudio]);
 
   const content = (
-    <div className="relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center py-6">
+    <div className={`relative z-10 w-full min-h-0 flex-1 flex flex-col items-center justify-center py-6 ${scoped ? "bg-[var(--bg)]" : ""}`}>
       {children}
     </div>
   );
@@ -118,11 +126,12 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
       handleUnlock();
     }
   }, [testOverlayVisible, onTestOverlayDismissed, handleUnlock]);
+  const overlayPos = scoped ? "absolute" : "fixed";
   const unlockOverlay = showOverlay && (
     <button
       type="button"
       onClick={handleOverlayClick}
-      className={`fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset ${isLightTheme ? "bg-white/70 hover:bg-white/60" : "bg-black/60 hover:bg-black/50"}`}
+      className={`${overlayPos} inset-0 z-[100] flex items-center justify-center backdrop-blur-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset ${isLightTheme ? "bg-white/70 hover:bg-white/60" : "bg-black/60 hover:bg-black/50"}`}
       aria-label="Click to view profile and play media"
     >
       <span className="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)]/95 px-7 py-4 text-lg font-medium text-[var(--foreground)] shadow-xl transition-all duration-200 hover:border-[var(--accent)]/70 hover:bg-[var(--surface)]">
@@ -134,7 +143,7 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
   /** Themed vignette + gradient overlay on image/video backgrounds for better legibility and cohesion. */
   const themedOverlay = (customBgType === "image" || customBgType === "video") && (
     <div
-      className="pointer-events-none fixed inset-0 z-[1]"
+      className={`pointer-events-none ${overlayPos} inset-0 z-[1]`}
       aria-hidden
       style={
         isLightTheme
@@ -154,10 +163,10 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
     />
   );
 
-  const hasCustomCursor = Boolean(cursorClass || cursorStyle?.cursor);
+  const hasCustomCursor = !disableCustomCursor && Boolean(cursorClass || cursorStyle?.cursor);
   const hasCustomBg = Boolean(profile.customBackgroundColor?.trim() && /^#[0-9a-fA-F]{6}$/.test(profile.customBackgroundColor.trim()));
   const wrapperClassName = [
-    "min-h-screen flex flex-col",
+    scoped ? "relative flex flex-col min-h-0 flex-1" : "min-h-screen flex flex-col",
     themeClass,
     cursorClass,
     hasCustomCursor && "profile-cursor-active",
@@ -172,18 +181,22 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
         ? "profile-bg-grid"
         : builtInBg === "gradient"
           ? "profile-bg-gradient"
-          : "profile-bg-dither";
+          : builtInBg === "solid"
+            ? "profile-bg-solid"
+            : "profile-bg-dither";
+    const bgPos = scoped ? "absolute" : "fixed";
     return (
       <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
         <div
-          className={`fixed inset-0 z-0 overflow-hidden ${bgClass}`}
+          className={`${bgPos} inset-0 z-0 overflow-hidden ${bgClass}`}
           aria-hidden
         />
-        {backgroundEffect && (
+        {backgroundEffect && !staticFrame && (
           <BackgroundEffectOverlay
             effect={backgroundEffect}
             isLightTheme={isLightTheme}
             aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+            scoped={scoped}
           />
         )}
         {backgroundAudioUrl && (
@@ -206,7 +219,7 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
     const resolvedImageUrl = resolveMediaUrl(backgroundUrl);
     return (
       <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
-        <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden>
+        <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
           <img
             src={resolvedImageUrl}
             alt=""
@@ -217,11 +230,12 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
             }}
           />
         </div>
-        {backgroundEffect && (
+        {backgroundEffect && !staticFrame && (
           <BackgroundEffectOverlay
             effect={backgroundEffect}
             isLightTheme={isLightTheme}
             aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+            scoped={scoped}
           />
         )}
         {themedOverlay}
@@ -247,15 +261,15 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
 
     return (
       <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
-        <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden>
+        <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
           <video
             ref={videoRef}
             src={resolvedUrl}
-            autoPlay
-            loop
-            muted={!unlocked}
+            autoPlay={!staticFrame}
+            loop={!staticFrame}
+            muted={!unlocked || staticFrame}
             playsInline
-            preload="metadata"
+            preload={staticFrame ? "auto" : "metadata"}
             className="absolute left-1/2 top-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
             style={{
               width: "max(100vw, 177.78vh)",
@@ -264,11 +278,12 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
             }}
           />
         </div>
-        {backgroundEffect && (
+        {backgroundEffect && !staticFrame && (
           <BackgroundEffectOverlay
             effect={backgroundEffect}
             isLightTheme={isLightTheme}
             aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+            scoped={scoped}
           />
         )}
         {themedOverlay}
@@ -294,11 +309,12 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
 
     return (
       <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
-        {backgroundEffect && (
+        {backgroundEffect && !staticFrame && (
           <BackgroundEffectOverlay
             effect={backgroundEffect}
             isLightTheme={isLightTheme}
             aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+            scoped={scoped}
           />
         )}
         <audio ref={audioRef} src={resolvedUrl} loop preload="metadata" className="sr-only" aria-hidden />
@@ -310,11 +326,12 @@ export default function ProfileBackground({ profile, children, defaultUnlocked =
 
   return (
     <div className={wrapperClassName} style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined} data-page-theme={pageTheme}>
-      {backgroundEffect && (
+      {backgroundEffect && !staticFrame && (
           <BackgroundEffectOverlay
             effect={backgroundEffect}
             isLightTheme={isLightTheme}
             aboveContent={backgroundEffect === "snow" || backgroundEffect === "rain" || backgroundEffect === "retro-computer"}
+            scoped={scoped}
           />
         )}
       {children}

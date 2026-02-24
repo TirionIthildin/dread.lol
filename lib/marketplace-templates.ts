@@ -33,6 +33,7 @@ export interface TemplateData {
   cardStyle?: string | null;
   cardOpacity?: number | null;
   cardBlur?: "none" | "sm" | "md" | "lg" | null;
+  cardEffectsEnabled?: boolean | null;
   customTextColor?: string | null;
   customBackgroundColor?: string | null;
   pronouns?: string | null;
@@ -120,6 +121,7 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     nameGreeting: profile.nameGreeting ?? null,
     cardStyle: profile.cardStyle ?? null,
     cardOpacity: profile.cardOpacity ?? null,
+    cardEffectsEnabled: (profile as { cardEffectsEnabled?: boolean }).cardEffectsEnabled ?? null,
     cardBlur: (() => {
       const b = (profile as { cardBlur?: string | null }).cardBlur;
       if (b && ["none", "sm", "md", "lg"].includes(b)) return b as "none" | "sm" | "md" | "lg";
@@ -541,6 +543,7 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.cardStyle !== undefined) update.cardStyle = data.cardStyle;
   if (data.cardOpacity !== undefined) update.cardOpacity = data.cardOpacity;
   if (data.cardBlur !== undefined) update.cardBlur = data.cardBlur;
+  if (data.cardEffectsEnabled !== undefined) update.cardEffectsEnabled = data.cardEffectsEnabled;
   if (data.customTextColor !== undefined) update.customTextColor = data.customTextColor;
   if (data.customBackgroundColor !== undefined) update.customBackgroundColor = data.customBackgroundColor;
   if (data.pronouns !== undefined) update.pronouns = data.pronouns;
@@ -654,6 +657,7 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     cardStyle: d.cardStyle ?? undefined,
     cardOpacity: d.cardOpacity ?? undefined,
     cardBlur: d.cardBlur && ["none", "sm", "md", "lg"].includes(d.cardBlur) ? d.cardBlur : undefined,
+    cardEffectsEnabled: d.cardEffectsEnabled ?? undefined,
     customTextColor: d.customTextColor && /^#[0-9a-fA-F]{6}$/.test(d.customTextColor) ? d.customTextColor : undefined,
     customBackgroundColor: d.customBackgroundColor && /^#[0-9a-fA-F]{6}$/.test(d.customBackgroundColor) ? d.customBackgroundColor : undefined,
     pronouns: d.pronouns ?? undefined,

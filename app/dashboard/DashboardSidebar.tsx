@@ -14,6 +14,7 @@ import {
   LinkSimple,
   Medal,
   SignOut,
+  SquaresFour,
   Storefront,
   Trophy,
   User,
@@ -36,6 +37,7 @@ const mainNavItems = [
 ] as const;
 
 const contentNavItems = [
+  { href: "/editor", label: "Profile editor", icon: SquaresFour },
   { href: "/dashboard/blog", label: "Blog", icon: Article },
   { href: "/dashboard/gallery", label: "Gallery", icon: ImagesSquare },
   { href: "/dashboard/paste", label: "Paste", icon: ClipboardText },

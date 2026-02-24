@@ -125,6 +125,55 @@ export async function updateLinksAction(
   return { success: true, savedAt: new Date().toISOString() };
 }
 
+/** Partial profile update for visual editor - only updates provided fields. */
+export async function updateProfileFieldsAction(
+  profileId: string,
+  fields: Record<string, unknown>
+): Promise<ProfileFormState> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
+  if (Object.keys(fields).length === 0) return { success: true, savedAt: new Date().toISOString() };
+  try {
+    await updateMemberProfile(profileId, session.sub, fields);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Update failed" };
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/editor");
+  const slug = await getProfileSlugByUserId(session.sub);
+  if (slug) revalidatePath(`/${slug}`);
+  return { success: true, savedAt: new Date().toISOString() };
+}
+
+/** Update profile layout (section order, visibility, removed) from drag-and-drop editor. */
+export async function updateProfileLayoutAction(
+  profileId: string,
+  sectionOrder: string[],
+  sectionVisibility: Record<string, boolean>,
+  removedSectionIds?: string[]
+): Promise<ProfileFormState> {
+  const session = await getSession();
+  if (!session) return { error: "Not signed in" };
+  const user = await getOrCreateUser(session);
+  if (!canUseDashboard(user)) return { error: "Account not approved" };
+  try {
+    await updateMemberProfile(profileId, session.sub, {
+      sectionOrder: sectionOrder.length > 0 ? sectionOrder : undefined,
+      sectionVisibility: Object.keys(sectionVisibility).length > 0 ? sectionVisibility : undefined,
+      ...(Array.isArray(removedSectionIds) && { removedSectionIds }),
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Update failed" };
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/editor");
+  const slug = await getProfileSlugByUserId(session.sub);
+  if (slug) revalidatePath(`/${slug}`);
+  return { success: true, savedAt: new Date().toISOString() };
+}
+
 export async function updateProfileAction(
   _prevState: ProfileFormState,
   formData: FormData
@@ -146,7 +195,7 @@ export async function updateProfileAction(
   const banner = bannerRaw ? bannerRaw.slice(0, 5000) : undefined;
   const bgType = (formData.get("backgroundType") as string)?.trim();
   const usesCustomMedia = ["image", "video"].includes(bgType ?? "");
-  const usesVisualBackground = usesCustomMedia || ["grid", "gradient", "dither"].includes(bgType ?? "");
+  const usesVisualBackground = usesCustomMedia || ["grid", "gradient", "solid", "dither"].includes(bgType ?? "");
   const rawBackgroundUrl = usesCustomMedia
     ? (formData.get("backgroundUrl") as string)?.trim()
     : undefined;
@@ -225,7 +274,7 @@ export async function updateProfileAction(
       cardStyle: (formData.get("cardStyle") as string)?.trim() || undefined,
       pageTheme: (() => {
         const t = (formData.get("pageTheme") as string)?.trim();
-        return ["classic-dark", "classic-light", "minimalist-light", "minimalist-dark"].includes(t) ? t : undefined;
+        return ["classic-dark", "classic-light", "minimalist-light", "minimalist-dark", "professional-light", "professional-dark"].includes(t) ? t : undefined;
       })(),
       cardOpacity: (() => {
         const v = formData.get("cardOpacity");
@@ -238,6 +287,7 @@ export async function updateProfileAction(
         const b = (formData.get("cardBlur") as string)?.trim();
         return b && ["none", "sm", "md", "lg"].includes(b) ? (b as "none" | "sm" | "md" | "lg") : undefined;
       })(),
+      cardEffectsEnabled: formData.get("cardEffectsEnabled") === "on",
       pronouns: ((formData.get("pronouns") as string)?.trim() || undefined)?.slice(0, 40),
       location: ((formData.get("location") as string)?.trim() || undefined)?.slice(0, 80),
       timezone: ((formData.get("timezone") as string)?.trim() || undefined)?.slice(0, 64),

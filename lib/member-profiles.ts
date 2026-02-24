@@ -1476,11 +1476,13 @@ export function memberProfileToProfile(
       const b = (row as { cardBlur?: string | null }).cardBlur;
       return b && ["none", "sm", "md", "lg"].includes(b) ? (b as "none" | "sm" | "md" | "lg") : undefined;
     })(),
+    cardEffectsEnabled: (row as { cardEffectsEnabled?: boolean | null }).cardEffectsEnabled ?? false,
     pageTheme: (() => {
       const t = (row.pageTheme ?? "") as string;
       if (t === "classic") return "classic-dark" as const;
       if (t === "minimalist") return "minimalist-light" as const;
-      if (["classic-dark", "classic-light", "minimalist-light", "minimalist-dark"].includes(t)) return t as "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark";
+      if (t === "professional") return "professional-light" as const;
+      if (["classic-dark", "classic-light", "minimalist-light", "minimalist-dark", "professional-light", "professional-dark"].includes(t)) return t as "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark" | "professional-light" | "professional-dark";
       return "classic-dark" as const;
     })(),
     pronouns: row.pronouns ?? undefined,
@@ -1573,6 +1575,18 @@ export function memberProfileToProfile(
     ...(row.discordPresenceStyle && {
       discordPresenceStyle: row.discordPresenceStyle,
     }),
+    ...((row as { sectionOrder?: string[] | null }).sectionOrder &&
+      (row as { sectionOrder: string[] }).sectionOrder.length > 0 && {
+        sectionOrder: (row as { sectionOrder: string[] }).sectionOrder,
+      }),
+    ...((row as { sectionVisibility?: Record<string, boolean> | null }).sectionVisibility &&
+      Object.keys((row as { sectionVisibility: Record<string, boolean> }).sectionVisibility).length > 0 && {
+        sectionVisibility: (row as { sectionVisibility: Record<string, boolean> }).sectionVisibility,
+      }),
+    ...((row as { removedSectionIds?: string[] | null }).removedSectionIds &&
+      (row as { removedSectionIds: string[] }).removedSectionIds.length > 0 && {
+        removedSectionIds: (row as { removedSectionIds: string[] }).removedSectionIds,
+      }),
   };
 }
 

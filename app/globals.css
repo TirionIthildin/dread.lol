@@ -80,11 +80,13 @@
 
 /* Light themes: improve amber/warning badges (Staff, Report, etc.) */
 [data-page-theme="classic-light"] .text-amber-600,
-[data-page-theme="minimalist-light"] .text-amber-600 {
+[data-page-theme="minimalist-light"] .text-amber-600,
+[data-page-theme="professional-light"] .text-amber-600 {
   color: var(--warning) !important;
 }
 [data-page-theme="classic-light"] .bg-amber-500\/15,
-[data-page-theme="minimalist-light"] .bg-amber-500\/15 {
+[data-page-theme="minimalist-light"] .bg-amber-500\/15,
+[data-page-theme="professional-light"] .bg-amber-500\/15 {
   background-color: color-mix(in srgb, var(--warning) 15%, transparent) !important;
 }
 
@@ -157,28 +159,112 @@
   background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.04) 0%, transparent 50%), #050505;
 }
 
+/* ========== PROFESSIONAL LIGHT (Portfolio / resume style) ========== */
+[data-page-theme="professional-light"] {
+  --bg: #f8fafc;
+  --bg-grid: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --border-bright: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --terminal: #475569;
+  --terminal-dim: #334155;
+  --accent: #475569;
+  --accent-dim: #334155;
+  --surface-hover: #f1f5f9;
+  --accent-muted: color-mix(in srgb, var(--accent) 14%, transparent);
+  --warning: #b45309;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow: 0 0 0 1px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.06), 0 8px 24px -8px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.08), 0 16px 40px -12px rgba(15, 23, 42, 0.12);
+  --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+.grid-bg:has([data-page-theme="professional-light"]) {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* ========== PROFESSIONAL DARK (Portfolio dark mode) ========== */
+[data-page-theme="professional-dark"] {
+  --bg: #0f172a;
+  --bg-grid: #1e293b;
+  --surface: #1e293b;
+  --border: #334155;
+  --border-bright: #475569;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --terminal: #94a3b8;
+  --terminal-dim: #64748b;
+  --accent: #94a3b8;
+  --accent-dim: #64748b;
+  --surface-hover: #334155;
+  --accent-muted: color-mix(in srgb, var(--accent) 12%, transparent);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+.grid-bg:has([data-page-theme="professional-dark"]) {
+  background: #0f172a;
+}
 
 .scanlines:has([data-page-theme="minimalist-light"])::after,
-.scanlines:has([data-page-theme="minimalist-dark"])::after {
+.scanlines:has([data-page-theme="minimalist-dark"])::after,
+.scanlines:has([data-page-theme="professional-light"])::after,
+.scanlines:has([data-page-theme="professional-dark"])::after {
   display: none;
 }
 
 .grid-bg:has([data-page-theme="minimalist-light"]) .page-theme-minimalist-hide-ornament,
-.grid-bg:has([data-page-theme="minimalist-dark"]) .page-theme-minimalist-hide-ornament {
+.grid-bg:has([data-page-theme="minimalist-dark"]) .page-theme-minimalist-hide-ornament,
+.grid-bg:has([data-page-theme="professional-light"]) .page-theme-minimalist-hide-ornament,
+.grid-bg:has([data-page-theme="professional-dark"]) .page-theme-minimalist-hide-ornament {
   display: none;
 }
 
 /* Minimalist: profile built-in backgrounds become solid */
 [data-page-theme="minimalist-light"] .profile-bg-grid,
 [data-page-theme="minimalist-light"] .profile-bg-gradient,
-[data-page-theme="minimalist-light"] .profile-bg-dither {
+[data-page-theme="minimalist-light"] .profile-bg-dither,
+[data-page-theme="minimalist-light"] .profile-bg-solid {
   background: linear-gradient(180deg, #faf9f6 0%, #f2f0eb 100%) !important;
 }
 
 [data-page-theme="minimalist-dark"] .profile-bg-grid,
 [data-page-theme="minimalist-dark"] .profile-bg-gradient,
-[data-page-theme="minimalist-dark"] .profile-bg-dither {
+[data-page-theme="minimalist-dark"] .profile-bg-dither,
+[data-page-theme="minimalist-dark"] .profile-bg-solid {
   background: #050505 !important;
+}
+
+[data-page-theme="professional-light"] .profile-bg-grid,
+[data-page-theme="professional-light"] .profile-bg-gradient,
+[data-page-theme="professional-light"] .profile-bg-dither,
+[data-page-theme="professional-light"] .profile-bg-solid {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+}
+
+[data-page-theme="professional-dark"] .profile-bg-grid,
+[data-page-theme="professional-dark"] .profile-bg-gradient,
+[data-page-theme="professional-dark"] .profile-bg-dither,
+[data-page-theme="professional-dark"] .profile-bg-solid {
+  background: #0f172a !important;
 }
 
 /* User custom background color overrides theme defaults */
@@ -190,19 +276,31 @@
     linear-gradient(90deg, rgba(0, 0, 0, 0.15) 1px, transparent 1px) !important;
   background-size: 24px 24px !important;
 }
+.profile-custom-bg .profile-bg-solid {
+  background-color: var(--bg) !important;
+  background-image: none !important;
+}
 
 [data-page-theme="minimalist-light"] .profile-bg-dither::after,
-[data-page-theme="minimalist-dark"] .profile-bg-dither::after {
+[data-page-theme="minimalist-dark"] .profile-bg-dither::after,
+[data-page-theme="professional-light"] .profile-bg-dither::after,
+[data-page-theme="professional-dark"] .profile-bg-dither::after {
   display: none !important;
 }
 
-/* Minimalist: use body font (override profile mono fonts) */
+/* Minimalist & Professional: use body font (override profile mono fonts) */
 [data-page-theme="minimalist-light"] .profile-font-jetbrains-mono,
 [data-page-theme="minimalist-light"] .profile-font-fira-code,
 [data-page-theme="minimalist-light"] .profile-font-space-mono,
 [data-page-theme="minimalist-dark"] .profile-font-jetbrains-mono,
 [data-page-theme="minimalist-dark"] .profile-font-fira-code,
-[data-page-theme="minimalist-dark"] .profile-font-space-mono {
+[data-page-theme="minimalist-dark"] .profile-font-space-mono,
+[data-page-theme="professional-light"] .profile-font-jetbrains-mono,
+[data-page-theme="professional-light"] .profile-font-fira-code,
+[data-page-theme="professional-light"] .profile-font-space-mono,
+[data-page-theme="professional-dark"] .profile-font-jetbrains-mono,
+[data-page-theme="professional-dark"] .profile-font-fira-code,
+[data-page-theme="professional-dark"] .profile-font-space-mono {
   font-family: var(--font-body) !important;
 }
 
@@ -238,7 +336,8 @@
 
 /* Light themes: stronger accent-muted for readable badge/pill backgrounds */
 [data-page-theme="classic-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span),
-[data-page-theme="minimalist-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) {
+[data-page-theme="minimalist-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span),
+[data-page-theme="professional-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) {
   background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
 }
 
@@ -288,6 +387,7 @@
 /* Light themes: quote block - clearer background, border, and punctuation */
 [data-page-theme="classic-light"] .profile-content-inner blockquote,
 [data-page-theme="minimalist-light"] .profile-content-inner blockquote,
+[data-page-theme="professional-light"] .profile-content-inner blockquote,
 [data-page-theme="minimalist"] .profile-content-inner blockquote {
   background: var(--accent-muted) !important;
   border-left-color: var(--accent-dim) !important;
@@ -295,12 +395,14 @@
 
 [data-page-theme="classic-light"] .profile-content-inner blockquote:hover,
 [data-page-theme="minimalist-light"] .profile-content-inner blockquote:hover,
+[data-page-theme="professional-light"] .profile-content-inner blockquote:hover,
 [data-page-theme="minimalist"] .profile-content-inner blockquote:hover {
   background: color-mix(in srgb, var(--accent) 26%, transparent) !important;
 }
 
 [data-page-theme="classic-light"] .profile-content-inner blockquote > span[aria-hidden],
 [data-page-theme="minimalist-light"] .profile-content-inner blockquote > span[aria-hidden],
+[data-page-theme="professional-light"] .profile-content-inner blockquote > span[aria-hidden],
 [data-page-theme="minimalist"] .profile-content-inner blockquote > span[aria-hidden] {
   color: var(--accent-dim) !important;
 }
@@ -715,7 +817,11 @@
     box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 15%, transparent), inset 0 0 60px rgba(0, 0, 0, 0.3);
   }
 
-  /* Profile built-in backgrounds (grid, gradient, dither) */
+  /* Profile built-in backgrounds (grid, gradient, dither, solid) */
+  .profile-bg-solid {
+    background-color: var(--bg);
+    background-image: none;
+  }
   .profile-bg-grid {
     background-color: var(--bg);
     background-image:
@@ -835,6 +941,30 @@
   [data-page-theme="minimalist-dark"].profile-theme-indigo { --accent: #818cf8; --accent-dim: #6366f1; --terminal: #a5b4fc; }
   [data-page-theme="minimalist-dark"].profile-theme-teal { --accent: #2dd4bf; --accent-dim: #14b8a6; --terminal: #5eead4; }
   [data-page-theme="minimalist-dark"].profile-theme-sky { --accent: #38bdf8; --accent-dim: #0ea5e9; --terminal: #7dd3fc; }
+
+  /* Professional light: muted slate accents for portfolio feel */
+  [data-page-theme="professional-light"].profile-theme-cyan { --accent: #0e7490; --accent-dim: #0f766e; --terminal: #0e7490; }
+  [data-page-theme="professional-light"].profile-theme-green { --accent: #047857; --accent-dim: #065f46; --terminal: #047857; }
+  [data-page-theme="professional-light"].profile-theme-purple { --accent: #6d28d9; --accent-dim: #5b21b6; --terminal: #6d28d9; }
+  [data-page-theme="professional-light"].profile-theme-orange { --accent: #c2410c; --accent-dim: #9a3412; --terminal: #c2410c; }
+  [data-page-theme="professional-light"].profile-theme-rose { --accent: #b91c1c; --accent-dim: #991b1b; --terminal: #b91c1c; }
+  [data-page-theme="professional-light"].profile-theme-amber { --accent: #b45309; --accent-dim: #92400e; --terminal: #b45309; }
+  [data-page-theme="professional-light"].profile-theme-blue { --accent: #1d4ed8; --accent-dim: #1e40af; --terminal: #1d4ed8; }
+  [data-page-theme="professional-light"].profile-theme-indigo { --accent: #4338ca; --accent-dim: #3730a3; --terminal: #4338ca; }
+  [data-page-theme="professional-light"].profile-theme-teal { --accent: #0f766e; --accent-dim: #115e59; --terminal: #0f766e; }
+  [data-page-theme="professional-light"].profile-theme-sky { --accent: #0369a1; --accent-dim: #075985; --terminal: #0369a1; }
+
+  /* Professional dark: softer accents on slate background */
+  [data-page-theme="professional-dark"].profile-theme-cyan { --accent: #22d3ee; --accent-dim: #06b6d4; --terminal: #67e8f9; }
+  [data-page-theme="professional-dark"].profile-theme-green { --accent: #4ade80; --accent-dim: #22c55e; --terminal: #86efac; }
+  [data-page-theme="professional-dark"].profile-theme-purple { --accent: #c084fc; --accent-dim: #a855f7; --terminal: #e879f9; }
+  [data-page-theme="professional-dark"].profile-theme-orange { --accent: #fb923c; --accent-dim: #f97316; --terminal: #fdba74; }
+  [data-page-theme="professional-dark"].profile-theme-rose { --accent: #fb7185; --accent-dim: #f43f5e; --terminal: #fda4af; }
+  [data-page-theme="professional-dark"].profile-theme-amber { --accent: #fbbf24; --accent-dim: #f59e0b; --terminal: #fcd34d; }
+  [data-page-theme="professional-dark"].profile-theme-blue { --accent: #60a5fa; --accent-dim: #3b82f6; --terminal: #93c5fd; }
+  [data-page-theme="professional-dark"].profile-theme-indigo { --accent: #818cf8; --accent-dim: #6366f1; --terminal: #a5b4fc; }
+  [data-page-theme="professional-dark"].profile-theme-teal { --accent: #2dd4bf; --accent-dim: #14b8a6; --terminal: #5eead4; }
+  [data-page-theme="professional-dark"].profile-theme-sky { --accent: #38bdf8; --accent-dim: #0ea5e9; --terminal: #7dd3fc; }
 
   .profile-card-sharp {
     border-radius: 4px;

@@ -55,12 +55,14 @@ export interface Profile {
   nameGreeting?: string;
   /** Card style: default, sharp, glass, neon, minimal, elevated. */
   cardStyle?: string;
-  /** Page theme: classic-dark, classic-light, minimalist-light, minimalist-dark. */
-  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark";
+  /** Page theme: classic-dark, classic-light, minimalist-light, minimalist-dark, professional-light, professional-dark. */
+  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark" | "professional-light" | "professional-dark";
   /** Box opacity (50–100). Controls profile card transparency. */
   cardOpacity?: number;
   /** Backdrop blur: none, sm, md, lg. Controls profile card blur. */
   cardBlur?: "none" | "sm" | "md" | "lg";
+  /** Enable card effects (3D tilt, spotlight, glare, magnetic border). Default: false. */
+  cardEffectsEnabled?: boolean;
   /** Pronouns (e.g. they/them). */
   pronouns?: string;
   /** Location or "Based in" (e.g. NYC, Berlin). */
@@ -163,6 +165,10 @@ export interface Profile {
   };
   /** When true, widgets use profile accent color instead of brand colors. */
   widgetsMatchAccent?: boolean;
+  /** Comma-separated Discord widget order (e.g. "accountAge,joined,serverCount,serverInvite"). Determines display order. */
+  showDiscordWidgets?: string;
+  /** Comma-separated Roblox widget order (e.g. "accountAge,profile"). Determines display order. */
+  showRobloxWidgets?: string;
   /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
   discordWidgets?: {
     accountAge?: { createdAt: Date; label: string };
@@ -170,5 +176,11 @@ export interface Profile {
     serverCount?: number;
     serverInvite?: { url: string; guildName?: string; memberCount?: number };
   };
+  /** Ordered section IDs for drag-and-drop layout. When absent, uses default order. */
+  sectionOrder?: string[];
+  /** Per-section visibility. When true, section is hidden. Default: visible. */
+  sectionVisibility?: Record<string, boolean>;
+  /** Section IDs explicitly removed from profile (excluded from display). */
+  removedSectionIds?: string[];
 }
 

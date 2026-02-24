@@ -3,11 +3,26 @@ import { ArrowSquareOut } from "@phosphor-icons/react/dist/ssr";
 import type { RobloxWidgetData } from "@/lib/roblox-widgets";
 
 const labelClass = "text-[10px] font-medium uppercase tracking-wider";
+const ROBLOX_WIDGET_ORDER = ["accountAge", "profile"] as const;
+
+function parseRobloxOrder(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [...ROBLOX_WIDGET_ORDER];
+  const map: Record<string, string> = {
+    accountage: "accountAge",
+    profile: "profile",
+  };
+  return raw
+    .split(",")
+    .map((s) => map[s.trim().toLowerCase()])
+    .filter(Boolean);
+}
 
 interface RobloxWidgetsDisplayProps {
   data: RobloxWidgetData;
   /** When true, use accent color instead of Roblox brand color. */
   matchAccent?: boolean;
+  /** Override order from CSV (profile.showRobloxWidgets). */
+  orderFromCsv?: string;
 }
 
 function RobloxIcon({ className }: { className?: string }) {
@@ -40,8 +55,9 @@ function RobloxAvatar({ avatarUrl, size = 36 }: { avatarUrl: string; size?: numb
   );
 }
 
-export default function RobloxWidgetsDisplay({ data, matchAccent = false }: RobloxWidgetsDisplayProps) {
-  const widgets: React.ReactNode[] = [];
+export default function RobloxWidgetsDisplay({ data, matchAccent = false, orderFromCsv }: RobloxWidgetsDisplayProps) {
+  const resolvedOrder = orderFromCsv ? parseRobloxOrder(orderFromCsv) : [...ROBLOX_WIDGET_ORDER];
+  const widgetMap: Record<string, React.ReactNode> = {};
   const widgetBase = matchAccent
     ? "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--accent)]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--accent)]/40"
     : "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[#00A2FF]/40";
@@ -56,12 +72,8 @@ export default function RobloxWidgetsDisplay({ data, matchAccent = false }: Robl
     const title = !isNaN(createdAt.getTime())
       ? `Roblox account since ${createdAt.toLocaleDateString()}`
       : "Roblox account age";
-    widgets.push(
-      <div
-        key="accountAge"
-        className={widgetBase}
-        title={title}
-      >
+    widgetMap["accountAge"] = (
+      <div className={widgetBase} title={title}>
         <span className="shrink-0" style={{ color: iconColor }}>
           <RobloxIcon className="block" />
         </span>
@@ -77,9 +89,8 @@ export default function RobloxWidgetsDisplay({ data, matchAccent = false }: Robl
 
   if (data.profile) {
     const label = data.profile.displayName || data.profile.username || "View profile";
-    widgets.push(
+    widgetMap["profile"] = (
         <Link
-        key="profile"
         href={data.profile.url}
         target="_blank"
         rel="noopener noreferrer"
@@ -107,7 +118,8 @@ export default function RobloxWidgetsDisplay({ data, matchAccent = false }: Robl
     );
   }
 
-  if (widgets.length === 0) return null;
+  const orderedIds = resolvedOrder.filter((id) => widgetMap[id] != null);
+  if (orderedIds.length === 0) return null;
 
   return (
     <div
@@ -116,7 +128,69 @@ export default function RobloxWidgetsDisplay({ data, matchAccent = false }: Robl
       role="group"
       aria-label="Roblox info"
     >
-      {widgets}
+      {orderedIds.map((id) => (
+        <div key={id}>{widgetMap[id]}</div>
+      ))}
     </div>
   );
+}
+
+/** Renders a single Roblox widget by id. Used for sortable grid. */
+export function RobloxSingleWidget({
+  id,
+  data,
+  matchAccent = false,
+}: {
+  id: string;
+  data: RobloxWidgetData;
+  matchAccent?: boolean;
+}) {
+  const widgetBase = matchAccent
+    ? "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[var(--accent)]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--accent)]/40"
+    : "roblox-widget-card flex items-center gap-2.5 rounded-lg border border-[#00A2FF]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[#00A2FF]/40";
+  const iconColor = matchAccent ? "var(--accent)" : "#00A2FF";
+  const labelColorClass = matchAccent ? "text-[var(--accent)]/80" : "text-[#00A2FF]/80";
+  const linkHoverClass = matchAccent ? "hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10" : "hover:border-[#00A2FF]/50 hover:bg-[#00A2FF]/10";
+
+  if (id === "accountAge" && data.accountAge) {
+    const createdAt = data.accountAge.createdAt instanceof Date ? data.accountAge.createdAt : new Date(data.accountAge.createdAt as string);
+    const title = !isNaN(createdAt.getTime()) ? `Roblox account since ${createdAt.toLocaleDateString()}` : "Roblox account age";
+    return (
+      <div className={widgetBase} title={title}>
+        <span className="shrink-0" style={{ color: iconColor }}>
+          <RobloxIcon className="block" />
+        </span>
+        <div>
+          <p className={`${labelClass} ${labelColorClass}`}>Account age</p>
+          <p className="text-[var(--foreground)] font-medium">{data.accountAge.label}</p>
+        </div>
+      </div>
+    );
+  }
+  if (id === "profile" && data.profile) {
+    const label = data.profile.displayName || data.profile.username || "View profile";
+    return (
+      <Link
+        href={data.profile.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${widgetBase} text-[var(--foreground)] ${linkHoverClass} group`}
+        aria-label={`Open Roblox profile for ${data.profile.displayName || data.profile.username}`}
+      >
+        {data.profile.avatarUrl ? (
+          <RobloxAvatar avatarUrl={data.profile.avatarUrl} />
+        ) : (
+          <span className="shrink-0" style={{ color: iconColor }}>
+            <RobloxIcon className="block" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className={`${labelClass} ${labelColorClass}`}>Roblox</p>
+          <p className="font-medium truncate">{label}</p>
+        </div>
+        <ArrowSquareOut size={14} weight="regular" className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
+      </Link>
+    );
+  }
+  return null;
 }

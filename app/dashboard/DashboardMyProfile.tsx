@@ -26,6 +26,7 @@ import {
   CircleHalf,
   Monitor,
   Sparkle,
+  Square,
   SquaresFour,
   ClockCounterClockwise,
   ArrowCounterClockwise,
@@ -376,10 +377,10 @@ export default function DashboardMyProfile({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
-  const BG_OPTIONS = ["grid", "gradient", "dither", "image", "video"] as const;
+  const BG_OPTIONS = ["grid", "gradient", "solid", "dither", "image", "video"] as const;
   const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "grid";
-    return ["image", "video", "grid", "gradient", "dither"].includes(t) ? t : "grid";
+    return ["image", "video", "grid", "gradient", "solid", "dither"].includes(t) ? t : "grid";
   });
   const [backgroundUrlValue, setBackgroundUrlValue] = useState(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "grid";
@@ -610,6 +611,7 @@ export default function DashboardMyProfile({
 
   const [cardOpacityValue, setCardOpacityValue] = useState((profile as { cardOpacity?: number }).cardOpacity ?? 95);
   const [cardBlurValue, setCardBlurValue] = useState((profile as { cardBlur?: string }).cardBlur ?? "sm");
+  const [cardEffectsEnabledValue, setCardEffectsEnabledValue] = useState((profile as { cardEffectsEnabled?: boolean }).cardEffectsEnabled ?? false);
   const slugCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const router = useRouter();
@@ -670,7 +672,7 @@ export default function DashboardMyProfile({
         banner: bannerValue || undefined,
         avatar: avatarUrlValue || baseProfileForPreview.avatar,
         terminalCommands: terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()),
-        backgroundType: ["grid", "gradient", "dither", "image", "video"].includes(backgroundTypeValue)
+        backgroundType: ["grid", "gradient", "solid", "dither", "image", "video"].includes(backgroundTypeValue)
           ? backgroundTypeValue
           : baseProfileForPreview.backgroundType,
         backgroundUrl: ["image", "video"].includes(backgroundTypeValue) ? backgroundUrlValue || undefined : undefined,
@@ -678,6 +680,7 @@ export default function DashboardMyProfile({
         backgroundEffect: backgroundEffectValue && backgroundEffectValue !== "none" ? backgroundEffectValue : undefined,
         cardOpacity: cardOpacityValue,
         cardBlur: ["none", "sm", "md", "lg"].includes(cardBlurValue) ? (cardBlurValue as "none" | "sm" | "md" | "lg") : baseProfileForPreview.cardBlur,
+        cardEffectsEnabled: cardEffectsEnabledValue,
         widgetsMatchAccent: widgetsMatchAccent,
         discordWidgets: widgetPreviewFiltered ?? undefined,
         robloxWidgets:
@@ -710,6 +713,7 @@ export default function DashboardMyProfile({
     widgetsMatchAccent,
     cardOpacityValue,
     cardBlurValue,
+    cardEffectsEnabledValue,
     widgetPreviewFiltered,
     widgetRobloxAccountAge,
     widgetRobloxProfile,
@@ -736,7 +740,7 @@ export default function DashboardMyProfile({
     setAvatarUrlValue(profile.avatarUrl ?? "");
     setTerminalCommandEntries(parseTerminalCommandsForEditor(profile.terminalCommands ?? null));
     setBackgroundTypeValue(
-      ["image", "video", "grid", "gradient", "dither"].includes((profile as { backgroundType?: string }).backgroundType ?? "")
+      ["image", "video", "grid", "gradient", "solid", "dither"].includes((profile as { backgroundType?: string }).backgroundType ?? "")
         ? (profile as { backgroundType?: string }).backgroundType ?? "grid"
         : "grid"
     );
@@ -758,6 +762,7 @@ export default function DashboardMyProfile({
     setWidgetsMatchAccent((profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false);
     setCardOpacityValue((profile as { cardOpacity?: number }).cardOpacity ?? 95);
     setCardBlurValue((profile as { cardBlur?: string }).cardBlur ?? "sm");
+    setCardEffectsEnabledValue((profile as { cardEffectsEnabled?: boolean }).cardEffectsEnabled ?? false);
     setCustomFontValue((() => {
       const p = profile as { customFont?: string; customFontUrl?: string };
       return p.customFontUrl ? "custom" : (p.customFont ?? "");
@@ -1265,6 +1270,16 @@ export default function DashboardMyProfile({
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
               </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
+                <input
+                  type="checkbox"
+                  name="cardEffectsEnabled"
+                  checked={cardEffectsEnabledValue}
+                  onChange={(e) => setCardEffectsEnabledValue(e.target.checked)}
+                  className="rounded border-[var(--border)]"
+                />
+                Card effects <span className="text-[var(--muted)]/70">(3D tilt, spotlight, glare on hover)</span>
+              </label>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Languages <span className="text-[var(--muted)]/70">(e.g. EN, ES, FR)</span>
                 <input
@@ -1452,6 +1467,8 @@ export default function DashboardMyProfile({
                       { value: "classic-light", label: "Classic — light" },
                       { value: "minimalist-light", label: "Minimalist — light" },
                       { value: "minimalist-dark", label: "Minimalist — dark" },
+                      { value: "professional-light", label: "Professional — light" },
+                      { value: "professional-dark", label: "Professional — dark" },
                     ]}
                     searchThreshold={10}
                   />
@@ -1951,7 +1968,7 @@ export default function DashboardMyProfile({
                           onClick={() => {
                             setBackgroundTypeValue(opt);
                             setBackgroundUploadError(null);
-                            if (opt === "grid" || opt === "gradient" || opt === "dither") {
+                            if (opt === "grid" || opt === "gradient" || opt === "solid" || opt === "dither") {
                               setBackgroundUrlValue("");
                             } else if ((opt === "image" && backgroundTypeValue === "video") || (opt === "video" && backgroundTypeValue === "image")) {
                               setBackgroundUrlValue("");
@@ -1965,10 +1982,11 @@ export default function DashboardMyProfile({
                         >
                           {opt === "grid" && <GridFour size={16} weight="regular" />}
                           {opt === "gradient" && <Sparkle size={16} weight="regular" />}
+                          {opt === "solid" && <Square size={16} weight="regular" />}
                           {opt === "dither" && <SquaresFour size={16} weight="regular" />}
                           {opt === "image" && <ImageIcon size={16} weight="regular" />}
                           {opt === "video" && <VideoCamera size={16} weight="regular" />}
-                          {opt === "grid" ? "Grid" : opt === "gradient" ? "Gradient" : opt === "dither" ? "Animated" : opt === "image" ? "Image" : "Video"}
+                          {opt === "grid" ? "Grid" : opt === "gradient" ? "Gradient" : opt === "solid" ? "Solid" : opt === "dither" ? "Animated" : opt === "image" ? "Image" : "Video"}
                         </button>
                       ))}
                     </div>

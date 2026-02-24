@@ -1,8 +1,15 @@
 /**
- * Page themes — profile-level design (Classic/Minimalist × light/dark).
+ * Page themes — profile-level design (Classic/Minimalist/Professional × light/dark).
  * Separate from profile accent colors and card styles.
  */
-export const PAGE_THEMES = ["classic-dark", "classic-light", "minimalist-light", "minimalist-dark"] as const;
+export const PAGE_THEMES = [
+  "classic-dark",
+  "classic-light",
+  "minimalist-light",
+  "minimalist-dark",
+  "professional-light",
+  "professional-dark",
+] as const;
 export type PageTheme = (typeof PAGE_THEMES)[number];
 
 export const PAGE_THEME_OPTIONS: { value: PageTheme; label: string }[] = [
@@ -10,6 +17,8 @@ export const PAGE_THEME_OPTIONS: { value: PageTheme; label: string }[] = [
   { value: "classic-light", label: "Classic — light" },
   { value: "minimalist-light", label: "Minimalist — light" },
   { value: "minimalist-dark", label: "Minimalist — dark" },
+  { value: "professional-light", label: "Professional — light" },
+  { value: "professional-dark", label: "Professional — dark" },
 ];
 
 export const DEFAULT_PAGE_THEME: PageTheme = "classic-dark";
@@ -22,6 +31,15 @@ export function isMinimalistTheme(theme: PageTheme): boolean {
   return theme === "minimalist-light" || theme === "minimalist-dark";
 }
 
+export function isProfessionalTheme(theme: PageTheme): boolean {
+  return theme === "professional-light" || theme === "professional-dark";
+}
+
+/** Clean layout = minimalist or professional (no terminal dots, spacious card). */
+export function isCleanLayoutTheme(theme: PageTheme): boolean {
+  return isMinimalistTheme(theme) || isProfessionalTheme(theme);
+}
+
 export function isLightTheme(theme: PageTheme): boolean {
-  return theme === "classic-light" || theme === "minimalist-light";
+  return theme === "classic-light" || theme === "minimalist-light" || theme === "professional-light";
 }

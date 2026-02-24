@@ -173,6 +173,8 @@ export default async function ProfilePage({ params }: Props) {
   if (showPageViews) profile.viewCount = viewCount;
   if (discordWidgetData) profile.discordWidgets = discordWidgetData;
   if (robloxWidgetData) profile.robloxWidgets = robloxWidgetData;
+  profile.showDiscordWidgets = memberRow.showDiscordWidgets ?? undefined;
+  profile.showRobloxWidgets = (memberRow as { showRobloxWidgets?: string | null }).showRobloxWidgets ?? undefined;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;
   const showLastSeen = showDiscordPresence && (!discordPresence?.status || discordPresence?.status === "offline");
   if (showDiscordPresence && discordPresence) {
