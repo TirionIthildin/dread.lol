@@ -11,6 +11,11 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Profile card effects",
+    description: "Profile cards tilt and follow your cursor in 3D on hover, with a spotlight glow and subtle shine sweep.",
+  },
+  {
+    date: "2026-02",
     title: "Admin analytics overview",
     description: "Admin dashboard now shows service analytics: users, signups, templates, subscriptions, profile views, and recent activity.",
   },

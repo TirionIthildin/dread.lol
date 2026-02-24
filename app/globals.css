@@ -988,6 +988,53 @@
     cursor: none;
   }
 
+  /* Profile card 3D / hover effects (ProfileCardEffect wrapper) */
+  .profile-card-effect-wrapper {
+    contain: layout;
+  }
+  .profile-card-effect-inner {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .profile-card-spotlight {
+    z-index: 0;
+    mix-blend-mode: soft-light;
+  }
+  .profile-card-hover-effects {
+    position: relative;
+    z-index: 1;
+  }
+  /* Shine sweep on hover */
+  .profile-card-hover-effects::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.03) 45%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.03) 55%,
+      transparent 60%
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease, background-position 0.6s ease;
+    z-index: 2;
+  }
+  .profile-card-effect-wrapper:hover .profile-card-hover-effects::after {
+    opacity: 1;
+    background-position: -100% 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .profile-card-hover-effects::after {
+      display: none;
+    }
+  }
+
   /* Force custom cursor on all descendants (links, buttons, etc. otherwise show pointer) */
   .profile-cursor-active *,
   .profile-cursor-active *::before,

@@ -17,6 +17,7 @@ import SparkleUsername from "@/app/components/SparkleUsername";
 import ProfileCommandBar from "@/app/components/ProfileCommandBar";
 import ProfileVouches from "@/app/components/ProfileVouches";
 import ProfileReportButton from "@/app/components/ProfileReportButton";
+import ProfileCardEffect from "@/app/components/ProfileCardEffect";
 import ProfileAudioPlayer from "@/app/components/ProfileAudioPlayer";
 import ProfileGalleryButton from "@/app/components/ProfileGalleryButton";
 import ProfileBlogButton from "@/app/components/ProfileBlogButton";
@@ -208,8 +209,9 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
     <div
       className={`relative z-10 w-full min-w-0 max-w-2xl max-h-[calc(100vh-3rem)] overflow-auto shrink-0 ${themeClass} ${fontClass}`}
     >
+      <ProfileCardEffect>
       <article
-        className={`rounded-2xl border overflow-hidden transition-all duration-300 ${isMinimalist ? "profile-minimalist-card border-[var(--border)]/60 shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)]" : `rounded-xl border-[var(--border)] shadow-2xl shadow-black/50 ${blurClass} hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]`} ${!isMinimalist ? cardClass : ""} ${densityClass} ${animationClass}`}
+        className={`rounded-2xl border overflow-hidden transition-all duration-300 profile-card-hover-effects ${isMinimalist ? "profile-minimalist-card border-[var(--border)]/60 shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)]" : `rounded-xl border-[var(--border)] shadow-2xl shadow-black/50 ${blurClass} hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(6,182,212,0.05)]`} ${!isMinimalist ? cardClass : ""} ${densityClass} ${animationClass}`}
         style={{ backgroundColor: `color-mix(in srgb, var(--surface) ${cardOpacity}%, transparent)` }}
         aria-labelledby="profile-name"
       >
@@ -542,6 +544,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
           />
         )}
       </article>
+      </ProfileCardEffect>
     </div>
     </>
   );
