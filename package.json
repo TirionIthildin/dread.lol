@@ -11,6 +11,9 @@
     "typecheck": "tsc --noEmit",
     "db:migrate-prod": "node scripts/migrate.mjs",
     "discord-presence-bot": "node --env-file=.env scripts/discord-presence-bot.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "dependencies": {
@@ -42,7 +45,9 @@
     "eslint-config-next": "^15.0.0",
     "husky": "^9.1.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.0",
+    "@playwright/test": "^1.49.0"
   },
   "engines": {
     "node": ">=20.0.0"

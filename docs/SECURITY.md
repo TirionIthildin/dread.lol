@@ -16,7 +16,7 @@ Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and SeaweedFS. Th
 Next.js adds the following headers globally:
 
 - `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
+- `X-Frame-Options: SAMEORIGIN` (allows same-origin embedding; use DENY to block all framing)
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCode, getUserInfo } from "@/lib/auth/roblox";
 import { consumeOAuthState, getSession } from "@/lib/auth/session";
+import { logger } from "@/lib/logger";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
 
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
       new URL("/dashboard/my-profile?roblox=linked", baseUrl)
     );
   } catch (err) {
-    console.error("Roblox OAuth callback error:", err);
+    logger.error("RobloxAuth", "OAuth callback error:", err);
     return NextResponse.redirect(
       new URL("/dashboard?error=roblox_token&message=Failed+to+link", baseUrl)
     );

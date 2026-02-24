@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCode, getUserInfo, getAvatarUrl, getUserGuilds } from "@/lib/auth/discord";
+import { logger } from "@/lib/logger";
 import {
   consumeOAuthState,
   createSession,
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     res.cookies.set(name, value, opts);
     return res;
   } catch (err) {
-    console.error("Discord OAuth callback error:", err);
+    logger.error("DiscordAuth", "OAuth callback error:", err);
     return NextResponse.redirect(
       new URL("/dashboard?error=token_exchange", SITE_URL)
     );

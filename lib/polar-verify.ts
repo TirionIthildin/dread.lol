@@ -3,6 +3,7 @@
  * we fetch the checkout from Polar API and process it. Idempotent via polar_checkouts collection.
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { getPolarClient } from "@/lib/polar";
 import { getBillingSettings } from "@/lib/settings";
 
@@ -61,7 +62,7 @@ export async function verifyCheckout(
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Polar] Verify checkout error:", checkoutId, msg);
+    logger.error("Polar", "Verify checkout error:", checkoutId, msg);
     return { ok: false, error: msg };
   }
 }

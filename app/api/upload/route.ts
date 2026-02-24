@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
+import { requireSession } from "@/lib/auth/require-session";
 import { uploadFile, deleteFile, isSeaweedConfigured } from "@/lib/seaweed";
+import { rateLimitByUser } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MiB (general use, e.g. gallery)
 const IMAGE_BACKGROUND_MAX_BYTES = 100 * 1024 * 1024; // 100 MiB for profile background
@@ -70,11 +72,21 @@ const FONT_TYPES = new Set([
   "application/vnd.ms-fontobject", // sometimes .woff
 ]);
 
+const UPLOAD_LIMIT = 30;
+const UPLOAD_WINDOW = 60;
+
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session?.sub) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+
+  const rateLimitResult = await rateLimitByUser(
+    auth.session.sub,
+    "upload",
+    UPLOAD_LIMIT,
+    UPLOAD_WINDOW
+  );
+  if (!rateLimitResult.allowed) return rateLimitResult.response;
+
   if (!isSeaweedConfigured()) {
     return NextResponse.json(
       { error: "Upload not configured" },
@@ -135,7 +147,7 @@ export async function POST(req: Request) {
   try {
     const result = await uploadFile(file, name ?? "image");
     if (isBackground && replaceFid && /^\d+,\d+$/.test(replaceFid)) {
-      deleteFile(replaceFid).catch((err) => console.error("Delete old background failed:", err));
+      deleteFile(replaceFid).catch((err) => logger.error("Upload", "Delete old background failed:", err));
     }
     const json: { url: string; fid: string; size: number; contentType?: string } = {
       url: result.path,
@@ -147,7 +159,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(json);
   } catch (e) {
-    console.error("Upload error:", e);
+    logger.error("Upload", "Upload failed:", e);
     return NextResponse.json(
       { error: "Upload failed" },
       { status: 502 }
