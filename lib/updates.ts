@@ -11,6 +11,16 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-02",
+    title: "Admin analytics overview",
+    description: "Admin dashboard now shows service analytics: users, signups, templates, subscriptions, profile views, and recent activity.",
+  },
+  {
+    date: "2026-02",
+    title: "Open signup",
+    description: "No approval needed—anyone who signs in can use the dashboard and create a profile.",
+  },
+  {
+    date: "2026-02",
     title: "Improved Shop admin",
     description: "Redesigned Admin → Shop with status overview, setup checklist, collapsible sections, product name resolution, and copy buttons for API links.",
   },

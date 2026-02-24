@@ -6,6 +6,7 @@ import { getBillingSettings } from "@/lib/settings";
 import { getUserPolarState } from "@/lib/polar-subscription";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getProductsWithTypes, formatPrice, type PolarProductPrice } from "@/lib/polar-products";
+import { canUseDashboard } from "@/lib/dashboard-access";
 import DashboardPremiumClient from "@/app/dashboard/DashboardPremiumClient";
 
 export const metadata: Metadata = {
@@ -17,13 +18,12 @@ export const metadata: Metadata = {
 export default async function PremiumPage() {
   const session = await getSession();
   const user = session ? await getOrCreateUser(session) : null;
-  const canUseDashboard = user && (user.approved || user.isAdmin);
 
-  if (!session || !canUseDashboard) {
+  if (!session || !canUseDashboard(user)) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 p-6 text-center">
         <p className="text-[var(--muted)] text-sm">
-          Sign in and get approved to view Premium.
+          Sign in to view Premium.
         </p>
       </div>
     );

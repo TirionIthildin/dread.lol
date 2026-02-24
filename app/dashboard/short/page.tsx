@@ -1,21 +1,20 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
-import { getOrCreateUser, getOrCreateMemberProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile } from "@/lib/member-profiles";
 import { getBillingSettings } from "@/lib/settings";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { slugFromUsername } from "@/lib/slug";
-import DashboardLinks from "@/app/dashboard/DashboardLinks";
+import DashboardShortLinks from "@/app/dashboard/DashboardShortLinks";
 
 export const metadata: Metadata = {
-  title: "Links",
-  description: `Manage your profile links for ${SITE_NAME}`,
+  title: "Short links",
+  description: `Manage your short links for ${SITE_NAME}`,
   robots: "noindex, nofollow",
 };
 
-export default async function LinksPage() {
+export default async function ShortLinksPage() {
   const session = await getSession();
   if (!session) redirect("/dashboard");
 
@@ -34,10 +33,11 @@ export default async function LinksPage() {
     slug,
     avatarUrl: session.picture ?? undefined,
   });
+  const shortLinks = await getShortLinksForProfile(profile.id);
 
   return (
     <div className="space-y-6">
-      <DashboardLinks profile={profile} />
+      <DashboardShortLinks profile={profile} shortLinks={shortLinks} />
     </div>
   );
 }

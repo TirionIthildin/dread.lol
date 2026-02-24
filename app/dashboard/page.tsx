@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { PolarSuccessHandler } from "@/app/dashboard/PolarSuccessHandler";
-import { getOrCreateUser, getOrCreateMemberProfile, getShortLinksForProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
@@ -11,7 +11,6 @@ import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
-import UnapprovedMessage from "@/app/components/UnapprovedMessage";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -31,12 +30,6 @@ export default async function DashboardPage() {
       <Suspense fallback={null}>
         <PolarSuccessHandler />
       </Suspense>
-      {session && !canUseDashboard && (
-        <div className="animate-fade-in-up animate-delay-100">
-          <UnapprovedMessage />
-        </div>
-      )}
-
       {session && canUseDashboard && (
         <div className="animate-fade-in-up animate-delay-100">
           <MemberProfileSection session={session} />
@@ -60,7 +53,7 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [discordBadgeData, premiumAccess, widgetPreviewData, shortLinks, versions, robloxLinked, robloxWidgetData] = await Promise.all([
+    const [discordBadgeData, premiumAccess, widgetPreviewData, versions, robloxLinked, robloxWidgetData] = await Promise.all([
       getUserDiscordBadgeData(userId),
       getPremiumAccess(userId),
       getDiscordWidgetData(
@@ -69,7 +62,6 @@ async function MemberProfileSection({
         profile.discordInviteUrl,
         profile.createdAt
       ).catch(() => null),
-      getShortLinksForProfile(profile.id),
       getProfileVersions(userId),
       hasRobloxLinked(userId),
       getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
@@ -84,7 +76,6 @@ async function MemberProfileSection({
       <DashboardMyProfile
         profile={profile}
         baseProfileForPreview={baseProfileForPreview}
-        shortLinks={shortLinks}
         versions={versions}
         discordAvatarUrl={session.picture ?? undefined}
         availableDiscordBadges={availableDiscordBadges}

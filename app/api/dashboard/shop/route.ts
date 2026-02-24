@@ -13,10 +13,7 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) {
-    return NextResponse.json({ error: "Account not approved" }, { status: 403 });
-  }
+  await getOrCreateUser(session);
 
   const [billing, polarState] = await Promise.all([
     getBillingSettings(),

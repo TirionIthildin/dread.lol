@@ -5,7 +5,7 @@ import { X } from "@phosphor-icons/react";
 import { useState, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { approveUserAction, setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction, setCustomBadgeVouchersAction, wipeUserSubscriptionAction } from "@/app/dashboard/actions";
+import { setUserBadgesAction, setUserRestrictedAction, setUserCustomBadgesAction, setCustomBadgeVouchersAction, wipeUserSubscriptionAction } from "@/app/dashboard/actions";
 import type { CustomBadge } from "@/app/dashboard/AdminBadgesPanel";
 
 export type AdminUser = {
@@ -29,7 +29,6 @@ type Props = {
 };
 
 export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
-  const [, setApproved] = useState(user.approved);
   const [verified, setVerified] = useState(user.verified);
   const [staff, setStaff] = useState(user.staff);
   const [premiumGranted, setPremiumGranted] = useState(user.premiumGranted);
@@ -44,13 +43,12 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setApproved(user.approved);
     setVerified(user.verified);
     setStaff(user.staff);
     setPremiumGranted(user.premiumGranted);
     setRestricted(user.restricted ?? false);
     setCustomBadgeVouchers(user.customBadgeVouchers ?? 0);
-  }, [user.id, user.approved, user.verified, user.staff, user.premiumGranted, user.restricted, user.customBadgeVouchers]);
+  }, [user.id, user.verified, user.staff, user.premiumGranted, user.restricted, user.customBadgeVouchers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,19 +68,6 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
       cancelled = true;
     };
   }, [user.id]);
-
-  function handleApproveToggle() {
-    setError(null);
-    startTransition(async () => {
-      const result = await approveUserAction(user.id);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        setApproved(true);
-        onUpdate({ ...user, approved: true });
-      }
-    });
-  }
 
   function handleRestrictedToggle(value: boolean) {
     setError(null);
@@ -229,20 +214,6 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
             <p className="text-sm text-[var(--warning)]" role="alert">
               {error}
             </p>
-          )}
-
-          {!user.approved && (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/50 px-3 py-2">
-              <span className="text-sm text-[var(--muted)]">Approve user</span>
-              <button
-                type="button"
-                onClick={handleApproveToggle}
-                disabled={isPending}
-                className="rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-1.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 transition-colors"
-              >
-                {isPending ? "Approving…" : "Approve"}
-              </button>
-            </div>
           )}
 
           <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/50 px-3 py-2">

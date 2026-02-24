@@ -33,10 +33,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) {
-    return NextResponse.json({ error: "Account not approved" }, { status: 403 });
-  }
+  await getOrCreateUser(session);
 
   const { id } = await params;
   try {
@@ -64,10 +61,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const user = await getOrCreateUser(session);
-  if (!user.approved && !user.isAdmin) {
-    return NextResponse.json({ error: "Account not approved" }, { status: 403 });
-  }
+  await getOrCreateUser(session);
 
   const { id } = await params;
   const ok = await deleteTemplate(id, session.sub);

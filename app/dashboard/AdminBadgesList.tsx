@@ -57,9 +57,6 @@ export default function AdminBadgesList({ users, onUpdate }: Props) {
               <span className="text-sm font-medium text-[var(--foreground)] truncate" title={displayName}>
                 {displayName}
               </span>
-              {!u.approved && (
-                <span className="text-xs text-[var(--muted)] shrink-0">(pending)</span>
-              )}
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer disabled:opacity-50">

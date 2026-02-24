@@ -1,9 +1,9 @@
 /**
- * Dashboard access: approved or admin.
+ * Dashboard access: any signed-in user.
+ * Open signup – no approval required.
  */
 import type { UserWithApproval } from "@/lib/member-profiles";
 
 export function canUseDashboard(user: UserWithApproval | null): boolean {
-  if (!user) return false;
-  return user.approved || user.isAdmin;
+  return !!user;
 }

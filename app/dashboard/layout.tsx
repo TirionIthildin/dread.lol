@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import DashboardSidebar from "@/app/dashboard/DashboardSidebar";
@@ -45,15 +43,6 @@ export default async function DashboardLayout({
       </div>
 
       <aside className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-64 md:max-h-screen">
-        <div className="flex h-14 md:h-auto shrink-0 items-center px-4 md:px-3 md:pt-4 md:pb-1 border-b md:border-b-0 border-[var(--border)]">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--muted)] transition-all duration-200 hover:text-[var(--terminal)] hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
-          >
-            <span className="text-[var(--terminal)]">$</span> cd ..
-            <span className="text-[var(--muted)]"> / {SITE_NAME}</span>
-          </Link>
-        </div>
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <DashboardSidebar isAdmin={isAdmin} session={session} />
         </div>

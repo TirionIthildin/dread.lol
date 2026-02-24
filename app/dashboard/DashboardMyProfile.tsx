@@ -58,7 +58,6 @@ import DiscordWidgetsDisplay, { normalizeWidgetData } from "@/app/components/Dis
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import DashboardLinks from "@/app/dashboard/DashboardLinks";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
-import type { ProfileShortLink } from "@/lib/member-profiles";
 import type { Profile } from "@/lib/profiles";
 
 const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
@@ -106,7 +105,6 @@ interface DashboardMyProfileProps {
   profile: ProfileRow;
   /** Base profile for live preview (from memberProfileToProfile). */
   baseProfileForPreview?: Profile;
-  shortLinks?: ProfileShortLink[];
   /** Saved profile versions (up to 5). */
   versions?: ProfileVersionRow[];
   /** Current user's Discord avatar URL (from session), for "Use Discord avatar" button. */
@@ -352,7 +350,6 @@ type DashboardTab = "editor" | "preview";
 export default function DashboardMyProfile({
   profile,
   baseProfileForPreview,
-  shortLinks = [],
   versions: initialVersions = [],
   discordAvatarUrl,
   availableDiscordBadges = [],
@@ -877,7 +874,7 @@ export default function DashboardMyProfile({
           </nav>
           <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-5 lg:p-6 overscroll-contain">
           {activeEditorSection === "links" ? (
-            <DashboardLinks profile={profile} shortLinks={shortLinks} embedded />
+            <DashboardLinks profile={profile} embedded />
           ) : (
           <form id="profile-editor-form" key={formKey} action={formAction} className="space-y-5 max-w-3xl">
             <input type="hidden" name="profileId" value={profile.id} />

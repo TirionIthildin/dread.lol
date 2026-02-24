@@ -6,15 +6,11 @@ import { useFormStatus } from "react-dom";
 import { FloppyDisk, Link as LinkIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import SearchableSelect from "@/app/components/SearchableSelect";
-import ConfirmDialog from "@/app/components/ConfirmDialog";
 import {
   updateLinksAction,
-  addShortLinkAction,
-  deleteShortLinkAction,
   type ProfileFormState,
 } from "@/app/dashboard/actions";
 import type { ProfileRow } from "@/lib/db/schema";
-import type { ProfileShortLink } from "@/lib/member-profiles";
 import {
   LINK_TYPES,
   parseLinkEntries,
@@ -24,7 +20,6 @@ import {
 
 interface DashboardLinksProps {
   profile: ProfileRow;
-  shortLinks: ProfileShortLink[];
   /** When true, hide the page heading (for embedding in the profile editor). */
   embedded?: boolean;
 }
@@ -43,15 +38,8 @@ function SaveButton() {
   );
 }
 
-export default function DashboardLinks({ profile, shortLinks: initialShortLinks, embedded }: DashboardLinksProps) {
+export default function DashboardLinks({ profile, embedded }: DashboardLinksProps) {
   const [linkEntries, setLinkEntries] = useState<LinkEntry[]>(() => parseLinkEntries(profile));
-  const [shortLinks, setShortLinks] = useState<ProfileShortLink[]>(initialShortLinks);
-  const [shortLinkSlug, setShortLinkSlug] = useState("");
-  const [shortLinkUrl, setShortLinkUrl] = useState("");
-  const [shortLinkAdding, setShortLinkAdding] = useState(false);
-  const [shortLinkError, setShortLinkError] = useState<string | null>(null);
-  const [shortLinkToDelete, setShortLinkToDelete] = useState<ProfileShortLink | null>(null);
-  const [shortLinkDeleting, setShortLinkDeleting] = useState(false);
 
   const [state, formAction] = useActionState<ProfileFormState, FormData>(updateLinksAction, null);
 
@@ -67,9 +55,13 @@ export default function DashboardLinks({ profile, shortLinks: initialShortLinks,
         <div>
           <h1 className="text-xl font-semibold text-[var(--foreground)]">Links</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Manage your profile buttons and short links. These appear on your{" "}
+            Manage your profile buttons. These appear on your{" "}
             <Link href={`/${profile.slug}`} className="text-[var(--accent)] hover:underline">
               public profile
+            </Link>
+            . For short redirect URLs, see{" "}
+            <Link href="/dashboard/short" className="text-[var(--accent)] hover:underline">
+              Short links
             </Link>
             .
           </p>
@@ -196,130 +188,8 @@ export default function DashboardLinks({ profile, shortLinks: initialShortLinks,
           </div>
         </div>
 
-        {/* Short links */}
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-[var(--border)]">
-            <span className="text-sm font-medium text-[var(--foreground)]">Short links</span>
-          </div>
-          <div className="p-4 space-y-3">
-            <p className="text-[10px] text-[var(--muted)]">
-              <code className="rounded bg-[var(--bg)]/80 px-1">/{profile.slug}/SLUG</code> will redirect to a URL
-              you set (e.g. <code className="rounded bg-[var(--bg)]/80 px-1">twitch</code> → your Twitch).
-            </p>
-            {shortLinks.length > 0 && (
-              <ul className="space-y-2">
-                {shortLinks.map((link) => (
-                  <li
-                    key={link.id}
-                    className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/60 px-2 py-2"
-                  >
-                    <code className="text-xs text-[var(--accent)]">
-                      /{profile.slug}/{link.slug}
-                    </code>
-                    <span className="text-[10px] text-[var(--muted)]">→</span>
-                    <span
-                      className="text-xs text-[var(--muted)] truncate max-w-[180px]"
-                      title={link.url}
-                    >
-                      {link.url}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShortLinkToDelete(link)}
-                      className="ml-auto shrink-0 rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted)] hover:text-[var(--warning)]"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {shortLinkError && (
-              <p className="text-xs text-[var(--warning)]">{shortLinkError}</p>
-            )}
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="text-xs font-medium text-[var(--muted)]">
-                Slug
-                <input
-                  type="text"
-                  value={shortLinkSlug}
-                  onChange={(e) => {
-                    setShortLinkSlug(e.target.value);
-                    setShortLinkError(null);
-                  }}
-                  placeholder="twitch"
-                  className="mt-0.5 block w-24 rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm"
-                />
-              </label>
-              <label className="min-w-0 flex-1 text-xs font-medium text-[var(--muted)]">
-                URL
-                <input
-                  type="url"
-                  value={shortLinkUrl}
-                  onChange={(e) => {
-                    setShortLinkUrl(e.target.value);
-                    setShortLinkError(null);
-                  }}
-                  placeholder="https://…"
-                  className="mt-0.5 block w-full rounded border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm"
-                />
-              </label>
-              <button
-                type="button"
-                disabled={!shortLinkSlug.trim() || !shortLinkUrl.trim() || shortLinkAdding}
-                onClick={async () => {
-                  setShortLinkError(null);
-                  setShortLinkAdding(true);
-                  const result = await addShortLinkAction(profile.id, {
-                    slug: shortLinkSlug.trim(),
-                    url: shortLinkUrl.trim(),
-                  });
-                  setShortLinkAdding(false);
-                  if (result.error) setShortLinkError(result.error);
-                  else if (result.id != null && result.slug != null && result.url != null) {
-                    setShortLinks((prev) => [
-                      ...prev,
-                      { id: result.id!, slug: result.slug!, url: result.url! },
-                    ]);
-                    setShortLinkSlug("");
-                    setShortLinkUrl("");
-                    toast.success("Short link added");
-                  }
-                }}
-                className="rounded border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
-              >
-                {shortLinkAdding ? "Adding…" : "Add short link"}
-              </button>
-            </div>
-          </div>
-        </div>
-
         <SaveButton />
       </form>
-
-      <ConfirmDialog
-        open={shortLinkToDelete != null}
-        title="Remove short link?"
-        message={shortLinkToDelete ? `/${profile.slug}/${shortLinkToDelete.slug} will no longer redirect.` : ""}
-        confirmLabel="Remove"
-        variant="danger"
-        loading={shortLinkDeleting}
-        onConfirm={async () => {
-          if (!shortLinkToDelete) return;
-          setShortLinkDeleting(true);
-          const result = await deleteShortLinkAction(shortLinkToDelete.id);
-          setShortLinkDeleting(false);
-          if (result.error) {
-            setShortLinkError(result.error);
-            toast.error(result.error);
-          } else {
-            setShortLinks((prev) => prev.filter((l) => l.id !== shortLinkToDelete.id));
-            setShortLinkToDelete(null);
-            toast.success("Short link removed");
-          }
-        }}
-        onCancel={() => setShortLinkToDelete(null)}
-      />
     </div>
   );
 }

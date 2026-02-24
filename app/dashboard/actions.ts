@@ -5,7 +5,6 @@ import { getSession } from "@/lib/auth/session";
 import {
   updateMemberProfile,
   getOrCreateUser,
-  approveUser,
   setUserBadges,
   setUserRestricted,
   getProfileSlugByUserId,
@@ -471,6 +470,7 @@ export async function addShortLinkAction(
     const link = await addShortLink(profileId, session.sub, { slug: data.slug.trim(), url });
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/links");
+    revalidatePath("/dashboard/short");
     const slug = await getProfileSlugByUserId(session.sub);
     if (slug) revalidatePath(`/${slug}`);
     return { id: link.id, slug: link.slug, url: link.url };
@@ -489,6 +489,7 @@ export async function deleteShortLinkAction(linkId: string): Promise<{ error?: s
     await deleteShortLink(linkId, session.sub);
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/links");
+    revalidatePath("/dashboard/short");
     const slug = await getProfileSlugByUserId(session.sub);
     if (slug) revalidatePath(`/${slug}`);
     return {};
@@ -504,17 +505,6 @@ export async function requireAdmin(): Promise<string | null> {
   const user = await getOrCreateUser(session);
   if (!user.isAdmin) return "Access denied";
   return null;
-}
-
-export async function approveUserAction(userId: string): Promise<{ error?: string }> {
-  const err = await requireAdmin();
-  if (err) return { error: err };
-  if (!userId?.trim()) return { error: "Missing user" };
-  const ok = await approveUser(userId.trim());
-  if (!ok) return { error: "User not found or already approved" };
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/dashboard");
-  return {};
 }
 
 export async function setUserBadgesAction(

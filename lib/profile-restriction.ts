@@ -1,6 +1,6 @@
 /**
  * Profile restriction: show "This profile has been restricted..." when user
- * is terminated or unapproved.
+ * is terminated (admin-set restricted flag).
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import type { UserDoc } from "@/lib/db/schema";
@@ -11,7 +11,7 @@ export interface ProfileRestrictionStatus {
 
 /**
  * Check if a user's profile should show the restricted message.
- * True when: user has restricted flag (admin set) or is unapproved.
+ * True when: user has restricted flag (admin set).
  */
 export async function getProfileRestrictionStatus(
   userId: string
@@ -23,11 +23,9 @@ export async function getProfileRestrictionStatus(
     .collection<UserDoc>(COLLECTIONS.users)
     .findOne(
       { _id: userId },
-      { projection: { approved: 1, isAdmin: 1, restricted: 1 } }
+      { projection: { restricted: 1 } }
     );
 
   if (!userDoc) return { restricted: false };
-  if (userDoc.restricted === true) return { restricted: true };
-  if (userDoc.approved || userDoc.isAdmin) return { restricted: false };
-  return { restricted: true };
+  return { restricted: userDoc.restricted === true };
 }
