@@ -114,7 +114,18 @@ export default function ProfileBackground({
       videoRef.current.play().catch(() => {});
     }
     if (backgroundAudioUrl && audioRef.current && !muteBackgroundAudio) {
-      audioRef.current.play().catch(() => {});
+      const audio = audioRef.current;
+      audio.volume = 0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            fadeAudio(audio, 1);
+          })
+          .catch((err) => {
+            console.error("Audio playback failed:", err);
+          });
+      }
     }
     setUnlocked(true);
   }, [customBgType, backgroundAudioUrl, muteBackgroundAudio]);
