@@ -37,7 +37,7 @@ export default function NotFound() {
               <span className="cursor-blink ml-0.5 text-[var(--accent)]" aria-hidden>_</span>
             </p>
             <p className="mt-4 text-[var(--muted)]">
-              File not found. The page you're looking for doesn't exist or was
+              File not found. The page you&apos;re looking for doesn&apos;t exist or was
               moved.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">

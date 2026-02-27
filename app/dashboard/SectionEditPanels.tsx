@@ -50,8 +50,7 @@ export function SectionEditPanel({
   hasPremium = false,
 }: SectionEditPanelProps) {
   const def = sectionId === "style" ? { label: "Style & appearance" } : SECTION_DEFINITIONS.find((d) => d.id === sectionId);
-  if (!def && sectionId !== "style") return null;
-
+  
   const handleSave = useCallback(
     async (fields: Record<string, unknown>) => {
       const result = await updateProfileFieldsAction(profileId, fields);
@@ -66,6 +65,8 @@ export function SectionEditPanel({
     },
     [profileId, profile, onProfileChange]
   );
+
+  if (!def && sectionId !== "style") return null;
 
   if (sectionId === "style") {
     return <StylePanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} hasPremium={hasPremium} />;
