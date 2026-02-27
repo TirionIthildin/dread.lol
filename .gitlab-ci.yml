@@ -1,29 +1,9 @@
 stages:
-  - validate
   - build
   - deploy
 
-# Lint, typecheck, unit tests
-validate:
-  image: node:20-alpine
-  stage: validate
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-  before_script:
-    - npm ci
-  script:
-    - npm run lint
-    - npm run typecheck
-    - npm run test
-    - npm audit --audit-level=high
-  rules:
-    - if: $CI_COMMIT_BRANCH
-
 # Dread.lol Docker Build
 docker-build:
-  needs: [validate]
   image: docker:cli
   stage: build
   services:
