@@ -1517,6 +1517,7 @@ export function memberProfileToProfile(
       return row.backgroundUrl ?? undefined;
     })(),
     backgroundAudioUrl: row.backgroundAudioUrl ?? (row.backgroundType === "audio" ? row.backgroundUrl ?? undefined : undefined),
+    backgroundAudioStartSeconds: (row as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? undefined,
     backgroundEffect: stripPremium && isPremiumBackgroundEffect(bgEffect) ? undefined : (bgEffect ?? undefined),
     widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
     unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,

@@ -388,6 +388,13 @@ export async function updateProfileAction(
       backgroundType: usesVisualBackground ? bgType : null,
       backgroundUrl: usesCustomMedia ? backgroundUrl : null,
       backgroundAudioUrl: backgroundAudioUrl || null,
+      backgroundAudioStartSeconds: (() => {
+        const v = formData.get("backgroundAudioStartSeconds");
+        if (v == null || v === "") return null;
+        const n = typeof v === "string" ? parseFloat(v) : Number(v);
+        if (Number.isNaN(n) || n < 0) return null;
+        return Math.min(9999, n);
+      })(),
       backgroundEffect: (() => {
         if (!hasPremium) return null;
         const v = (formData.get("backgroundEffect") as string)?.trim();

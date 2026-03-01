@@ -397,6 +397,10 @@ export default function DashboardMyProfile({
   });
   const [backgroundAudioUploading, setBackgroundAudioUploading] = useState(false);
   const [backgroundAudioUploadError, setBackgroundAudioUploadError] = useState<string | null>(null);
+  const [backgroundAudioStartSecondsValue, setBackgroundAudioStartSecondsValue] = useState<string>(() => {
+    const v = (profile as { backgroundAudioStartSeconds?: number }).backgroundAudioStartSeconds;
+    return typeof v === "number" && v >= 0 ? String(v) : "";
+  });
   const backgroundAudioFileRef = useRef<HTMLInputElement>(null);
   const [backgroundDragOver, setBackgroundDragOver] = useState(false);
   const [audioDragOver, setAudioDragOver] = useState(false);
@@ -677,6 +681,10 @@ export default function DashboardMyProfile({
           : baseProfileForPreview.backgroundType,
         backgroundUrl: ["image", "video"].includes(backgroundTypeValue) ? backgroundUrlValue || undefined : undefined,
         backgroundAudioUrl: backgroundAudioUrlValue?.trim() || undefined,
+        backgroundAudioStartSeconds: (() => {
+          const v = parseFloat(backgroundAudioStartSecondsValue);
+          return !Number.isNaN(v) && v > 0 ? v : undefined;
+        })(),
         backgroundEffect: backgroundEffectValue && backgroundEffectValue !== "none" ? backgroundEffectValue : undefined,
         cardOpacity: cardOpacityValue,
         cardBlur: ["none", "sm", "md", "lg"].includes(cardBlurValue) ? (cardBlurValue as "none" | "sm" | "md" | "lg") : baseProfileForPreview.cardBlur,
@@ -709,6 +717,7 @@ export default function DashboardMyProfile({
     backgroundTypeValue,
     backgroundUrlValue,
     backgroundAudioUrlValue,
+    backgroundAudioStartSecondsValue,
     backgroundEffectValue,
     widgetsMatchAccent,
     cardOpacityValue,
@@ -2158,38 +2167,62 @@ export default function DashboardMyProfile({
                   <div className="p-4 space-y-4">
                     <input type="hidden" name="backgroundAudioUrl" value={backgroundAudioUrlValue} />
                     {backgroundAudioUrlValue ? (
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-[var(--accent)]/15 shrink-0">
-                            <MusicNotes size={24} weight="fill" className="text-[var(--accent)]" />
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 p-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-[var(--accent)]/15 shrink-0">
+                              <MusicNotes size={24} weight="fill" className="text-[var(--accent)]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[var(--foreground)]">Audio track loaded</p>
+                              <p className="text-[10px] text-[var(--muted)]">Plays when visitor unlocks profile</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[var(--foreground)]">Audio track loaded</p>
-                            <p className="text-[10px] text-[var(--muted)]">Plays when visitor unlocks profile</p>
+                          <div className="flex flex-wrap items-center gap-3">
+                            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                            <audio src={backgroundAudioUrlValue} controls className="h-8 flex-1 min-w-0 max-w-full sm:max-w-[160px] opacity-90" preload="metadata" />
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => backgroundAudioFileRef.current?.click()}
+                                disabled={backgroundAudioUploading}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+                              >
+                                <UploadSimple size={14} weight="bold" />
+                                Replace
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setBackgroundAudioUrlValue("")}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:border-[var(--warning)]/50 hover:text-[var(--warning)] transition-colors"
+                              >
+                                <X size={14} weight="bold" />
+                                Remove
+                              </button>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                          <audio src={backgroundAudioUrlValue} controls className="h-8 flex-1 min-w-0 max-w-full sm:max-w-[160px] opacity-90" preload="metadata" />
-                          <div className="flex gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => backgroundAudioFileRef.current?.click()}
-                              disabled={backgroundAudioUploading}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)]/50 hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
-                            >
-                              <UploadSimple size={14} weight="bold" />
-                              Replace
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setBackgroundAudioUrlValue("")}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:border-[var(--warning)]/50 hover:text-[var(--warning)] transition-colors"
-                            >
-                              <X size={14} weight="bold" />
-                              Remove
-                            </button>
-                          </div>
+                        <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 px-4 py-3">
+                          <label className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+                            <span className="text-sm font-medium text-[var(--foreground)]">Start offset</span>
+                            <span className="text-xs text-[var(--muted)] sm:ml-2">Skip intro (seconds from start)</span>
+                            <input
+                              type="number"
+                              name="backgroundAudioStartSeconds"
+                              min={0}
+                              max={9999}
+                              step={0.5}
+                              value={backgroundAudioStartSecondsValue}
+                              onChange={(e) => setBackgroundAudioStartSecondsValue(e.target.value)}
+                              onBlur={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (Number.isNaN(v) || v < 0) setBackgroundAudioStartSecondsValue("");
+                                else if (v > 9999) setBackgroundAudioStartSecondsValue("9999");
+                              }}
+                              placeholder="0"
+                              className="mt-1 sm:mt-0 sm:ml-auto w-24 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm tabular-nums focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+                            />
+                          </label>
                         </div>
                       </div>
                     ) : (

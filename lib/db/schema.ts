@@ -100,6 +100,8 @@ export interface ProfileDoc {
   backgroundType?: string | null;
   backgroundUrl?: string | null;
   backgroundAudioUrl?: string | null;
+  /** Start playback at this offset (seconds). Skips intro/silence. */
+  backgroundAudioStartSeconds?: number | null;
   /** Background overlay effect: snow, rain, blur, retro-computer. */
   backgroundEffect?: string | null;
   /** Custom text for unlock overlay (video/audio); default "Click here to view profile". */

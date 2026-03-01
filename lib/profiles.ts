@@ -107,6 +107,8 @@ export interface Profile {
   backgroundUrl?: string;
   /** Ambient background audio URL (separate from visual background). */
   backgroundAudioUrl?: string;
+  /** Start playback at this offset in seconds (skips intro). */
+  backgroundAudioStartSeconds?: number;
   /** Background overlay effect: snow, rain, blur, retro-computer. */
   backgroundEffect?: string;
   /** Custom text for the unlock overlay when profile has video or audio (default: "Click here to view profile"). */

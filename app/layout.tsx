@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import { JetBrains_Mono, Fira_Code, Space_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_OG_IMAGE } from "@/lib/site";
+import PwaRegistration from "@/app/components/PwaRegistration";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -95,6 +96,7 @@ export default function RootLayout({
       <body className="antialiased font-mono">
         <Toaster richColors position="top-center" theme="dark" />
         <div className="relative z-10">{children}</div>
+        <PwaRegistration />
       </body>
     </html>
   );

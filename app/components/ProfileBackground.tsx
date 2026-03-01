@@ -92,6 +92,7 @@ export default function ProfileBackground({
   })();
   const backgroundUrl = profile.backgroundUrl?.trim();
   const backgroundAudioUrl = profile.backgroundAudioUrl?.trim();
+  const backgroundAudioStartSeconds = Math.max(0, Number(profile.backgroundAudioStartSeconds) || 0);
 
   const themeClass = getThemeClass(profile.accentColor);
   const { cursorClass, cursorStyle } = getProfileCursorProps(profile, resolveMediaUrl);
@@ -115,21 +116,34 @@ export default function ProfileBackground({
     }
     if (backgroundAudioUrl && audioRef.current && !muteBackgroundAudio) {
       const audio = audioRef.current;
-      audio.volume = 0;
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            fadeAudio(audio, 1);
-          })
-          .catch((err) => {
-            console.error("Audio playback failed:", err);
-          });
+      const startSec = backgroundAudioStartSeconds;
+      if (startSec > 0) {
+        audio.volume = 0;
+        const onPlaying = () => {
+          audio.removeEventListener("playing", onPlaying);
+          audio.removeEventListener("timeupdate", onTimeUpdate);
+          if (audio.currentTime < startSec - 0.5) audio.currentTime = startSec;
+          fadeAudio(audio, 1);
+        };
+        const onTimeUpdate = () => {
+          if (audio.currentTime < startSec - 0.5) audio.currentTime = startSec;
+          audio.removeEventListener("timeupdate", onTimeUpdate);
+        };
+        audio.addEventListener("playing", onPlaying);
+        audio.addEventListener("timeupdate", onTimeUpdate);
+        audio.currentTime = startSec;
+        audio.play().catch(() => {
+          audio.removeEventListener("playing", onPlaying);
+          audio.removeEventListener("timeupdate", onTimeUpdate);
+        });
+      } else {
+        audio.play().catch(() => {});
       }
     }
     setUnlocked(true);
-  }, [customBgType, backgroundAudioUrl, muteBackgroundAudio]);
+  }, [customBgType, backgroundAudioUrl, muteBackgroundAudio, backgroundAudioStartSeconds]);
 
+  // Coordinate with ProfileAudioPlayer: fade out/pause background when a track plays; resume when track stops
   useEffect(() => {
     if (!backgroundAudioUrl || muteBackgroundAudio) return;
     const handler = (e: Event) => {
@@ -139,14 +153,36 @@ export default function ProfileBackground({
       if (playing) {
         fadeAudio(audio, 0, () => audio.pause());
       } else if (playing === false && unlocked && audio.paused) {
-        audio.volume = 0;
-        audio.play().catch(() => {});
-        fadeAudio(audio, 1);
+        const startSec = backgroundAudioStartSeconds;
+        if (startSec > 0) {
+          audio.volume = 0;
+          const onPlaying = () => {
+            audio.removeEventListener("playing", onPlaying);
+            audio.removeEventListener("timeupdate", onTimeUpdate);
+            if (audio.currentTime < startSec - 0.5) audio.currentTime = startSec;
+            fadeAudio(audio, 1);
+          };
+          const onTimeUpdate = () => {
+            if (audio.currentTime < startSec - 0.5) audio.currentTime = startSec;
+            audio.removeEventListener("timeupdate", onTimeUpdate);
+          };
+          audio.addEventListener("playing", onPlaying);
+          audio.addEventListener("timeupdate", onTimeUpdate);
+          audio.currentTime = startSec;
+          audio.play().catch(() => {
+            audio.removeEventListener("playing", onPlaying);
+            audio.removeEventListener("timeupdate", onTimeUpdate);
+          });
+        } else {
+          audio.volume = 0;
+          audio.play().catch(() => {});
+          fadeAudio(audio, 1);
+        }
       }
     };
     window.addEventListener("dread:profile-audio-playing", handler as EventListener);
     return () => window.removeEventListener("dread:profile-audio-playing", handler as EventListener);
-  }, [backgroundAudioUrl, unlocked, muteBackgroundAudio]);
+  }, [backgroundAudioUrl, unlocked, muteBackgroundAudio, backgroundAudioStartSeconds]);
 
   const content = (
     <div
@@ -231,67 +267,72 @@ export default function ProfileBackground({
       <audio
         ref={audioRef}
         src={resolveMediaUrl(backgroundAudioUrl)}
-        loop
-        preload="metadata"
+        loop={backgroundAudioStartSeconds <= 0}
+        preload="auto"
         className="sr-only"
         aria-hidden
+        onCanPlay={
+          backgroundAudioStartSeconds > 0
+            ? (e) => {
+                const el = e.currentTarget as HTMLAudioElement;
+                if (el.currentTime < backgroundAudioStartSeconds - 0.1) el.currentTime = backgroundAudioStartSeconds;
+              }
+            : undefined
+        }
+        onEnded={
+          backgroundAudioStartSeconds > 0
+            ? () => {
+                const a = audioRef.current;
+                if (a) {
+                  a.currentTime = backgroundAudioStartSeconds;
+                  a.play().catch(() => {});
+                }
+              }
+            : undefined
+        }
       />
     ) : null;
-
-  const Wrapper = ({
-    children: inner,
-    background,
-  }: {
-    children: React.ReactNode;
-    background?: React.ReactNode;
-  }) => (
-    <div
-      className={wrapperClassName}
-      style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined}
-      data-page-theme={pageTheme}
-    >
-      {background}
-      {effectOverlay}
-      {inner}
-    </div>
-  );
 
   if (builtInBg) {
     const bgClass = BUILT_IN_CLASS_MAP[builtInBg];
     const bgPos = scoped ? "absolute" : "fixed";
     return (
-      <Wrapper
-        background={
-          <div className={`${bgPos} inset-0 z-0 overflow-hidden ${bgClass}`} aria-hidden />
-        }
+      <div
+        className={wrapperClassName}
+        style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined}
+        data-page-theme={pageTheme}
       >
+        <div className={`${bgPos} inset-0 z-0 overflow-hidden ${bgClass}`} aria-hidden />
+        {effectOverlay}
         {audioElement}
         {unlockOverlay}
         {content}
-      </Wrapper>
+      </div>
     );
   }
 
   if (customBgType === "image" && backgroundUrl) {
     const resolvedImageUrl = resolveMediaUrl(backgroundUrl);
     return (
-      <Wrapper
-        background={
-          <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
-            <img
-              src={resolvedImageUrl}
-              alt=""
-              className="absolute left-1/2 top-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
-              style={MEDIA_COVER_STYLE}
-            />
-          </div>
-        }
+      <div
+        className={wrapperClassName}
+        style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined}
+        data-page-theme={pageTheme}
       >
+        <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
+          <img
+            src={resolvedImageUrl}
+            alt=""
+            className="absolute left-1/2 top-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
+            style={MEDIA_COVER_STYLE}
+          />
+        </div>
+        {effectOverlay}
         {themedOverlay}
         {audioElement}
         {unlockOverlay}
         {content}
-      </Wrapper>
+      </div>
     );
   }
 
@@ -300,28 +341,30 @@ export default function ProfileBackground({
     if (!resolvedUrl) return <>{children}</>;
 
     return (
-      <Wrapper
-        background={
-          <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
-            <video
-              ref={videoRef}
-              src={resolvedUrl}
-              autoPlay={!staticFrame}
-              loop={!staticFrame}
-              muted={!unlocked || staticFrame}
-              playsInline
-              preload={staticFrame ? "auto" : "metadata"}
-              className="absolute left-1/2 top-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
-              style={{ ...MEDIA_COVER_STYLE, opacity: unlocked ? 1 : 0.3 }}
-            />
-          </div>
-        }
+      <div
+        className={wrapperClassName}
+        style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined}
+        data-page-theme={pageTheme}
       >
+        <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
+          <video
+            ref={videoRef}
+            src={resolvedUrl}
+            autoPlay={!staticFrame}
+            loop={!staticFrame}
+            muted={!unlocked || staticFrame}
+            playsInline
+            preload={staticFrame ? "auto" : "metadata"}
+            className="absolute left-1/2 top-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 object-cover"
+            style={{ ...MEDIA_COVER_STYLE, opacity: unlocked ? 1 : 0.3 }}
+          />
+        </div>
+        {effectOverlay}
         {themedOverlay}
         {audioElement}
         {unlockOverlay}
         {content}
-      </Wrapper>
+      </div>
     );
   }
 
@@ -330,13 +373,27 @@ export default function ProfileBackground({
     if (!resolvedUrl) return <>{children}</>;
 
     return (
-      <Wrapper>
+      <div
+        className={wrapperClassName}
+        style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined}
+        data-page-theme={pageTheme}
+      >
+        {effectOverlay}
         {audioElement}
         {unlockOverlay}
         {content}
-      </Wrapper>
+      </div>
     );
   }
 
-  return <Wrapper>{content}</Wrapper>;
+  return (
+    <div
+      className={wrapperClassName}
+      style={Object.keys(wrapperStyle).length ? wrapperStyle : undefined}
+      data-page-theme={pageTheme}
+    >
+      {effectOverlay}
+      {content}
+    </div>
+  );
 }

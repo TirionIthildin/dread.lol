@@ -84,11 +84,14 @@ export async function lookupVolumeUrl(fid: string): Promise<string> {
 
 /**
  * Fetch file from SeaweedFS (volume server) and return the Response for streaming.
+ * Pass rangeHeader (e.g. "bytes=0-1023") to enable partial content / seeking.
  */
-export async function getFile(fid: string): Promise<Response> {
+export async function getFile(fid: string, rangeHeader?: string | null): Promise<Response> {
   const baseUrl = await lookupVolumeUrl(fid);
   const url = `${baseUrl.replace(/\/$/, "")}/${fid}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const init: RequestInit = { cache: "no-store" };
+  if (rangeHeader) init.headers = { Range: rangeHeader };
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`SeaweedFS get failed: ${res.status}`);
   }
