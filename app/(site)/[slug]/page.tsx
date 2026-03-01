@@ -101,7 +101,8 @@ export default async function ProfilePage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
   const showPageViews = memberRow.showPageViews ?? true;
-  const [ip, userAgent, referrer, countryCode, badgeFlags, customBadges, discordBadgeData, premiumAccess, restrictionStatus, vouchesData, session, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
+  const session = await getSession();
+  const [ip, userAgent, referrer, countryCode, badgeFlags, customBadges, discordBadgeData, premiumAccess, restrictionStatus, vouchesData, currentUser, discordPresence, discordLastSeen, viewCount] = await Promise.all([
     getClientIp(),
     getUserAgent(),
     getReferer(),
@@ -112,11 +113,7 @@ export default async function ProfilePage({ params }: Props) {
     getPremiumAccess(memberRow.userId),
     getProfileRestrictionStatus(memberRow.userId),
     getVouchesForProfile(memberRow.id),
-    getSession(),
-    (async () => {
-      const s = await getSession();
-      return s ? getOrCreateUser(s) : null;
-    })(),
+    session ? getOrCreateUser(session) : Promise.resolve(null),
     getDiscordPresence(memberRow.userId),
     getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),

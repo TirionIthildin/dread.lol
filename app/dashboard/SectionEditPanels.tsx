@@ -79,9 +79,9 @@ export function SectionEditPanel({
     case "description":
       return <DescriptionPanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} hasPremium={hasPremium} />;
     case "tags":
-      return <TagsPanel profile={profile} onSave={handleSave} />;
+      return <TagsPanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} />;
     case "skills":
-      return <SkillsPanel profile={profile} onSave={handleSave} />;
+      return <SkillsPanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} />;
     case "quote":
       return <QuotePanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} />;
     case "links":
@@ -91,13 +91,33 @@ export function SectionEditPanel({
     case "roblox-widgets":
       return <RobloxWidgetsPanel profile={profile} profileRow={profileRow} onSave={handleSave} onProfileChange={onProfileChange} />;
     case "gallery-blog":
-      return <GalleryBlogPanel def={def ?? { label: "Gallery & blog" }} />;
+      return <GalleryBlogPanel />;
     case "audio":
       return <AudioPanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} />;
     case "similar":
-      return <InfoPanel title={def?.label ?? "Similar"} text="Similar profiles are suggested automatically based on your profile." />;
+      return (
+        <div className="space-y-3">
+          <InfoPanel title={def?.label ?? "Similar profiles"} text="Similar profiles are suggested automatically based on mutual vouches and shared connections. The more active your community, the better the suggestions." />
+          <Link
+            href="/dashboard/views"
+            className="flex items-center gap-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+          >
+            <span className="text-[var(--accent)]">→</span> View analytics
+          </Link>
+        </div>
+      );
     case "vouches":
-      return <InfoPanel title={def?.label ?? "Vouches"} text="Vouches and view count appear here. Edit in Basics to toggle view count." />;
+      return (
+        <div className="space-y-3">
+          <InfoPanel title={def?.label ?? "Vouches & views"} text="Vouches are endorsements from other members. View count tracks profile visits. Toggle view count visibility in the Hero section." />
+          <Link
+            href="/dashboard/views"
+            className="flex items-center gap-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+          >
+            <span className="text-[var(--accent)]">→</span> View analytics
+          </Link>
+        </div>
+      );
     default:
       return <InfoPanel title={def?.label ?? String(sectionId)} text="Click a section to edit its content." />;
   }
@@ -375,36 +395,46 @@ function DescriptionPanel({ profile, onSave, onProfileChange, hasPremium }: { pr
   );
 }
 
-function TagsPanel({ profile, onSave }: { profile: Profile; onSave: (f: Record<string, unknown>) => Promise<void> }) {
+function TagsPanel({ profile, onSave, onProfileChange }: { profile: Profile; onSave: (f: Record<string, unknown>) => Promise<void>; onProfileChange: (p: Profile) => void }) {
   const [tags, setTags] = useState((profile.tags ?? []).join(", "));
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const arr = tags.split(",").map((s) => s.trim()).filter(Boolean);
     onSave({ tags: arr.length > 0 ? arr : undefined });
   };
+  const handleChange = (value: string) => {
+    setTags(value);
+    const arr = value.split(",").map((s) => s.trim()).filter(Boolean);
+    onProfileChange({ ...profile, tags: arr.length > 0 ? arr : undefined });
+  };
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className={labelClass}>
         Tags (comma-separated)
-        <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className={inputClass} placeholder="Vibe Coder, LOTR, Coffee" />
+        <input type="text" value={tags} onChange={(e) => handleChange(e.target.value)} className={inputClass} placeholder="Vibe Coder, LOTR, Coffee" />
       </label>
       <SaveButton />
     </form>
   );
 }
 
-function SkillsPanel({ profile, onSave }: { profile: Profile; onSave: (f: Record<string, unknown>) => Promise<void> }) {
+function SkillsPanel({ profile, onSave, onProfileChange }: { profile: Profile; onSave: (f: Record<string, unknown>) => Promise<void>; onProfileChange: (p: Profile) => void }) {
   const [skills, setSkills] = useState((profile.skills ?? []).join(", "));
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const arr = skills.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 20);
     onSave({ skills: arr.length > 0 ? arr : undefined });
   };
+  const handleChange = (value: string) => {
+    setSkills(value);
+    const arr = value.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 20);
+    onProfileChange({ ...profile, skills: arr.length > 0 ? arr : undefined });
+  };
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className={labelClass}>
         Skills / roles (comma-separated, max 20)
-        <input type="text" value={skills} onChange={(e) => setSkills(e.target.value)} className={inputClass} placeholder="Frontend, Design, 3D" />
+        <input type="text" value={skills} onChange={(e) => handleChange(e.target.value)} className={inputClass} placeholder="Frontend, Design, 3D" />
       </label>
       <SaveButton />
     </form>
@@ -529,12 +559,25 @@ function RobloxWidgetsPanel({
   );
 }
 
-function GalleryBlogPanel({ def }: { def: { label: string } }) {
+function GalleryBlogPanel() {
   return (
-    <InfoPanel
-      title={def.label}
-      text="Gallery and blog buttons appear here. Add images in Gallery and posts in Blog from the dashboard."
-    />
+    <div className="space-y-3">
+      <p className="text-xs text-[var(--muted)]">
+        Gallery and blog buttons appear on your profile when you have content. Manage your content below.
+      </p>
+      <Link
+        href="/dashboard/gallery"
+        className="flex items-center gap-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+      >
+        <span className="text-[var(--accent)]">→</span> Manage Gallery
+      </Link>
+      <Link
+        href="/dashboard/blog"
+        className="flex items-center gap-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
+      >
+        <span className="text-[var(--accent)]">→</span> Manage Blog
+      </Link>
+    </div>
   );
 }
 

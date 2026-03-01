@@ -32,7 +32,6 @@ import {
   isPremiumFieldAnimation,
   isPremiumBackgroundEffect,
 } from "@/lib/premium-features";
-import { getBillingSettings } from "@/lib/settings";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { wipeUserSubscriptionData } from "@/lib/polar-subscription";
 import { setCustomBadgeVouchers } from "@/lib/member-profiles";
@@ -98,7 +97,7 @@ export async function updateLinksAction(
 ): Promise<ProfileFormState> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
@@ -180,7 +179,7 @@ export async function updateProfileAction(
 ): Promise<ProfileFormState> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
@@ -463,7 +462,7 @@ export async function updateGalleryItemAction(
 ): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await updateGalleryItem(itemId, session.sub, {
@@ -483,7 +482,7 @@ export async function updateGalleryItemAction(
 export async function deleteGalleryItemAction(itemId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await deleteGalleryItem(itemId, session.sub);
@@ -500,7 +499,7 @@ export async function deleteGalleryItemAction(itemId: string): Promise<{ error?:
 export async function setGalleryOrderAction(profileId: string, orderedIds: string[]): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await setGalleryOrder(profileId, session.sub, orderedIds);
@@ -520,7 +519,7 @@ export async function addShortLinkAction(
 ): Promise<{ error?: string; id?: string; slug?: string; url?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     const url = requireSafeUrl(data.url.trim(), "URL");
@@ -540,7 +539,7 @@ export async function addShortLinkAction(
 export async function deleteShortLinkAction(linkId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   try {
     await deleteShortLink(linkId, session.sub);
@@ -704,7 +703,7 @@ export async function saveProfileVersionAction(
 ): Promise<{ id?: string; error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const trimmed = name?.trim().slice(0, 80);
   if (!trimmed) return { error: "Name is required" };
@@ -720,7 +719,7 @@ export async function saveProfileVersionAction(
 export async function restoreProfileVersionAction(versionId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const result = await restoreProfileVersion(session.sub, versionId);
   if (result.error) return result;
@@ -734,7 +733,7 @@ export async function restoreProfileVersionAction(versionId: string): Promise<{ 
 export async function deleteProfileVersionAction(versionId: string): Promise<{ error?: string }> {
   const session = await getSession();
   if (!session) return { error: "Not signed in" };
-  const [user, billing] = await Promise.all([getOrCreateUser(session), getBillingSettings()]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const result = await deleteProfileVersion(session.sub, versionId);
   if (result.error) return result;
