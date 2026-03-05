@@ -29,6 +29,35 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* ========== CLASSIC DARK (explicit; mirrors :root for consistency) ========== */
+[data-page-theme="classic-dark"] {
+  --bg: #08090a;
+  --bg-grid: #0c0e10;
+  --surface: #0d0f12;
+  --border: #1a1f26;
+  --border-bright: #2a3340;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --terminal: #22c55e;
+  --terminal-dim: #15803d;
+  --accent: #06b6d4;
+  --accent-dim: #0891b2;
+  --warning: #f59e0b;
+  --radius: 6px;
+  --font-mono: var(--font-jetbrains-mono, "JetBrains Mono"), "Fira Code", ui-monospace, "Cascadia Code", monospace;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --border-strong: var(--border-bright);
+  --surface-hover: #111318;
+  --accent-muted: color-mix(in srgb, var(--accent) 15%, transparent);
+  --radius-sm: 4px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
 /* ========== CLASSIC LIGHT ========== */
 [data-page-theme="classic-light"] {
   --bg: #f4f6f9;
@@ -387,53 +416,21 @@
 /* Light themes: quote block - clearer background, border, and punctuation */
 [data-page-theme="classic-light"] .profile-content-inner blockquote,
 [data-page-theme="minimalist-light"] .profile-content-inner blockquote,
-[data-page-theme="professional-light"] .profile-content-inner blockquote,
-[data-page-theme="minimalist"] .profile-content-inner blockquote {
+[data-page-theme="professional-light"] .profile-content-inner blockquote {
   background: var(--accent-muted) !important;
   border-left-color: var(--accent-dim) !important;
 }
 
 [data-page-theme="classic-light"] .profile-content-inner blockquote:hover,
 [data-page-theme="minimalist-light"] .profile-content-inner blockquote:hover,
-[data-page-theme="professional-light"] .profile-content-inner blockquote:hover,
-[data-page-theme="minimalist"] .profile-content-inner blockquote:hover {
+[data-page-theme="professional-light"] .profile-content-inner blockquote:hover {
   background: color-mix(in srgb, var(--accent) 26%, transparent) !important;
 }
 
 [data-page-theme="classic-light"] .profile-content-inner blockquote > span[aria-hidden],
 [data-page-theme="minimalist-light"] .profile-content-inner blockquote > span[aria-hidden],
-[data-page-theme="professional-light"] .profile-content-inner blockquote > span[aria-hidden],
-[data-page-theme="minimalist"] .profile-content-inner blockquote > span[aria-hidden] {
+[data-page-theme="professional-light"] .profile-content-inner blockquote > span[aria-hidden] {
   color: var(--accent-dim) !important;
-}
-
-/* Legacy: minimalist (no variant) → minimalist-light */
-[data-page-theme="minimalist"] {
-  --bg: #faf9f6;
-  --bg-grid: #f2f0eb;
-  --surface: #ffffff;
-  --border: #e5e2dc;
-  --border-bright: #d4d1c9;
-  --text: #1a1816;
-  --muted: #57534e;
-  --terminal: #6366f1;
-  --terminal-dim: #4f46e5;
-  --accent: #6366f1;
-  --accent-dim: #4f46e5;
-  --surface-hover: #f5f4f0;
-  --accent-muted: color-mix(in srgb, var(--accent) 14%, transparent);
-  --warning: #b45309;
-  --radius: 16px;
-  --radius-sm: 10px;
-  --radius-lg: 20px;
-  --shadow-sm: 0 1px 2px rgba(26, 24, 22, 0.04);
-  --shadow: 0 0 0 1px rgba(26, 24, 22, 0.06), 0 2px 8px rgba(26, 24, 22, 0.05), 0 12px 28px -8px rgba(26, 24, 22, 0.1);
-  --shadow-lg: 0 0 0 1px rgba(26, 24, 22, 0.06), 0 4px 16px rgba(26, 24, 22, 0.08), 0 24px 48px -12px rgba(26, 24, 22, 0.14);
-  --font-body: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.75;
-  letter-spacing: -0.02em;
 }
 
 @theme inline {
