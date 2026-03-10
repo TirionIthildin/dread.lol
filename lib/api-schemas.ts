@@ -22,6 +22,26 @@ export const marketplaceApplySchema = z.object({
 
 const MAX_TEMPLATE_DATA_BYTES = 500_000;
 
+/** Optional schema for template data structure. Used for docs; actual sanitization is in sanitizeTemplateData. */
+export const templateDataSchema = z
+  .object({
+    tagline: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    accentColor: z.string().nullable().optional(),
+    useTerminalLayout: z.boolean().optional(),
+    gallery: z
+      .array(z.object({ imageUrl: z.string(), title: z.string().optional(), description: z.string().optional() }))
+      .max(50)
+      .optional()
+      .nullable(),
+    audioTracks: z
+      .array(z.object({ url: z.string(), title: z.string().optional() }))
+      .max(20)
+      .optional()
+      .nullable(),
+  })
+  .passthrough();
+
 /** Template creation schema. Validates name, optional data, and limits payload size. */
 export const marketplaceTemplateCreateSchema = z
   .object({

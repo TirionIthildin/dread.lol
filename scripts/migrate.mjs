@@ -73,6 +73,12 @@ try {
   await db.collection("profile_templates").createIndex({ status: 1, applyCount: -1 });
   await db.collection("profile_templates").createIndex({ status: 1, createdAt: -1 });
 
+  await db.collection("template_favorites").createIndex({ userId: 1, templateId: 1 }, { unique: true });
+  await db.collection("template_favorites").createIndex({ templateId: 1 });
+
+  await db.collection("template_reports").createIndex({ templateId: 1, reportedBy: 1 }, { unique: true });
+  await db.collection("template_reports").createIndex({ templateId: 1, createdAt: -1 });
+
   await db.collection("profile_versions").createIndex({ userId: 1, createdAt: -1 });
 
   await db.collection("blog_posts").createIndex({ profileId: 1, createdAt: -1 });

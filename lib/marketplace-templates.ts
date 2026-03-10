@@ -69,6 +69,112 @@ export interface TemplateData {
   /** Audio tracks: url, title? */
   audioTracks?: { url: string; title?: string }[] | null;
   showAudioPlayer?: boolean;
+  /** Page theme: classic-dark, classic-light, etc. */
+  pageTheme?: "classic-dark" | "classic-light" | "minimalist-light" | "minimalist-dark" | "professional-light" | "professional-dark" | null;
+  /** Ordered section IDs for layout. */
+  sectionOrder?: string[] | null;
+  /** Per-section visibility (true = hidden). */
+  sectionVisibility?: Record<string, boolean> | null;
+  /** Section IDs removed from profile. */
+  removedSectionIds?: string[] | null;
+  /** Audio visualizer style: none, bars, waveform, etc. */
+  audioVisualizerStyle?: string | null;
+  /** Audio visualizer animation. */
+  audioVisualizerAnimation?: string | null;
+}
+
+/** Whitelist of allowed keys in template data. Used for sanitization on create/update. */
+export const TEMPLATE_DATA_KEYS = [
+  "tagline", "description", "banner", "discord", "roblox", "links", "quote", "tags",
+  "bannerSmall", "bannerAnimatedFire", "bannerStyle", "useTerminalLayout", "terminalTitle",
+  "terminalCommands", "easterEgg", "easterEggTaglineWord", "easterEggLinkTrigger",
+  "easterEggLinkUrl", "easterEggLinkPopupUrl", "accentColor", "terminalPrompt", "nameGreeting",
+  "cardStyle", "cardOpacity", "cardBlur", "cardEffectsEnabled", "customTextColor", "customBackgroundColor",
+  "pronouns", "location", "timezone", "timezoneRange", "birthday", "websiteUrl", "skills", "languages",
+  "availability", "currentFocus", "avatarShape", "layoutDensity", "customFont", "customFontUrl",
+  "cursorStyle", "cursorImageUrl", "animationPreset", "nameAnimation", "taglineAnimation", "descriptionAnimation",
+  "backgroundType", "backgroundUrl", "backgroundAudioUrl", "backgroundAudioStartSeconds",
+  "backgroundEffect", "widgetsMatchAccent", "unlockOverlayText", "ogImageUrl", "gallery", "audioTracks",
+  "showAudioPlayer", "pageTheme", "sectionOrder", "sectionVisibility", "removedSectionIds",
+  "audioVisualizerStyle", "audioVisualizerAnimation",
+] as const;
+
+/** Sanitize raw template data: whitelist keys and validate structure. Prevents storing arbitrary junk. */
+export function sanitizeTemplateData(data: unknown): TemplateData {
+  if (!data || typeof data !== "object") return {};
+  const input = data as Record<string, unknown>;
+  const allowed = new Set(TEMPLATE_DATA_KEYS);
+  const out: TemplateData = {};
+  for (const k of allowed) {
+    if (!(k in input)) continue;
+    const v = input[k];
+    if (v === undefined) continue;
+    if (k === "gallery") {
+      out.gallery = sanitizeGallery(v);
+    } else if (k === "audioTracks") {
+      out.audioTracks = sanitizeAudioTracks(v);
+    } else if (k === "sectionOrder" || k === "removedSectionIds" || k === "tags" || k === "skills") {
+      const arr = sanitizeStringArray(v, 200);
+      (out as Record<string, unknown>)[k] = arr.length ? arr : null;
+    } else if (k === "sectionVisibility") {
+      out.sectionVisibility = isRecordOfBooleans(v) ? v : null;
+    } else if (k === "pageTheme") {
+      out.pageTheme = validatePageTheme(typeof v === "string" ? v : null) ?? undefined;
+    } else {
+      (out as Record<string, unknown>)[k] = v;
+    }
+  }
+  return out;
+}
+
+function sanitizeGallery(v: unknown): TemplateData["gallery"] {
+  if (!Array.isArray(v)) return null;
+  const out: { imageUrl: string; title?: string; description?: string }[] = [];
+  for (const item of v.slice(0, 50)) {
+    if (item && typeof item === "object" && typeof (item as { imageUrl?: unknown }).imageUrl === "string") {
+      const url = (item as { imageUrl: string }).imageUrl.trim();
+      if (url) out.push({ imageUrl: url, title: str((item as { title?: unknown }).title), description: str((item as { description?: unknown }).description) });
+    }
+  }
+  return out.length ? out : null;
+}
+
+function sanitizeAudioTracks(v: unknown): TemplateData["audioTracks"] {
+  if (!Array.isArray(v)) return null;
+  const out: { url: string; title?: string }[] = [];
+  for (const item of v.slice(0, 20)) {
+    if (item && typeof item === "object" && typeof (item as { url?: unknown }).url === "string") {
+      const url = (item as { url: string }).url.trim();
+      if (url) out.push({ url, title: str((item as { title?: unknown }).title) });
+    }
+  }
+  return out.length ? out : null;
+}
+
+const PAGE_THEMES = ["classic-dark", "classic-light", "minimalist-light", "minimalist-dark", "professional-light", "professional-dark"] as const;
+
+function validatePageTheme(
+  v: string | null | undefined
+): (typeof PAGE_THEMES)[number] | null {
+  if (!v || typeof v !== "string") return null;
+  return PAGE_THEMES.includes(v as (typeof PAGE_THEMES)[number]) ? (v as (typeof PAGE_THEMES)[number]) : null;
+}
+
+function sanitizeStringArray(v: unknown, max: number): string[] {
+  if (!Array.isArray(v)) return [];
+  return (v as unknown[]).filter((x): x is string => typeof x === "string").slice(0, max);
+}
+
+function str(x: unknown): string | undefined {
+  return typeof x === "string" ? x.trim() || undefined : undefined;
+}
+
+function isRecordOfBooleans(v: unknown): v is Record<string, boolean> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+  for (const val of Object.values(v as Record<string, unknown>)) {
+    if (typeof val !== "boolean") return false;
+  }
+  return true;
 }
 
 export interface TemplateDoc {
@@ -161,6 +267,12 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     showAudioPlayer: profile.showAudioPlayer ?? false,
     gallery: null, // Populate from gallery_items when creating from profile
     audioTracks: profile.audioTracks ? parseAudioTracks(profile.audioTracks) : null,
+    pageTheme: validatePageTheme((profile as { pageTheme?: string | null }).pageTheme) ?? null,
+    sectionOrder: (profile as { sectionOrder?: string[] | null }).sectionOrder ?? null,
+    sectionVisibility: (profile as { sectionVisibility?: Record<string, boolean> | null }).sectionVisibility ?? null,
+    removedSectionIds: (profile as { removedSectionIds?: string[] | null }).removedSectionIds ?? null,
+    audioVisualizerStyle: (profile as { audioVisualizerStyle?: string | null }).audioVisualizerStyle ?? null,
+    audioVisualizerAnimation: (profile as { audioVisualizerAnimation?: string | null }).audioVisualizerAnimation ?? null,
   };
 }
 
@@ -336,7 +448,7 @@ export async function createTemplate(
     name,
     description: data.description?.trim().slice(0, 500) ?? null,
     previewUrl: validateBackgroundUrl(data.previewUrl?.trim()) ?? null,
-    data: data.data ?? {},
+    data: sanitizeTemplateData(data.data ?? {}),
     applyCount: 0,
     status: "draft",
     featured: false,
@@ -363,7 +475,7 @@ export async function updateTemplate(
   if (updates.name !== undefined) set.name = updates.name.trim().slice(0, 100);
   if (updates.description !== undefined) set.description = updates.description?.trim().slice(0, 500) ?? null;
   if (updates.previewUrl !== undefined) set.previewUrl = validateBackgroundUrl(updates.previewUrl?.trim()) ?? null;
-  if (updates.data !== undefined) set.data = updates.data;
+  if (updates.data !== undefined) set.data = sanitizeTemplateData(updates.data);
 
   const client = await getDb();
   const dbName = await getDbName();
@@ -475,7 +587,8 @@ export async function incrementTemplateApplyCount(id: string): Promise<void> {
     .updateOne({ _id: oid }, { $inc: { applyCount: 1 } });
 }
 
-/** Copy-on-apply: replace /api/files/ URLs in template data with new copies. */
+/** Copy-on-apply: replace /api/files/ URLs with new copies. External URLs pass through.
+ * When copy fails for internal URLs, omits them (do not leak creator's files). */
 async function copyTemplateMediaUrls(data: TemplateData): Promise<TemplateData> {
   const { copyFile } = await import("@/lib/seaweed");
 
@@ -483,35 +596,46 @@ async function copyTemplateMediaUrls(data: TemplateData): Promise<TemplateData> 
     if (!url?.trim()) return url;
     if (url.startsWith("/api/files/")) {
       const newPath = await copyFile(url);
-      return newPath ?? url;
+      return newPath ?? null;
     }
     return url;
   };
 
   const out: TemplateData = { ...data };
 
-  out.backgroundUrl = (await copyIfInternal(data.backgroundUrl)) ?? undefined;
-  out.backgroundAudioUrl = (await copyIfInternal(data.backgroundAudioUrl)) ?? undefined;
-  out.ogImageUrl = (await copyIfInternal(data.ogImageUrl)) ?? undefined;
-  out.cursorImageUrl = (await copyIfInternal(data.cursorImageUrl)) ?? undefined;
-  out.customFontUrl = (await copyIfInternal(data.customFontUrl)) ?? undefined;
+  const bgUrl = await copyIfInternal(data.backgroundUrl);
+  out.backgroundUrl = bgUrl ?? undefined;
+  const bgAudioUrl = await copyIfInternal(data.backgroundAudioUrl);
+  out.backgroundAudioUrl = bgAudioUrl ?? undefined;
+  const ogUrl = await copyIfInternal(data.ogImageUrl);
+  out.ogImageUrl = ogUrl ?? undefined;
+  const cursorUrl = await copyIfInternal(data.cursorImageUrl);
+  out.cursorImageUrl = cursorUrl ?? undefined;
+  const fontUrl = await copyIfInternal(data.customFontUrl);
+  out.customFontUrl = fontUrl ?? undefined;
 
   if (data.gallery?.length) {
-    out.gallery = await Promise.all(
-      data.gallery.map(async (g) => ({
-        ...g,
-        imageUrl: (await copyIfInternal(g.imageUrl)) ?? g.imageUrl,
-      }))
+    const galleryItems = await Promise.all(
+      data.gallery.map(async (g) => {
+        const newUrl = await copyIfInternal(g.imageUrl);
+        const isInternal = g.imageUrl?.startsWith("/api/files/");
+        if (isInternal && !newUrl) return null;
+        return { ...g, imageUrl: newUrl ?? g.imageUrl } as const;
+      })
     );
+    out.gallery = galleryItems.filter((x): x is NonNullable<typeof x> => x !== null && !!x.imageUrl);
   }
 
   if (data.audioTracks?.length) {
-    out.audioTracks = await Promise.all(
-      data.audioTracks.map(async (t) => ({
-        ...t,
-        url: (await copyIfInternal(t.url)) ?? t.url,
-      }))
+    const trackItems = await Promise.all(
+      data.audioTracks.map(async (t) => {
+        const newUrl = await copyIfInternal(t.url);
+        const isInternal = t.url?.startsWith("/api/files/");
+        if (isInternal && !newUrl) return null;
+        return { ...t, url: newUrl ?? t.url } as const;
+      })
     );
+    out.audioTracks = trackItems.filter((x): x is NonNullable<typeof x> => x !== null && !!x.url);
   }
 
   return out;
@@ -580,6 +704,12 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.audioTracks !== undefined) {
     update.audioTracks = data.audioTracks && data.audioTracks.length > 0 ? JSON.stringify(data.audioTracks) : null;
   }
+  if (data.pageTheme !== undefined) update.pageTheme = data.pageTheme;
+  if (data.sectionOrder !== undefined) update.sectionOrder = data.sectionOrder;
+  if (data.sectionVisibility !== undefined) update.sectionVisibility = data.sectionVisibility;
+  if (data.removedSectionIds !== undefined) update.removedSectionIds = data.removedSectionIds;
+  if (data.audioVisualizerStyle !== undefined) update.audioVisualizerStyle = data.audioVisualizerStyle;
+  if (data.audioVisualizerAnimation !== undefined) update.audioVisualizerAnimation = data.audioVisualizerAnimation;
   return update;
 }
 
@@ -694,6 +824,12 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     showAudioPlayer: d.showAudioPlayer ?? false,
     audioTracks: d.audioTracks ?? undefined,
     gallery,
+    pageTheme: d.pageTheme ?? undefined,
+    sectionOrder: d.sectionOrder ?? undefined,
+    sectionVisibility: d.sectionVisibility ?? undefined,
+    removedSectionIds: d.removedSectionIds ?? undefined,
+    audioVisualizerStyle: d.audioVisualizerStyle ?? undefined,
+    audioVisualizerAnimation: d.audioVisualizerAnimation ?? undefined,
     noindex: true,
   };
 }
