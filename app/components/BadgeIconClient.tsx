@@ -6,7 +6,7 @@ import * as PhosphorIcons from "@phosphor-icons/react";
 const iconProps: IconProps = { size: 14, weight: "fill" };
 
 /** Client component: renders any Phosphor icon. */
-export function BadgeIconClient({
+function BadgeIconClient({
   iconName,
 }: {
   iconName: string | null | undefined;
