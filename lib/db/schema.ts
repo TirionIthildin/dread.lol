@@ -279,15 +279,49 @@ export interface PolarOrderDoc {
   updatedAt: Date;
 }
 
-/** One-time-use link to redeem a user-created badge. Creator shares link; redeemer gets a copy of the badge. */
+/** Link to redeem a user-created badge. Supports single-use (legacy) or multi-use with optional cap and expiry. */
 export interface BadgeRedemptionLinkDoc {
   _id: ObjectId;
   token: string;
   badgeId: ObjectId; // user_created_badges._id
   createdBy: string; // userId (Discord ID)
-  usedAt: Date | null;
-  usedBy: string | null; // userId when redeemed
+  usedAt: Date | null; // legacy single-use
+  usedBy: string | null; // legacy single-use
+  /** null = unlimited. Multi-use links ignore usedAt/usedBy. */
+  maxRedemptions?: number | null;
+  /** Optional expiry. */
+  expiresAt?: Date | null;
   createdAt: Date;
+}
+
+/** Per-user redemption event. Prevents duplicate redemptions and provides audit trail. */
+export interface BadgeRedemptionEventDoc {
+  _id: ObjectId;
+  linkId: ObjectId;
+  token: string;
+  redeemedBy: string;
+  redeemedAt: Date;
+}
+
+/** Shareable link for Premium voucher. Admin creates; tied to creator for attribution. */
+export interface PremiumVoucherLinkDoc {
+  _id: ObjectId;
+  token: string;
+  createdBy: string; // creator userId
+  createdAt: Date;
+  expiresAt?: Date | null;
+  maxRedemptions?: number | null;
+  label?: string | null;
+}
+
+/** Logs each Premium voucher redemption for creator attribution. */
+export interface PremiumVoucherRedemptionDoc {
+  _id: ObjectId;
+  linkId: ObjectId;
+  token: string;
+  redeemedBy: string;
+  creatorId: string;
+  redeemedAt: Date;
 }
 
 export type User = UserDoc;

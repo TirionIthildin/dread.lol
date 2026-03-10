@@ -72,7 +72,12 @@ export default function DashboardBadgesClient({
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formIconName, setFormIconName] = useState("");
   const [saving, setSaving] = useState(false);
-  const [linkModal, setLinkModal] = useState<{ badgeId: string; url: string } | null>(null);
+  const [linkModal, setLinkModal] = useState<{
+    badgeId: string;
+    url?: string;
+    maxRedemptions?: string;
+    expiresAt?: string;
+  } | null>(null);
   const [linkPending, setLinkPending] = useState<string | null>(null);
 
   const fetchBadges = useCallback(async () => {
@@ -160,20 +165,35 @@ export default function DashboardBadgesClient({
     }
   }
 
-  async function handleCreateLink(b: UserCreatedBadge) {
-    setLinkPending(b.id);
+  function openLinkModal(b: UserCreatedBadge) {
+    setLinkModal({ badgeId: b.id });
+  }
+
+  async function handleCreateLink(payload: { badgeId: string; maxRedemptions?: string; expiresAt?: string }) {
+    setLinkPending(payload.badgeId);
     try {
+      const body: { badgeId: string; maxRedemptions?: number | null; expiresAt?: string } = {
+        badgeId: payload.badgeId,
+      };
+      const cap = payload.maxRedemptions?.trim();
+      if (cap) {
+        const n = parseInt(cap, 10);
+        body.maxRedemptions = Number.isFinite(n) && n > 0 ? n : null;
+      }
+      if (payload.expiresAt?.trim()) {
+        body.expiresAt = payload.expiresAt.trim();
+      }
       const res = await fetch("/api/dashboard/shop/custom-badge/redemption", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ badgeId: b.id }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.error) {
         toast.error(data.error);
       } else if (data.url) {
-        setLinkModal({ badgeId: b.id, url: data.url });
-        toast.success("Redemption link created. Share with one person—it's one-time use.");
+        setLinkModal((prev) => (prev ? { ...prev, url: data.url } : null));
+        toast.success("Redemption link created. Share it—each person can redeem once.");
       } else {
         toast.error("Failed to create link");
       }
@@ -304,7 +324,7 @@ export default function DashboardBadgesClient({
                   <div className="flex gap-1 shrink-0">
                     <button
                       type="button"
-                      onClick={() => handleCreateLink(b)}
+                      onClick={() => openLinkModal(b)}
                       disabled={linkPending !== null}
                       className="p-1.5 text-[var(--muted)] hover:text-[var(--accent)] rounded transition-colors disabled:opacity-50"
                       title="Create redemption link"
@@ -506,20 +526,66 @@ export default function DashboardBadgesClient({
                 <X size={20} weight="regular" aria-hidden />
               </button>
             </div>
-            <p className="text-sm text-[var(--muted)] mb-3">
-              Share this link with one person. It can only be used once. Create a new link for each person.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={linkModal.url}
-                className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono text-[var(--foreground)]"
-              />
-              <CopyButton copyValue={linkModal.url} ariaLabel="Copy redemption link">
-                Copy
-              </CopyButton>
-            </div>
+            {linkModal.url ? (
+              <>
+                <p className="text-sm text-[var(--muted)] mb-3">
+                  Share this link. Each person can redeem once per account. Create another link for a different badge.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={linkModal.url}
+                    className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono text-[var(--foreground)]"
+                  />
+                  <CopyButton copyValue={linkModal.url} ariaLabel="Copy redemption link">
+                    Copy
+                  </CopyButton>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--muted)] mb-4">
+                  Create a shareable link. Each person can redeem once per account. Optional: set a cap or expiry.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="link-max-redemptions" className="block text-xs font-medium text-[var(--muted)] mb-1">
+                      Max redemptions (leave empty for unlimited)
+                    </label>
+                    <input
+                      id="link-max-redemptions"
+                      type="number"
+                      min={1}
+                      placeholder="Unlimited"
+                      value={linkModal.maxRedemptions ?? ""}
+                      onChange={(e) => setLinkModal((p) => (p ? { ...p, maxRedemptions: e.target.value } : null))}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="link-expires" className="block text-xs font-medium text-[var(--muted)] mb-1">
+                      Expiry date (optional)
+                    </label>
+                    <input
+                      id="link-expires"
+                      type="date"
+                      value={linkModal.expiresAt ?? ""}
+                      onChange={(e) => setLinkModal((p) => (p ? { ...p, expiresAt: e.target.value } : null))}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateLink(linkModal)}
+                    disabled={!!linkPending}
+                    className="w-full rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+                  >
+                    {linkPending === linkModal.badgeId ? "Creating…" : "Create link"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>,
         document.body

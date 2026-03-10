@@ -4,6 +4,7 @@ import { validateRedirectUrl } from "@/lib/validate-url";
 import { getCanonicalOrigin } from "@/lib/site";
 import {
   getMemberProfileBySlug,
+  resolveProfileAvatar,
   memberProfileToProfile,
   getUserBadges,
   getUserDiscordBadgeData,
@@ -64,13 +65,14 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  const [badgeFlags, customBadges, discordBadgeData, premiumAccess] = await Promise.all([
+  const [resolvedRow, badgeFlags, customBadges, discordBadgeData, premiumAccess] = await Promise.all([
+    resolveProfileAvatar(memberRow, 256),
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
     getPremiumAccess(memberRow.userId),
   ]);
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
+  const profile = memberProfileToProfile(resolvedRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
 
   // User has a custom OG image – redirect crawlers to it (same-origin or path only)
   const ogUrl = profile.ogImageUrl?.trim();

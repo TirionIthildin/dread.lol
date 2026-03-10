@@ -674,7 +674,7 @@ export default function DashboardMyProfile({
         tagline: taglineValue || undefined,
         description: descriptionValue,
         banner: bannerValue || undefined,
-        avatar: avatarUrlValue || baseProfileForPreview.avatar,
+        avatar: avatarUrlValue === "discord" ? (discordAvatarUrl || baseProfileForPreview.avatar) : (avatarUrlValue || baseProfileForPreview.avatar),
         terminalCommands: terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()),
         backgroundType: ["grid", "gradient", "solid", "dither", "image", "video"].includes(backgroundTypeValue)
           ? backgroundTypeValue
@@ -708,6 +708,7 @@ export default function DashboardMyProfile({
       } satisfies Profile)
     : null), [
     baseProfileForPreview,
+    discordAvatarUrl,
     slugValue,
     taglineValue,
     descriptionValue,
@@ -940,9 +941,9 @@ export default function DashboardMyProfile({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">Avatar</p>
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    {avatarUrlValue && (
+                    {(avatarUrlValue === "discord" ? discordAvatarUrl : avatarUrlValue) && (
                       <NextImage
-                        src={avatarUrlValue}
+                        src={avatarUrlValue === "discord" ? (discordAvatarUrl ?? "") : avatarUrlValue}
                         alt=""
                         width={48}
                         height={48}
@@ -998,7 +999,7 @@ export default function DashboardMyProfile({
                     {discordAvatarUrl && (
                       <button
                         type="button"
-                        onClick={() => setAvatarUrlValue(discordAvatarUrl)}
+                        onClick={() => setAvatarUrlValue("discord")}
                         className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[#5865F2]/50 hover:text-[#5865F2] transition-colors"
                       >
                         <DiscordLogo size={16} weight="fill" />

@@ -188,7 +188,9 @@ export async function updateProfileAction(
   // Link-related fields only updated when present (i.e. from Links page). Main profile form omits them.
   const linksJson = formData.has("links") ? parseLinksValue((formData.get("links") as string) ?? undefined) : undefined;
 
-  const avatarUrl = validateUrlOrEmpty(formData.get("avatarUrl") as string);
+  const rawAvatar = (formData.get("avatarUrl") as string)?.trim();
+  const avatarUrl =
+    rawAvatar === "discord" ? "discord" : validateUrlOrEmpty(rawAvatar);
   // Banner is ASCII art text, not a URL
   const bannerRaw = (formData.get("banner") as string)?.trim();
   const banner = bannerRaw ? bannerRaw.slice(0, 5000) : undefined;
@@ -202,7 +204,7 @@ export async function updateProfileAction(
   const rawBackgroundAudioUrl = (formData.get("backgroundAudioUrl") as string)?.trim();
   const backgroundAudioUrl = validateBackgroundUrl(rawBackgroundAudioUrl);
 
-  if ((formData.get("avatarUrl") as string)?.trim() && !avatarUrl) return { error: "Avatar URL must use https or http" };
+  if (rawAvatar && !avatarUrl) return { error: "Avatar URL must use https or http" };
   if (rawBackgroundUrl && !backgroundUrl) return { error: "Background URL must use https or http or a valid path" };
   if (usesCustomMedia && !backgroundUrl) return { error: "Choose a background and provide a valid URL or upload" };
   if (rawBackgroundAudioUrl && !backgroundAudioUrl) return { error: "Background audio URL must use https or http or a valid path" };

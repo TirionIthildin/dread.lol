@@ -6,6 +6,7 @@ import ProfileBackground from "@/app/components/ProfileBackground";
 import {
   getMemberProfileBySlug,
   recordProfileView,
+  resolveProfileAvatar,
   memberProfileToProfile,
   getProfileViewCount,
   getUserBadges,
@@ -45,7 +46,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       robots: { index: false, follow: false },
     };
   }
-  const profile = memberProfileToProfile(memberRow);
+  const resolvedRow = await resolveProfileAvatar(memberRow);
+  const profile = memberProfileToProfile(resolvedRow);
   const title = profile.name;
   const description =
     profile.metaDescription?.trim() ||
@@ -166,7 +168,8 @@ export default async function ProfilePage({ params }: Props) {
   const mutualVouchers = session && canVouch
     ? await getMutualVouchers(session.sub, memberRow.id, memberRow.userId)
     : [];
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
+  const resolvedRow = await resolveProfileAvatar(memberRow);
+  const profile = memberProfileToProfile(resolvedRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
   if (showPageViews) profile.viewCount = viewCount;
   if (discordWidgetData) profile.discordWidgets = discordWidgetData;
   if (robloxWidgetData) profile.robloxWidgets = robloxWidgetData;

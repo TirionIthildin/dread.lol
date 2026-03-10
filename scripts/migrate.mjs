@@ -95,6 +95,15 @@ try {
 
   await db.collection("badge_redemption_links").createIndex({ token: 1 }, { unique: true });
 
+  await db.collection("badge_redemption_events").createIndex({ linkId: 1, redeemedBy: 1 }, { unique: true });
+  await db.collection("badge_redemption_events").createIndex({ token: 1, redeemedBy: 1 }, { unique: true });
+
+  await db.collection("premium_voucher_links").createIndex({ token: 1 }, { unique: true });
+  await db.collection("premium_voucher_links").createIndex({ createdBy: 1, createdAt: -1 });
+
+  await db.collection("premium_voucher_redemptions").createIndex({ linkId: 1, redeemedBy: 1 }, { unique: true });
+  await db.collection("premium_voucher_redemptions").createIndex({ creatorId: 1, redeemedAt: -1 });
+
   console.log("MongoDB indexes created.");
 } catch (err) {
   console.error("Migration failed:", err.message);

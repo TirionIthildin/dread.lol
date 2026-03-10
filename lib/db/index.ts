@@ -44,6 +44,9 @@ export const COLLECTIONS = {
   settings: "settings",
   userCreatedBadges: "user_created_badges",
   badgeRedemptionLinks: "badge_redemption_links",
+  badgeRedemptionEvents: "badge_redemption_events",
+  premiumVoucherLinks: "premium_voucher_links",
+  premiumVoucherRedemptions: "premium_voucher_redemptions",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

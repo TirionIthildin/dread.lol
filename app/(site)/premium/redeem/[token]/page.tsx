@@ -1,30 +1,28 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/session";
-import { getLinkByToken } from "@/lib/badge-redemption";
+import { getPremiumVoucherByToken } from "@/lib/premium-voucher";
 import Link from "next/link";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-import BadgeRedeemClient from "./BadgeRedeemClient";
+import PremiumRedeemClient from "./PremiumRedeemClient";
 
 type Props = { params: Promise<{ token: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params;
-  const link = await getLinkByToken(token);
-  const title = link.valid
-    ? `Redeem badge${link.badgeLabel ? `: ${link.badgeLabel}` : ""}`
-    : "Invalid link";
+  const link = await getPremiumVoucherByToken(token);
+  const title = link.valid ? "Redeem Premium" : "Invalid link";
   return {
     title: `${title} — ${SITE_NAME}`,
-    description: link.valid ? "Claim this badge and add it to your profile." : "This redemption link is invalid or has already been used.",
-    alternates: { canonical: `${SITE_URL}/badge/redeem/${token}` },
+    description: link.valid ? "Claim Premium and unlock all features." : "This redemption link is invalid or has already been used.",
+    alternates: { canonical: `${SITE_URL}/premium/redeem/${token}` },
     robots: { index: false, follow: false },
   };
 }
 
-export default async function BadgeRedeemPage({ params }: Props) {
+export default async function PremiumRedeemPage({ params }: Props) {
   const { token } = await params;
   const session = await getSession();
-  const link = await getLinkByToken(token, session?.sub ?? undefined);
+  const link = await getPremiumVoucherByToken(token, session?.sub ?? undefined);
 
   if (!link.valid) {
     return (
@@ -34,7 +32,7 @@ export default async function BadgeRedeemPage({ params }: Props) {
             Invalid or expired link
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            {link.error ?? "This redemption link doesn&apos;t exist or has already been used."}
+            {link.error ?? "This voucher link doesn&apos;t exist or has already been used."}
           </p>
           <Link
             href="/dashboard"
@@ -48,9 +46,8 @@ export default async function BadgeRedeemPage({ params }: Props) {
   }
 
   return (
-    <BadgeRedeemClient
+    <PremiumRedeemClient
       token={token}
-      badgeLabel={link.badgeLabel}
       isLoggedIn={!!session}
       alreadyRedeemed={link.alreadyRedeemed}
     />

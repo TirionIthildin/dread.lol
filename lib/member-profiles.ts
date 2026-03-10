@@ -19,6 +19,7 @@ import {
   isPremiumBackgroundEffect,
 } from "@/lib/premium-features";
 import type { SessionUser } from "@/lib/auth/session";
+import { resolveDiscordAvatarUrl } from "@/lib/discord-avatar";
 import { escapeRegex } from "@/lib/regex";
 import { normalizeSlug } from "@/lib/slug";
 import { getBaseDomain } from "@/lib/site";
@@ -598,6 +599,17 @@ export async function getMemberProfileById(profileId: string): Promise<ProfileRo
   }
   const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne({ _id: oid });
   return doc ? toProfileRow(doc) : null;
+}
+
+/** Resolve avatarUrl when it is "discord" (use Discord avatar dynamically). Returns row with resolved URL. */
+export async function resolveProfileAvatar(
+  row: ProfileRow,
+  avatarSize = 256
+): Promise<ProfileRow> {
+  if (row.avatarUrl !== "discord") return row;
+  const resolved = await resolveDiscordAvatarUrl(row.userId, avatarSize);
+  if (!resolved) return row;
+  return { ...row, avatarUrl: resolved };
 }
 
 export async function getProfileSlugByUserId(userId: string): Promise<string | null> {

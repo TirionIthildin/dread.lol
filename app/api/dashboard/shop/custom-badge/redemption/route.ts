@@ -1,6 +1,8 @@
 /**
- * POST: create a one-time-use badge redemption link.
- * Body: { badgeId: string }
+ * POST: create a badge redemption link.
+ * Body: { badgeId: string, maxRedemptions?: number | null, expiresAt?: string }
+ * maxRedemptions: null = unlimited (default). Omit for multi-use unlimited.
+ * expiresAt: ISO date string. Optional.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Custom badge addon required" }, { status: 403 });
   }
 
-  let body: { badgeId?: string } = {};
+  let body: { badgeId?: string; maxRedemptions?: number | null; expiresAt?: string } = {};
   try {
     body = await request.json();
   } catch {
@@ -36,7 +38,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "badgeId is required" }, { status: 400 });
   }
 
-  const result = await createRedemptionLink(session.sub, badgeId);
+  const options: { maxRedemptions?: number | null; expiresAt?: Date | null } = {};
+  if (body.maxRedemptions != null) {
+    const n = typeof body.maxRedemptions === "number" ? body.maxRedemptions : parseInt(String(body.maxRedemptions), 10);
+    options.maxRedemptions = Number.isFinite(n) && n > 0 ? n : null;
+  } else {
+    options.maxRedemptions = null; // default: unlimited
+  }
+  if (typeof body.expiresAt === "string" && body.expiresAt.trim()) {
+    const d = new Date(body.expiresAt);
+    options.expiresAt = Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const result = await createRedemptionLink(session.sub, badgeId, options);
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

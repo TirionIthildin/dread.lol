@@ -5,6 +5,7 @@ import ProfileBackground from "@/app/components/ProfileBackground";
 import ProfileMarkdown from "@/app/components/ProfileMarkdown";
 import {
   getMemberProfileBySlug,
+  resolveProfileAvatar,
   memberProfileToProfile,
   getUserBadges,
   getCustomBadgesForUser,
@@ -24,7 +25,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!memberRow || !post || post.profileId !== memberRow.id) {
     return { title: "Not found" };
   }
-  const profile = memberProfileToProfile(memberRow);
+  const resolvedRow = await resolveProfileAvatar(memberRow);
+  const profile = memberProfileToProfile(resolvedRow);
   const title = `${post.title} · ${profile.name}'s blog`;
   const description =
     post.content.slice(0, 160).replace(/\s+/g, " ").trim() + (post.content.length > 160 ? "…" : "");
@@ -60,14 +62,15 @@ export default async function ProfileBlogPostPage({ params }: Props) {
 
   if (!memberRow || !post || post.profileId !== memberRow.id) notFound();
 
-  const [badgeFlags, customBadges, discordBadgeData, premiumAccess] = await Promise.all([
+  const [resolvedRow, badgeFlags, customBadges, discordBadgeData, premiumAccess] = await Promise.all([
+    resolveProfileAvatar(memberRow),
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
     getPremiumAccess(memberRow.userId),
   ]);
 
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
+  const profile = memberProfileToProfile(resolvedRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
   const themeClass = getThemeClass(profile.accentColor);
 
   return (

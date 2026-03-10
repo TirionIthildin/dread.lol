@@ -10,6 +10,16 @@ export interface FeatureUpdate {
 
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
+    date: "2026-03",
+    title: "Dynamic Discord avatars",
+    description: "Profiles using the Discord avatar option now fetch it live, so your avatar stays up to date when you change it on Discord.",
+  },
+  {
+    date: "2026-03",
+    title: "Multi-use badge links & premium vouchers",
+    description: "Badge links now support unlimited or capped redemptions with per-user deduplication. Admins can create tracked premium voucher links to grant Premium with creator attribution and stats.",
+  },
+  {
     date: "2026-02",
     title: "Security hardening",
     description: "OG open redirect fix, font URL CSS injection prevention, template payload limits, auth rate limiting, debug header redaction.",

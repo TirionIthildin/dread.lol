@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
-import { getOrCreateUser, getOrCreateMemberProfile, memberProfileToProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, resolveProfileAvatar, memberProfileToProfile } from "@/lib/member-profiles";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
 import { getRobloxWidgetData } from "@/lib/roblox-widgets";
@@ -46,11 +46,12 @@ export default async function EditorPage() {
     const slug = slugFromUsername(session.preferred_username ?? session.name ?? session.sub);
     const name = session.name ?? session.preferred_username ?? "Member";
     const profile = await getOrCreateMemberProfile(userId, { name, slug, avatarUrl: session.picture ?? undefined });
-    const [premiumAccess, robloxWidgetData] = await Promise.all([
+    const [resolvedProfile, premiumAccess, robloxWidgetData] = await Promise.all([
+      resolveProfileAvatar(profile),
       getPremiumAccess(userId),
       getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
     ]);
-    const baseProfile = memberProfileToProfile(profile, undefined, undefined, undefined, premiumAccess.hasAccess);
+    const baseProfile = memberProfileToProfile(resolvedProfile, undefined, undefined, undefined, premiumAccess.hasAccess);
     if (robloxWidgetData) baseProfile.robloxWidgets = robloxWidgetData;
     baseProfile.showDiscordWidgets = profile.showDiscordWidgets ?? undefined;
     baseProfile.showRobloxWidgets = profile.showRobloxWidgets ?? undefined;

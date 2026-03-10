@@ -5,6 +5,7 @@ import { Article } from "@phosphor-icons/react/dist/ssr";
 import ProfileBackground from "@/app/components/ProfileBackground";
 import {
   getMemberProfileBySlug,
+  resolveProfileAvatar,
   memberProfileToProfile,
   getUserBadges,
   getCustomBadgesForUser,
@@ -22,7 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) return { title: "Not found" };
-  const profile = memberProfileToProfile(memberRow);
+  const resolvedRow = await resolveProfileAvatar(memberRow);
+  const profile = memberProfileToProfile(resolvedRow);
   const title = `${profile.name}'s blog`;
   const description = `Micro-blog by ${profile.name} on ${SITE_NAME}`;
   const canonicalUrl = `${SITE_URL}/${slug}/blog`;
@@ -53,7 +55,8 @@ export default async function ProfileBlogPage({ params }: Props) {
   const memberRow = await getMemberProfileBySlug(slug);
   if (!memberRow) notFound();
 
-  const [badgeFlags, customBadges, discordBadgeData, premiumAccess, posts] = await Promise.all([
+  const [resolvedRow, badgeFlags, customBadges, discordBadgeData, premiumAccess, posts] = await Promise.all([
+    resolveProfileAvatar(memberRow),
     getUserBadges(memberRow.userId),
     getCustomBadgesForUser(memberRow.userId),
     getUserDiscordBadgeData(memberRow.userId),
@@ -61,7 +64,7 @@ export default async function ProfileBlogPage({ params }: Props) {
     getBlogPostsForProfile(memberRow.id),
   ]);
 
-  const profile = memberProfileToProfile(memberRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
+  const profile = memberProfileToProfile(resolvedRow, badgeFlags, discordBadgeData, customBadges, premiumAccess.hasAccess);
   const themeClass = getThemeClass(profile.accentColor);
 
   return (

@@ -2,24 +2,23 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Medal } from "@phosphor-icons/react";
+import { Crown } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 type Props = {
   token: string;
-  badgeLabel?: string;
   isLoggedIn: boolean;
   alreadyRedeemed?: boolean;
 };
 
-export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alreadyRedeemed }: Props) {
+export default function PremiumRedeemClient({ token, isLoggedIn, alreadyRedeemed }: Props) {
   const [status, setStatus] = useState<"idle" | "redeeming" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn || status !== "idle" || alreadyRedeemed) return;
     setStatus("redeeming");
-    fetch("/api/badge/redeem", {
+    fetch("/api/premium/redeem", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
@@ -32,7 +31,7 @@ export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alrea
           toast.error(data.error);
         } else {
           setStatus("success");
-          toast.success(`You received the "${data.badge?.label ?? badgeLabel ?? "badge"}" badge!`);
+          toast.success("Premium activated! Enjoy all features.");
         }
       })
       .catch(() => {
@@ -40,20 +39,20 @@ export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alrea
         setError("Something went wrong");
         toast.error("Failed to redeem");
       });
-  }, [isLoggedIn, token, status, badgeLabel, alreadyRedeemed]);
+  }, [isLoggedIn, token, status, alreadyRedeemed]);
 
   if (alreadyRedeemed) {
     return (
       <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-8">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/10">
-            <Medal size={32} weight="regular" className="text-[var(--accent)]" />
+            <Crown size={32} weight="regular" className="text-[var(--accent)]" />
           </div>
           <h1 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
             Already redeemed
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            You&apos;ve already claimed this badge. Each link can only be redeemed once per account.
+            You&apos;ve already claimed Premium from this link. Each link can only be redeemed once per account.
           </p>
           <Link
             href="/dashboard"
@@ -71,13 +70,13 @@ export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alrea
       <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-8">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/10">
-            <Medal size={32} weight="regular" className="text-[var(--accent)]" />
+            <Crown size={32} weight="regular" className="text-[var(--accent)]" />
           </div>
           <h1 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
-            Redeem badge{badgeLabel ? `: ${badgeLabel}` : ""}
+            Redeem Premium
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Sign in to claim this badge and add it to your profile.
+            Sign in to claim Premium and unlock all features.
           </p>
           <Link
             href="/api/auth/discord"
@@ -98,13 +97,13 @@ export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alrea
       <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-8">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/10 animate-pulse">
-            <Medal size={32} weight="regular" className="text-[var(--accent)]" />
+            <Crown size={32} weight="regular" className="text-[var(--accent)]" />
           </div>
           <h1 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
             Redeeming…
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Adding badge to your profile.
+            Activating Premium on your account.
           </p>
         </div>
       </div>
@@ -116,13 +115,13 @@ export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alrea
       <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-8">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/10">
-            <Medal size={32} weight="regular" className="text-[var(--accent)]" />
+            <Crown size={32} weight="regular" className="text-[var(--accent)]" />
           </div>
           <h1 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
-            Badge redeemed!
+            Premium activated!
           </h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            The badge has been added to your profile.
+            You now have full access to Premium features.
           </p>
           <Link
             href="/dashboard"
@@ -139,7 +138,7 @@ export default function BadgeRedeemClient({ token, badgeLabel, isLoggedIn, alrea
     <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-8">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--warning)]/10">
-          <Medal size={32} weight="regular" className="text-[var(--warning)]" />
+          <Crown size={32} weight="regular" className="text-[var(--warning)]" />
         </div>
         <h1 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
           Couldn&apos;t redeem

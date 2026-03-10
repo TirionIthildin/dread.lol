@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { PolarSuccessHandler } from "@/app/dashboard/PolarSuccessHandler";
-import { getOrCreateUser, getOrCreateMemberProfile, getUserDiscordBadgeData, memberProfileToProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, getUserDiscordBadgeData, resolveProfileAvatar, memberProfileToProfile } from "@/lib/member-profiles";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
@@ -70,7 +70,8 @@ async function MemberProfileSection({
       ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
       ...getPremiumBadgeKeys(discordBadgeData.premiumType),
     ];
-    const baseProfileForPreview = memberProfileToProfile(profile, undefined, discordBadgeData, undefined, premiumAccess.hasAccess);
+    const resolvedProfile = await resolveProfileAvatar(profile);
+    const baseProfileForPreview = memberProfileToProfile(resolvedProfile, undefined, discordBadgeData, undefined, premiumAccess.hasAccess);
     if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
     return (
       <DashboardMyProfile
