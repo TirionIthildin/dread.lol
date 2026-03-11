@@ -3,7 +3,7 @@
  * Admin creates links; each link is tied to a creator for attribution.
  * Redemptions are logged for stats.
  */
-import { ObjectId } from "mongodb";
+import { ObjectId, type Collection } from "mongodb";
 import crypto from "node:crypto";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
@@ -31,6 +31,7 @@ export async function createPremiumVoucherLink(
     createdAt: new Date(),
     expiresAt: options?.expiresAt ?? null,
     maxRedemptions: options?.maxRedemptions ?? null,
+    redemptionCount: 0,
     label: options?.label ?? null,
   };
 
@@ -65,25 +66,44 @@ export async function redeemPremiumVoucher(
     return { error: "You have already redeemed this link" };
   }
 
+  let reservedSlot = false;
   if (link.maxRedemptions != null && link.maxRedemptions > 0) {
-    const count = await redemptionsColl.countDocuments({ token });
-    if (count >= link.maxRedemptions) {
+    await ensurePremiumVoucherRedemptionCountInitialized(linksColl, redemptionsColl, link._id);
+    reservedSlot = await reservePremiumVoucherRedemptionSlot(
+      linksColl,
+      link._id,
+      link.maxRedemptions
+    );
+    if (!reservedSlot) {
       return { error: "This link has reached its redemption limit" };
     }
   }
 
   const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
   if (!ok) {
+    if (reservedSlot) {
+      await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
+    }
     return { error: "Failed to grant Premium" };
   }
 
-  await redemptionsColl.insertOne({
-    linkId: link._id,
-    token,
-    redeemedBy: redeemerUserId,
-    creatorId: link.createdBy,
-    redeemedAt: now,
-  });
+  try {
+    await redemptionsColl.insertOne({
+      linkId: link._id,
+      token,
+      redeemedBy: redeemerUserId,
+      creatorId: link.createdBy,
+      redeemedAt: now,
+    });
+  } catch (err) {
+    if (reservedSlot) {
+      await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
+    }
+    if (isDuplicateKeyError(err)) {
+      return { error: "You have already redeemed this link" };
+    }
+    return { error: "Failed to redeem link" };
+  }
 
   return { success: true };
 }
@@ -213,4 +233,45 @@ export async function getPremiumVoucherStats(): Promise<{
 function maskToken(token: string): string {
   if (token.length <= 8) return "••••";
   return token.slice(0, 4) + "••••" + token.slice(-4);
+}
+
+async function ensurePremiumVoucherRedemptionCountInitialized(
+  linksColl: Collection,
+  redemptionsColl: Collection,
+  linkId: ObjectId
+): Promise<void> {
+  const link = await linksColl.findOne({ _id: linkId }, { projection: { redemptionCount: 1 } });
+  if (typeof link?.redemptionCount === "number") return;
+  const count = await redemptionsColl.countDocuments({ linkId });
+  await linksColl.updateOne(
+    { _id: linkId, redemptionCount: { $exists: false } },
+    { $set: { redemptionCount: count } }
+  );
+}
+
+async function reservePremiumVoucherRedemptionSlot(
+  linksColl: Collection,
+  linkId: ObjectId,
+  maxRedemptions: number
+): Promise<boolean> {
+  const reserved = await linksColl.findOneAndUpdate(
+    { _id: linkId, redemptionCount: { $lt: maxRedemptions } },
+    { $inc: { redemptionCount: 1 } },
+    { returnDocument: "after", projection: { _id: 1 } }
+  );
+  return !!reserved;
+}
+
+async function releasePremiumVoucherRedemptionSlot(
+  linksColl: Collection,
+  linkId: ObjectId
+): Promise<void> {
+  await linksColl.updateOne(
+    { _id: linkId, redemptionCount: { $gt: 0 } },
+    { $inc: { redemptionCount: -1 } }
+  );
+}
+
+function isDuplicateKeyError(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: number }).code === 11000;
 }

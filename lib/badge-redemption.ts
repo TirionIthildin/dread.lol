@@ -3,7 +3,7 @@
  * Supports single-use (legacy) or multi-use with optional cap and expiry.
  * Per-user deduplication via badge_redemption_events.
  */
-import { ObjectId } from "mongodb";
+import { ObjectId, type Collection } from "mongodb";
 import crypto from "node:crypto";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { SITE_URL } from "@/lib/site";
@@ -46,6 +46,7 @@ export async function createRedemptionLink(
     usedAt: null as Date | null,
     usedBy: null as string | null,
     maxRedemptions: options?.maxRedemptions ?? null,
+    redemptionCount: 0,
     expiresAt: options?.expiresAt ?? null,
     createdAt: new Date(),
   };
@@ -104,10 +105,12 @@ export async function redeemLink(
     return { error: "You have already redeemed this link" };
   }
 
-  // Multi-use: check cap
+  // Multi-use: atomically reserve one redemption slot
+  let reservedSlot = false;
   if (link.maxRedemptions != null && link.maxRedemptions > 0) {
-    const count = await eventsColl.countDocuments({ token });
-    if (count >= link.maxRedemptions) {
+    await ensureBadgeRedemptionCountInitialized(coll, eventsColl, link._id);
+    reservedSlot = await reserveBadgeRedemptionSlot(coll, link._id, link.maxRedemptions);
+    if (!reservedSlot) {
       return { error: "This link has reached its redemption limit" };
     }
   }
@@ -127,15 +130,28 @@ export async function redeemLink(
   });
 
   if (!result) {
+    if (reservedSlot) {
+      await releaseBadgeRedemptionSlot(coll, link._id);
+    }
     return { error: "Failed to add badge" };
   }
 
-  await eventsColl.insertOne({
-    linkId: link._id,
-    token,
-    redeemedBy: redeemerUserId,
-    redeemedAt: now,
-  });
+  try {
+    await eventsColl.insertOne({
+      linkId: link._id,
+      token,
+      redeemedBy: redeemerUserId,
+      redeemedAt: now,
+    });
+  } catch (err) {
+    if (reservedSlot) {
+      await releaseBadgeRedemptionSlot(coll, link._id);
+    }
+    if (isDuplicateKeyError(err)) {
+      return { error: "You have already redeemed this link" };
+    }
+    return { error: "Failed to redeem link" };
+  }
 
   return {
     success: true,
@@ -235,4 +251,45 @@ async function redeemLegacyLink(
     success: true,
     badge: { id: result.id, label: result.label },
   };
+}
+
+async function ensureBadgeRedemptionCountInitialized(
+  linksColl: Collection,
+  eventsColl: Collection,
+  linkId: ObjectId
+): Promise<void> {
+  const link = await linksColl.findOne({ _id: linkId }, { projection: { redemptionCount: 1 } });
+  if (typeof link?.redemptionCount === "number") return;
+  const count = await eventsColl.countDocuments({ linkId });
+  await linksColl.updateOne(
+    { _id: linkId, redemptionCount: { $exists: false } },
+    { $set: { redemptionCount: count } }
+  );
+}
+
+async function reserveBadgeRedemptionSlot(
+  linksColl: Collection,
+  linkId: ObjectId,
+  maxRedemptions: number
+): Promise<boolean> {
+  const reserved = await linksColl.findOneAndUpdate(
+    { _id: linkId, redemptionCount: { $lt: maxRedemptions } },
+    { $inc: { redemptionCount: 1 } },
+    { returnDocument: "after", projection: { _id: 1 } }
+  );
+  return !!reserved;
+}
+
+async function releaseBadgeRedemptionSlot(
+  linksColl: Collection,
+  linkId: ObjectId
+): Promise<void> {
+  await linksColl.updateOne(
+    { _id: linkId, redemptionCount: { $gt: 0 } },
+    { $inc: { redemptionCount: -1 } }
+  );
+}
+
+function isDuplicateKeyError(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: number }).code === 11000;
 }
