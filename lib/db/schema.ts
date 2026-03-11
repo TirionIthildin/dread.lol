@@ -289,6 +289,8 @@ export interface BadgeRedemptionLinkDoc {
   usedBy: string | null; // legacy single-use
   /** null = unlimited. Multi-use links ignore usedAt/usedBy. */
   maxRedemptions?: number | null;
+  /** Atomic counter used for capped multi-use links. */
+  redemptionCount?: number;
   /** Optional expiry. */
   expiresAt?: Date | null;
   createdAt: Date;
@@ -311,6 +313,8 @@ export interface PremiumVoucherLinkDoc {
   createdAt: Date;
   expiresAt?: Date | null;
   maxRedemptions?: number | null;
+  /** Atomic counter used for capped links. */
+  redemptionCount?: number;
   label?: string | null;
 }
 
