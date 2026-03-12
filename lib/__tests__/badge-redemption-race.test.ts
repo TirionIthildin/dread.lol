@@ -125,6 +125,14 @@ vi.mock("@/lib/db", () => {
                 testState.events.push(doc);
                 return { acknowledged: true };
               },
+              deleteOne: async (query: { linkId: ObjectId; redeemedBy: string }) => {
+                const idx = testState.events.findIndex(
+                  (e) => e.linkId.equals(query.linkId) && e.redeemedBy === query.redeemedBy
+                );
+                if (idx === -1) return { deletedCount: 0 };
+                testState.events.splice(idx, 1);
+                return { deletedCount: 1 };
+              },
             };
           }
 
@@ -199,5 +207,23 @@ describe("redeemLink", () => {
     expect(result).toEqual({ error: "Failed to add badge" });
     expect(testState.events).toHaveLength(0);
     expect(testState.link?.redemptionCount).toBe(0);
+  });
+
+  it("does not mint duplicate badges for concurrent same-user redemption", async () => {
+    const { redeemLink } = await import("@/lib/badge-redemption");
+    if (testState.link) {
+      testState.link.maxRedemptions = 2;
+      testState.link.redemptionCount = 0;
+    }
+
+    const [a, b] = await Promise.all([
+      redeemLink("badge-token", "user-a"),
+      redeemLink("badge-token", "user-a"),
+    ]);
+
+    const successes = [a, b].filter((r) => "success" in r).length;
+    expect(successes).toBe(1);
+    expect(testState.events).toHaveLength(1);
+    expect(testState.createUserCreatedBadgeMock).toHaveBeenCalledTimes(1);
   });
 });

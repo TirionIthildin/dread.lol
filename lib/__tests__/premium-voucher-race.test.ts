@@ -14,6 +14,7 @@ const testState = vi.hoisted(() => ({
     | null,
   redemptions: [] as Array<{ linkId: ObjectId; token: string; redeemedBy: string; creatorId: string; redeemedAt: Date }>,
   setUserBadgesMock: vi.fn(async () => true),
+  insertErrorCode: null as number | null,
 }));
 
 vi.mock("@/lib/member-profiles", () => ({
@@ -98,6 +99,11 @@ vi.mock("@/lib/db", () => {
                     (query.linkId == null || r.linkId.equals(query.linkId))
                 ).length,
               insertOne: async (doc: { linkId: ObjectId; token: string; redeemedBy: string; creatorId: string; redeemedAt: Date }) => {
+                if (typeof testState.insertErrorCode === "number") {
+                  const err = new Error("insert failure");
+                  (err as Error & { code?: number }).code = testState.insertErrorCode;
+                  throw err;
+                }
                 const duplicate = testState.redemptions.some(
                   (r) => r.linkId.equals(doc.linkId) && r.redeemedBy === doc.redeemedBy
                 );
@@ -108,6 +114,14 @@ vi.mock("@/lib/db", () => {
                 }
                 testState.redemptions.push(doc);
                 return { acknowledged: true };
+              },
+              deleteOne: async (query: { linkId: ObjectId; redeemedBy: string }) => {
+                const idx = testState.redemptions.findIndex(
+                  (r) => r.linkId.equals(query.linkId) && r.redeemedBy === query.redeemedBy
+                );
+                if (idx === -1) return { deletedCount: 0 };
+                testState.redemptions.splice(idx, 1);
+                return { deletedCount: 1 };
               },
             };
           }
@@ -132,6 +146,7 @@ describe("redeemPremiumVoucher", () => {
     testState.redemptions = [];
     testState.setUserBadgesMock.mockReset();
     testState.setUserBadgesMock.mockResolvedValue(true);
+    testState.insertErrorCode = null;
   });
 
   it("enforces capped redemptions under concurrent requests", async () => {
@@ -157,6 +172,18 @@ describe("redeemPremiumVoucher", () => {
     const result = await redeemPremiumVoucher("premium-token", "user-a");
 
     expect(result).toEqual({ error: "Failed to grant Premium" });
+    expect(testState.redemptions).toHaveLength(0);
+    expect(testState.link?.redemptionCount).toBe(0);
+  });
+
+  it("does not grant premium when redemption logging fails", async () => {
+    const { redeemPremiumVoucher } = await import("@/lib/premium-voucher");
+    testState.insertErrorCode = 12345;
+
+    const result = await redeemPremiumVoucher("premium-token", "user-a");
+
+    expect(result).toEqual({ error: "Failed to redeem link" });
+    expect(testState.setUserBadgesMock).not.toHaveBeenCalled();
     expect(testState.redemptions).toHaveLength(0);
     expect(testState.link?.redemptionCount).toBe(0);
   });
