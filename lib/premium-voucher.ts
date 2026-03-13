@@ -79,33 +79,35 @@ export async function redeemPremiumVoucher(
     }
   }
 
-  const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
-  if (!ok) {
-    if (reservedSlot) {
-      await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
-    }
-    return { error: "Failed to grant Premium" };
-  }
-
+  let redemptionCommitted = false;
   try {
-    await redemptionsColl.insertOne({
-      linkId: link._id,
-      token,
-      redeemedBy: redeemerUserId,
-      creatorId: link.createdBy,
-      redeemedAt: now,
-    });
-  } catch (err) {
-    if (reservedSlot) {
+    const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
+    if (!ok) {
+      return { error: "Failed to grant Premium" };
+    }
+
+    try {
+      await redemptionsColl.insertOne({
+        linkId: link._id,
+        token,
+        redeemedBy: redeemerUserId,
+        creatorId: link.createdBy,
+        redeemedAt: now,
+      });
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        return { error: "You have already redeemed this link" };
+      }
+      return { error: "Failed to redeem link" };
+    }
+
+    redemptionCommitted = true;
+    return { success: true };
+  } finally {
+    if (reservedSlot && !redemptionCommitted) {
       await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
     }
-    if (isDuplicateKeyError(err)) {
-      return { error: "You have already redeemed this link" };
-    }
-    return { error: "Failed to redeem link" };
   }
-
-  return { success: true };
 }
 
 export async function getPremiumVoucherByToken(

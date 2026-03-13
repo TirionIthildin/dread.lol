@@ -115,48 +115,50 @@ export async function redeemLink(
     }
   }
 
-  const badge = await badgeColl.findOne({ _id: link.badgeId });
-  if (!badge) {
-    return { error: "Badge no longer exists" };
-  }
-
-  const result = await createUserCreatedBadge(redeemerUserId, {
-    label: badge.label ?? "",
-    description: badge.description ?? null,
-    color: badge.color ?? null,
-    badgeType: (badge.badgeType as "label" | "image" | "icon") ?? "label",
-    imageUrl: badge.imageUrl ?? null,
-    iconName: badge.iconName ?? null,
-  });
-
-  if (!result) {
-    if (reservedSlot) {
-      await releaseBadgeRedemptionSlot(coll, link._id);
-    }
-    return { error: "Failed to add badge" };
-  }
-
+  let redemptionCommitted = false;
   try {
-    await eventsColl.insertOne({
-      linkId: link._id,
-      token,
-      redeemedBy: redeemerUserId,
-      redeemedAt: now,
+    const badge = await badgeColl.findOne({ _id: link.badgeId });
+    if (!badge) {
+      return { error: "Badge no longer exists" };
+    }
+
+    const result = await createUserCreatedBadge(redeemerUserId, {
+      label: badge.label ?? "",
+      description: badge.description ?? null,
+      color: badge.color ?? null,
+      badgeType: (badge.badgeType as "label" | "image" | "icon") ?? "label",
+      imageUrl: badge.imageUrl ?? null,
+      iconName: badge.iconName ?? null,
     });
-  } catch (err) {
-    if (reservedSlot) {
+
+    if (!result) {
+      return { error: "Failed to add badge" };
+    }
+
+    try {
+      await eventsColl.insertOne({
+        linkId: link._id,
+        token,
+        redeemedBy: redeemerUserId,
+        redeemedAt: now,
+      });
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        return { error: "You have already redeemed this link" };
+      }
+      return { error: "Failed to redeem link" };
+    }
+
+    redemptionCommitted = true;
+    return {
+      success: true,
+      badge: { id: result.id, label: result.label },
+    };
+  } finally {
+    if (reservedSlot && !redemptionCommitted) {
       await releaseBadgeRedemptionSlot(coll, link._id);
     }
-    if (isDuplicateKeyError(err)) {
-      return { error: "You have already redeemed this link" };
-    }
-    return { error: "Failed to redeem link" };
   }
-
-  return {
-    success: true,
-    badge: { id: result.id, label: result.label },
-  };
 }
 
 export async function getLinkByToken(
