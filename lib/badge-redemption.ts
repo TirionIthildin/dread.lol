@@ -123,6 +123,25 @@ export async function redeemLink(
     return { error: "Badge no longer exists" };
   }
 
+  let insertedRedemptionEvent = false;
+  try {
+    await eventsColl.insertOne({
+      linkId: link._id,
+      token,
+      redeemedBy: redeemerUserId,
+      redeemedAt: now,
+    });
+    insertedRedemptionEvent = true;
+  } catch (err) {
+    if (reservedSlot) {
+      await releaseBadgeRedemptionSlot(coll, link._id);
+    }
+    if (isDuplicateKeyError(err)) {
+      return { error: "You have already redeemed this link" };
+    }
+    return { error: "Failed to redeem link" };
+  }
+
   const result = await createUserCreatedBadge(redeemerUserId, {
     label: badge.label ?? "",
     description: badge.description ?? null,
@@ -133,27 +152,14 @@ export async function redeemLink(
   });
 
   if (!result) {
-    if (reservedSlot) {
+    let rolledBackEvent = false;
+    if (insertedRedemptionEvent) {
+      rolledBackEvent = await rollbackBadgeRedemptionEvent(eventsColl, link._id, redeemerUserId);
+    }
+    if (reservedSlot && rolledBackEvent) {
       await releaseBadgeRedemptionSlot(coll, link._id);
     }
     return { error: "Failed to add badge" };
-  }
-
-  try {
-    await eventsColl.insertOne({
-      linkId: link._id,
-      token,
-      redeemedBy: redeemerUserId,
-      redeemedAt: now,
-    });
-  } catch (err) {
-    if (reservedSlot) {
-      await releaseBadgeRedemptionSlot(coll, link._id);
-    }
-    if (isDuplicateKeyError(err)) {
-      return { error: "You have already redeemed this link" };
-    }
-    return { error: "Failed to redeem link" };
   }
 
   return {
@@ -320,4 +326,17 @@ async function releaseBadgeRedemptionSlot(
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: number }).code === 11000;
+}
+
+async function rollbackBadgeRedemptionEvent(
+  eventsColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<boolean> {
+  try {
+    const result = await eventsColl.deleteOne({ linkId, redeemedBy: redeemerUserId });
+    return result.deletedCount > 0;
+  } catch {
+    return false;
+  }
 }

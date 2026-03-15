@@ -79,14 +79,7 @@ export async function redeemPremiumVoucher(
     }
   }
 
-  const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
-  if (!ok) {
-    if (reservedSlot) {
-      await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
-    }
-    return { error: "Failed to grant Premium" };
-  }
-
+  let insertedRedemptionEvent = false;
   try {
     await redemptionsColl.insertOne({
       linkId: link._id,
@@ -95,6 +88,7 @@ export async function redeemPremiumVoucher(
       creatorId: link.createdBy,
       redeemedAt: now,
     });
+    insertedRedemptionEvent = true;
   } catch (err) {
     if (reservedSlot) {
       await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
@@ -103,6 +97,22 @@ export async function redeemPremiumVoucher(
       return { error: "You have already redeemed this link" };
     }
     return { error: "Failed to redeem link" };
+  }
+
+  const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
+  if (!ok) {
+    let rolledBackEvent = false;
+    if (insertedRedemptionEvent) {
+      rolledBackEvent = await rollbackPremiumVoucherRedemptionEvent(
+        redemptionsColl,
+        link._id,
+        redeemerUserId
+      );
+    }
+    if (reservedSlot && rolledBackEvent) {
+      await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
+    }
+    return { error: "Failed to grant Premium" };
   }
 
   return { success: true };
@@ -274,4 +284,17 @@ async function releasePremiumVoucherRedemptionSlot(
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: number }).code === 11000;
+}
+
+async function rollbackPremiumVoucherRedemptionEvent(
+  redemptionsColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<boolean> {
+  try {
+    const result = await redemptionsColl.deleteOne({ linkId, redeemedBy: redeemerUserId });
+    return result.deletedCount > 0;
+  } catch {
+    return false;
+  }
 }
