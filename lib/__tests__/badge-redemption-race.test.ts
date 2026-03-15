@@ -10,7 +10,7 @@ const testState = vi.hoisted(() => ({
         createdBy: string;
         usedAt: Date | null;
         usedBy: string | null;
-        maxRedemptions: number;
+        maxRedemptions?: number | null;
         redemptionCount?: number;
         expiresAt: Date | null;
       }
@@ -59,14 +59,21 @@ vi.mock("@/lib/db", () => {
                 return null;
               },
               findOneAndUpdate: async (
-                filter: { _id: ObjectId; redemptionCount?: { $lt?: number } },
-                update: { $inc?: { redemptionCount?: number } }
+                filter: { _id: ObjectId; redemptionCount?: { $lt?: number }; usedAt?: null },
+                update: { $inc?: { redemptionCount?: number }; $set?: { usedAt?: Date | null; usedBy?: string | null } }
               ) => {
                 const link = testState.link;
                 if (!link || !link._id.equals(filter._id)) return null;
+                if (filter.usedAt === null && link.usedAt !== null) return null;
                 const lt = filter.redemptionCount?.$lt;
                 if (typeof lt === "number") {
                   if (typeof link.redemptionCount !== "number" || !(link.redemptionCount < lt)) return null;
+                }
+                if (Object.prototype.hasOwnProperty.call(update.$set ?? {}, "usedAt")) {
+                  link.usedAt = update.$set?.usedAt ?? null;
+                }
+                if (Object.prototype.hasOwnProperty.call(update.$set ?? {}, "usedBy")) {
+                  link.usedBy = update.$set?.usedBy ?? null;
                 }
                 if (typeof update.$inc?.redemptionCount === "number") {
                   link.redemptionCount = (link.redemptionCount ?? 0) + update.$inc.redemptionCount;
@@ -74,11 +81,14 @@ vi.mock("@/lib/db", () => {
                 return { ...link };
               },
               updateOne: async (
-                filter: { _id: ObjectId; redemptionCount?: { $exists?: boolean; $gt?: number } },
-                update: { $set?: { redemptionCount?: number }; $inc?: { redemptionCount?: number } }
+                filter: { _id: ObjectId; redemptionCount?: { $exists?: boolean; $gt?: number }; usedBy?: string | null },
+                update: { $set?: { redemptionCount?: number; usedAt?: Date | null; usedBy?: string | null }; $inc?: { redemptionCount?: number } }
               ) => {
                 const link = testState.link;
                 if (!link || !link._id.equals(filter._id)) return { matchedCount: 0, modifiedCount: 0 };
+                if (Object.prototype.hasOwnProperty.call(filter, "usedBy")) {
+                  if (link.usedBy !== filter.usedBy) return { matchedCount: 0, modifiedCount: 0 };
+                }
                 if (typeof filter.redemptionCount?.$exists === "boolean") {
                   const exists = typeof link.redemptionCount === "number";
                   if (exists !== filter.redemptionCount.$exists) return { matchedCount: 0, modifiedCount: 0 };
@@ -90,6 +100,12 @@ vi.mock("@/lib/db", () => {
                 }
                 if (typeof update.$set?.redemptionCount === "number") {
                   link.redemptionCount = update.$set.redemptionCount;
+                }
+                if (Object.prototype.hasOwnProperty.call(update.$set ?? {}, "usedAt")) {
+                  link.usedAt = update.$set?.usedAt ?? null;
+                }
+                if (Object.prototype.hasOwnProperty.call(update.$set ?? {}, "usedBy")) {
+                  link.usedBy = update.$set?.usedBy ?? null;
                 }
                 if (typeof update.$inc?.redemptionCount === "number") {
                   link.redemptionCount = (link.redemptionCount ?? 0) + update.$inc.redemptionCount;
@@ -225,5 +241,41 @@ describe("redeemLink", () => {
     expect(successes).toBe(1);
     expect(testState.events).toHaveLength(1);
     expect(testState.createUserCreatedBadgeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows only one redeemer for legacy single-use links under concurrency", async () => {
+    const { redeemLink } = await import("@/lib/badge-redemption");
+    if (testState.link) {
+      testState.link.maxRedemptions = undefined;
+      testState.link.redemptionCount = undefined;
+    }
+
+    const [a, b] = await Promise.all([
+      redeemLink("badge-token", "user-a"),
+      redeemLink("badge-token", "user-b"),
+    ]);
+
+    const successes = [a, b].filter((r) => "success" in r).length;
+    const failures = [a, b].filter((r) => "error" in r).length;
+    expect(successes).toBe(1);
+    expect(failures).toBe(1);
+    expect(testState.createUserCreatedBadgeMock).toHaveBeenCalledTimes(1);
+    expect(testState.link?.usedAt).not.toBeNull();
+    expect(["user-a", "user-b"]).toContain(testState.link?.usedBy ?? "");
+  });
+
+  it("releases legacy single-use claim when badge creation fails", async () => {
+    const { redeemLink } = await import("@/lib/badge-redemption");
+    if (testState.link) {
+      testState.link.maxRedemptions = undefined;
+      testState.link.redemptionCount = undefined;
+    }
+    testState.createUserCreatedBadgeMock.mockResolvedValue(null);
+
+    const result = await redeemLink("badge-token", "user-a");
+
+    expect(result).toEqual({ error: "Failed to add badge" });
+    expect(testState.link?.usedAt).toBeNull();
+    expect(testState.link?.usedBy).toBeNull();
   });
 });
