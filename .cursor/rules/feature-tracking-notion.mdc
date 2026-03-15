@@ -1,0 +1,28 @@
+---
+description: Track significant features in the Dread.Lol features Notion database
+alwaysApply: true
+---
+
+# Feature Tracking in Notion
+
+When you complete a significant feature or ship a major update for Dread.lol, create a row in the **Dread.Lol features** Notion database to track it.
+
+## How
+
+Use the create-database-row skill (or Notion MCP) with the **Dread.Lol features** database. Provide:
+
+- **Name** — Feature name
+- **Status** — `Done` (or Backlog/In Progress/Review as appropriate)
+- **Priority** — Low, Medium, High, or Critical
+- **Description** — One-line summary of what users get
+- **Owner** — Assignee if known
+
+## When
+
+- New user-facing features (e.g. marketplace, gallery, new page)
+- Major improvements to existing features
+- Not: minor bug fixes, refactors, or internal changes
+
+## Note
+
+This is separate from the homepage updates list (`lib/updates.ts`). Both should be updated when shipping significant features.
