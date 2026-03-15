@@ -79,43 +79,59 @@ export async function redeemPremiumVoucher(
     }
   }
 
+  let shouldReleaseReservedSlot = reservedSlot;
   let insertedRedemptionEvent = false;
   try {
-    await redemptionsColl.insertOne({
-      linkId: link._id,
-      token,
-      redeemedBy: redeemerUserId,
-      creatorId: link.createdBy,
-      redeemedAt: now,
-    });
-    insertedRedemptionEvent = true;
-  } catch (err) {
-    if (reservedSlot) {
-      await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
+    try {
+      await redemptionsColl.insertOne({
+        linkId: link._id,
+        token,
+        redeemedBy: redeemerUserId,
+        creatorId: link.createdBy,
+        redeemedAt: now,
+      });
+      insertedRedemptionEvent = true;
+      shouldReleaseReservedSlot = false;
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        return { error: "You have already redeemed this link" };
+      }
+      return { error: "Failed to redeem link" };
     }
-    if (isDuplicateKeyError(err)) {
-      return { error: "You have already redeemed this link" };
-    }
-    return { error: "Failed to redeem link" };
-  }
 
-  const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
-  if (!ok) {
-    let rolledBackEvent = false;
+    const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
+    if (!ok) {
+      if (insertedRedemptionEvent) {
+        const rolledBackEvent = await rollbackPremiumVoucherRedemptionEvent(
+          redemptionsColl,
+          link._id,
+          redeemerUserId
+        );
+        if (rolledBackEvent) {
+          shouldReleaseReservedSlot = reservedSlot;
+        }
+      }
+      return { error: "Failed to grant Premium" };
+    }
+
+    return { success: true };
+  } catch (err) {
     if (insertedRedemptionEvent) {
-      rolledBackEvent = await rollbackPremiumVoucherRedemptionEvent(
+      const rolledBackEvent = await rollbackPremiumVoucherRedemptionEvent(
         redemptionsColl,
         link._id,
         redeemerUserId
       );
+      if (rolledBackEvent) {
+        shouldReleaseReservedSlot = reservedSlot;
+      }
     }
-    if (reservedSlot && rolledBackEvent) {
+    throw err;
+  } finally {
+    if (shouldReleaseReservedSlot) {
       await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
     }
-    return { error: "Failed to grant Premium" };
   }
-
-  return { success: true };
 }
 
 export async function getPremiumVoucherByToken(

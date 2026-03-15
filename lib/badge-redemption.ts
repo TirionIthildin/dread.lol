@@ -115,57 +115,66 @@ export async function redeemLink(
     }
   }
 
-  const badge = await badgeColl.findOne({ _id: link.badgeId });
-  if (!badge) {
-    if (reservedSlot) {
-      await releaseBadgeRedemptionSlot(coll, link._id);
-    }
-    return { error: "Badge no longer exists" };
-  }
-
+  let shouldReleaseReservedSlot = reservedSlot;
   let insertedRedemptionEvent = false;
   try {
-    await eventsColl.insertOne({
-      linkId: link._id,
-      token,
-      redeemedBy: redeemerUserId,
-      redeemedAt: now,
+    const badge = await badgeColl.findOne({ _id: link.badgeId });
+    if (!badge) {
+      return { error: "Badge no longer exists" };
+    }
+
+    try {
+      await eventsColl.insertOne({
+        linkId: link._id,
+        token,
+        redeemedBy: redeemerUserId,
+        redeemedAt: now,
+      });
+      insertedRedemptionEvent = true;
+      shouldReleaseReservedSlot = false;
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        return { error: "You have already redeemed this link" };
+      }
+      return { error: "Failed to redeem link" };
+    }
+
+    const result = await createUserCreatedBadge(redeemerUserId, {
+      label: badge.label ?? "",
+      description: badge.description ?? null,
+      color: badge.color ?? null,
+      badgeType: (badge.badgeType as "label" | "image" | "icon") ?? "label",
+      imageUrl: badge.imageUrl ?? null,
+      iconName: badge.iconName ?? null,
     });
-    insertedRedemptionEvent = true;
+
+    if (!result) {
+      if (insertedRedemptionEvent) {
+        const rolledBackEvent = await rollbackBadgeRedemptionEvent(eventsColl, link._id, redeemerUserId);
+        if (rolledBackEvent) {
+          shouldReleaseReservedSlot = reservedSlot;
+        }
+      }
+      return { error: "Failed to add badge" };
+    }
+
+    return {
+      success: true,
+      badge: { id: result.id, label: result.label },
+    };
   } catch (err) {
-    if (reservedSlot) {
-      await releaseBadgeRedemptionSlot(coll, link._id);
-    }
-    if (isDuplicateKeyError(err)) {
-      return { error: "You have already redeemed this link" };
-    }
-    return { error: "Failed to redeem link" };
-  }
-
-  const result = await createUserCreatedBadge(redeemerUserId, {
-    label: badge.label ?? "",
-    description: badge.description ?? null,
-    color: badge.color ?? null,
-    badgeType: (badge.badgeType as "label" | "image" | "icon") ?? "label",
-    imageUrl: badge.imageUrl ?? null,
-    iconName: badge.iconName ?? null,
-  });
-
-  if (!result) {
-    let rolledBackEvent = false;
     if (insertedRedemptionEvent) {
-      rolledBackEvent = await rollbackBadgeRedemptionEvent(eventsColl, link._id, redeemerUserId);
+      const rolledBackEvent = await rollbackBadgeRedemptionEvent(eventsColl, link._id, redeemerUserId);
+      if (rolledBackEvent) {
+        shouldReleaseReservedSlot = reservedSlot;
+      }
     }
-    if (reservedSlot && rolledBackEvent) {
+    throw err;
+  } finally {
+    if (shouldReleaseReservedSlot) {
       await releaseBadgeRedemptionSlot(coll, link._id);
     }
-    return { error: "Failed to add badge" };
   }
-
-  return {
-    success: true,
-    badge: { id: result.id, label: result.label },
-  };
 }
 
 export async function getLinkByToken(

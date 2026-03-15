@@ -176,6 +176,15 @@ describe("redeemPremiumVoucher", () => {
     expect(testState.link?.redemptionCount).toBe(0);
   });
 
+  it("releases reserved slot if grant throws", async () => {
+    const { redeemPremiumVoucher } = await import("@/lib/premium-voucher");
+    testState.setUserBadgesMock.mockRejectedValue(new Error("db unavailable"));
+
+    await expect(redeemPremiumVoucher("premium-token", "user-a")).rejects.toThrow("db unavailable");
+    expect(testState.redemptions).toHaveLength(0);
+    expect(testState.link?.redemptionCount).toBe(0);
+  });
+
   it("does not grant premium when redemption logging fails", async () => {
     const { redeemPremiumVoucher } = await import("@/lib/premium-voucher");
     testState.insertErrorCode = 12345;

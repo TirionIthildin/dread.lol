@@ -225,6 +225,15 @@ describe("redeemLink", () => {
     expect(testState.link?.redemptionCount).toBe(0);
   });
 
+  it("releases reserved slot if badge creation throws", async () => {
+    const { redeemLink } = await import("@/lib/badge-redemption");
+    testState.createUserCreatedBadgeMock.mockRejectedValue(new Error("db unavailable"));
+
+    await expect(redeemLink("badge-token", "user-a")).rejects.toThrow("db unavailable");
+    expect(testState.events).toHaveLength(0);
+    expect(testState.link?.redemptionCount).toBe(0);
+  });
+
   it("does not mint duplicate badges for concurrent same-user redemption", async () => {
     const { redeemLink } = await import("@/lib/badge-redemption");
     if (testState.link) {
