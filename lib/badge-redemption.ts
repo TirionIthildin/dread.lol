@@ -89,7 +89,7 @@ export async function redeemLink(
     if (!badge) {
       return { error: "Badge no longer exists" };
     }
-    return redeemLegacyLink(token, redeemerUserId, linkDoc, {
+    return redeemLegacyLink(redeemerUserId, linkDoc, {
       label: badge.label,
       description: badge.description,
       color: badge.color,
@@ -115,11 +115,28 @@ export async function redeemLink(
     }
   }
 
-  let redemptionCommitted = false;
+  let shouldReleaseReservedSlot = reservedSlot;
+  let insertedRedemptionEvent = false;
   try {
     const badge = await badgeColl.findOne({ _id: link.badgeId });
     if (!badge) {
       return { error: "Badge no longer exists" };
+    }
+
+    try {
+      await eventsColl.insertOne({
+        linkId: link._id,
+        token,
+        redeemedBy: redeemerUserId,
+        redeemedAt: now,
+      });
+      insertedRedemptionEvent = true;
+      shouldReleaseReservedSlot = false;
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        return { error: "You have already redeemed this link" };
+      }
+      return { error: "Failed to redeem link" };
     }
 
     const result = await createUserCreatedBadge(redeemerUserId, {
@@ -132,30 +149,29 @@ export async function redeemLink(
     });
 
     if (!result) {
+      if (insertedRedemptionEvent) {
+        const rolledBackEvent = await rollbackBadgeRedemptionEvent(eventsColl, link._id, redeemerUserId);
+        if (rolledBackEvent) {
+          shouldReleaseReservedSlot = reservedSlot;
+        }
+      }
       return { error: "Failed to add badge" };
     }
 
-    try {
-      await eventsColl.insertOne({
-        linkId: link._id,
-        token,
-        redeemedBy: redeemerUserId,
-        redeemedAt: now,
-      });
-    } catch (err) {
-      if (isDuplicateKeyError(err)) {
-        return { error: "You have already redeemed this link" };
-      }
-      return { error: "Failed to redeem link" };
-    }
-
-    redemptionCommitted = true;
     return {
       success: true,
       badge: { id: result.id, label: result.label },
     };
+  } catch (err) {
+    if (insertedRedemptionEvent) {
+      const rolledBackEvent = await rollbackBadgeRedemptionEvent(eventsColl, link._id, redeemerUserId);
+      if (rolledBackEvent) {
+        shouldReleaseReservedSlot = reservedSlot;
+      }
+    }
+    throw err;
   } finally {
-    if (reservedSlot && !redemptionCommitted) {
+    if (shouldReleaseReservedSlot) {
       await releaseBadgeRedemptionSlot(coll, link._id);
     }
   }
@@ -222,7 +238,6 @@ export async function getLinkByToken(
 }
 
 async function redeemLegacyLink(
-  token: string,
   redeemerUserId: string,
   link: BadgeRedemptionLinkDoc,
   badge: { label?: string | null; description?: string | null; color?: string | null; badgeType?: string | null; imageUrl?: string | null; iconName?: string | null }
@@ -230,6 +245,12 @@ async function redeemLegacyLink(
   const client = await getDb();
   const dbName = await getDbName();
   const coll = client.db(dbName).collection(COLLECTIONS.badgeRedemptionLinks);
+
+  // Atomically claim legacy links so only one concurrent redeemer can proceed.
+  const claimed = await claimLegacyRedemption(coll, link._id, redeemerUserId);
+  if (!claimed) {
+    return { error: "This link has already been used" };
+  }
 
   const result = await createUserCreatedBadge(redeemerUserId, {
     label: badge.label ?? "",
@@ -241,18 +262,38 @@ async function redeemLegacyLink(
   });
 
   if (!result) {
+    await releaseLegacyRedemptionClaim(coll, link._id, redeemerUserId);
     return { error: "Failed to add badge" };
   }
-
-  await coll.updateOne(
-    { token },
-    { $set: { usedAt: new Date(), usedBy: redeemerUserId } }
-  );
 
   return {
     success: true,
     badge: { id: result.id, label: result.label },
   };
+}
+
+async function claimLegacyRedemption(
+  linksColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<boolean> {
+  const claimed = await linksColl.findOneAndUpdate(
+    { _id: linkId, usedAt: null },
+    { $set: { usedAt: new Date(), usedBy: redeemerUserId } },
+    { returnDocument: "after", projection: { _id: 1 } }
+  );
+  return !!claimed;
+}
+
+async function releaseLegacyRedemptionClaim(
+  linksColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<void> {
+  await linksColl.updateOne(
+    { _id: linkId, usedBy: redeemerUserId },
+    { $set: { usedAt: null, usedBy: null } }
+  );
 }
 
 async function ensureBadgeRedemptionCountInitialized(
@@ -294,4 +335,17 @@ async function releaseBadgeRedemptionSlot(
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: number }).code === 11000;
+}
+
+async function rollbackBadgeRedemptionEvent(
+  eventsColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<boolean> {
+  try {
+    const result = await eventsColl.deleteOne({ linkId, redeemedBy: redeemerUserId });
+    return result.deletedCount > 0;
+  } catch {
+    return false;
+  }
 }

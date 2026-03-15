@@ -79,13 +79,9 @@ export async function redeemPremiumVoucher(
     }
   }
 
-  let redemptionCommitted = false;
+  let shouldReleaseReservedSlot = reservedSlot;
+  let insertedRedemptionEvent = false;
   try {
-    const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
-    if (!ok) {
-      return { error: "Failed to grant Premium" };
-    }
-
     try {
       await redemptionsColl.insertOne({
         linkId: link._id,
@@ -94,6 +90,8 @@ export async function redeemPremiumVoucher(
         creatorId: link.createdBy,
         redeemedAt: now,
       });
+      insertedRedemptionEvent = true;
+      shouldReleaseReservedSlot = false;
     } catch (err) {
       if (isDuplicateKeyError(err)) {
         return { error: "You have already redeemed this link" };
@@ -101,10 +99,36 @@ export async function redeemPremiumVoucher(
       return { error: "Failed to redeem link" };
     }
 
-    redemptionCommitted = true;
+    const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
+    if (!ok) {
+      if (insertedRedemptionEvent) {
+        const rolledBackEvent = await rollbackPremiumVoucherRedemptionEvent(
+          redemptionsColl,
+          link._id,
+          redeemerUserId
+        );
+        if (rolledBackEvent) {
+          shouldReleaseReservedSlot = reservedSlot;
+        }
+      }
+      return { error: "Failed to grant Premium" };
+    }
+
     return { success: true };
+  } catch (err) {
+    if (insertedRedemptionEvent) {
+      const rolledBackEvent = await rollbackPremiumVoucherRedemptionEvent(
+        redemptionsColl,
+        link._id,
+        redeemerUserId
+      );
+      if (rolledBackEvent) {
+        shouldReleaseReservedSlot = reservedSlot;
+      }
+    }
+    throw err;
   } finally {
-    if (reservedSlot && !redemptionCommitted) {
+    if (shouldReleaseReservedSlot) {
       await releasePremiumVoucherRedemptionSlot(linksColl, link._id);
     }
   }
@@ -276,4 +300,17 @@ async function releasePremiumVoucherRedemptionSlot(
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: number }).code === 11000;
+}
+
+async function rollbackPremiumVoucherRedemptionEvent(
+  redemptionsColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<boolean> {
+  try {
+    const result = await redemptionsColl.deleteOne({ linkId, redeemedBy: redeemerUserId });
+    return result.deletedCount > 0;
+  } catch {
+    return false;
+  }
 }
