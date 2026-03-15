@@ -814,6 +814,51 @@ export async function getLeaderboardTopVouches(limit = 20): Promise<
 }
 
 /**
+ * Top profiles by unique profile views (all-time).
+ */
+export async function getLeaderboardTopViews(limit = 20): Promise<
+  { slug: string; name: string; count: number }[]
+> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const db = client.db(dbName);
+  const pipeline = [
+    {
+      $group: {
+        _id: {
+          profileId: "$profileId",
+          visitorKey: {
+            $ifNull: [
+              "$visitorKey",
+              { $concat: ["$visitorIp", "|", { $ifNull: ["$userAgent", ""] }] },
+            ],
+          },
+        },
+      },
+    },
+    { $group: { _id: "$_id.profileId", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: limit },
+    {
+      $lookup: {
+        from: COLLECTIONS.profiles,
+        localField: "_id",
+        foreignField: "_id",
+        as: "profile",
+        pipeline: [{ $project: { slug: 1, name: 1 } }],
+      },
+    },
+    { $unwind: "$profile" },
+    { $project: { slug: "$profile.slug", name: "$profile.name", count: 1, _id: 0 } },
+  ];
+  const results = await db
+    .collection(COLLECTIONS.profileViews)
+    .aggregate(pipeline)
+    .toArray();
+  return results as { slug: string; name: string; count: number }[];
+}
+
+/**
  * Trending profiles this week: combined score from vouches and views in last 7 days.
  */
 export async function getTrendingProfiles(limit = 10): Promise<

@@ -9,6 +9,9 @@ test.describe("Smoke tests", () => {
   test("leaderboard page loads", async ({ page }) => {
     const res = await page.goto("/leaderboard");
     expect(res?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: /leaderboard/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /top vouches this month/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /most viewed profiles/i })).toBeVisible();
   });
 
   test("marketplace page loads", async ({ page }) => {
