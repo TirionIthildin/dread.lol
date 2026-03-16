@@ -326,6 +326,10 @@ export interface PremiumVoucherRedemptionDoc {
   redeemedBy: string;
   creatorId: string;
   redeemedAt: Date;
+  /** True until premiumGranted is successfully applied to the user record. */
+  grantPending?: boolean;
+  /** Set when grantPending transitions to false. */
+  grantedAt?: Date;
 }
 
 export type User = UserDoc;
