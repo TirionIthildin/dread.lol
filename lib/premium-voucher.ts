@@ -169,17 +169,21 @@ export async function getPremiumVoucherByToken(
     return { valid: false, error: "Link expired" };
   }
 
-  if (link.maxRedemptions != null && link.maxRedemptions > 0) {
-    const count = await redemptionsColl.countDocuments({ token });
-    if (count >= link.maxRedemptions) {
-      return { valid: false, error: "This link has reached its redemption limit" };
-    }
-  }
-
+  let existingForUser: { grantPending?: boolean } | null = null;
   let alreadyRedeemed = false;
   if (redeemerUserId) {
-    const existing = await redemptionsColl.findOne({ token, redeemedBy: redeemerUserId });
-    alreadyRedeemed = !!existing && !isPendingPremiumGrant(existing);
+    existingForUser = (await redemptionsColl.findOne({
+      token,
+      redeemedBy: redeemerUserId,
+    })) as { grantPending?: boolean } | null;
+    alreadyRedeemed = !!existingForUser && !isPendingPremiumGrant(existingForUser);
+  }
+
+  if (link.maxRedemptions != null && link.maxRedemptions > 0) {
+    const count = await redemptionsColl.countDocuments({ token });
+    if (count >= link.maxRedemptions && !existingForUser) {
+      return { valid: false, error: "This link has reached its redemption limit" };
+    }
   }
 
   return {
