@@ -15,6 +15,7 @@ const testState = vi.hoisted(() => ({
   redemptions: [] as Array<{ linkId: ObjectId; token: string; redeemedBy: string; creatorId: string; redeemedAt: Date }>,
   setUserBadgesMock: vi.fn(async () => true),
   insertErrorCode: null as number | null,
+  deleteFails: false,
 }));
 
 vi.mock("@/lib/member-profiles", () => ({
@@ -116,6 +117,7 @@ vi.mock("@/lib/db", () => {
                 return { acknowledged: true };
               },
               deleteOne: async (query: { linkId: ObjectId; redeemedBy: string }) => {
+                if (testState.deleteFails) return { deletedCount: 0 };
                 const idx = testState.redemptions.findIndex(
                   (r) => r.linkId.equals(query.linkId) && r.redeemedBy === query.redeemedBy
                 );
@@ -147,6 +149,7 @@ describe("redeemPremiumVoucher", () => {
     testState.setUserBadgesMock.mockReset();
     testState.setUserBadgesMock.mockResolvedValue(true);
     testState.insertErrorCode = null;
+    testState.deleteFails = false;
   });
 
   it("enforces capped redemptions under concurrent requests", async () => {
@@ -174,6 +177,26 @@ describe("redeemPremiumVoucher", () => {
     expect(result).toEqual({ error: "Failed to grant Premium" });
     expect(testState.redemptions).toHaveLength(0);
     expect(testState.link?.redemptionCount).toBe(0);
+  });
+
+  it("recovers on retry when rollback fails after redemption is logged", async () => {
+    const { redeemPremiumVoucher } = await import("@/lib/premium-voucher");
+    testState.setUserBadgesMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    testState.deleteFails = true;
+
+    const first = await redeemPremiumVoucher("premium-token", "user-a");
+
+    expect(first).toEqual({ error: "Failed to grant Premium" });
+    expect(testState.redemptions).toHaveLength(1);
+    expect(testState.link?.redemptionCount).toBe(1);
+
+    testState.deleteFails = false;
+    const second = await redeemPremiumVoucher("premium-token", "user-a");
+
+    expect(second).toEqual({ success: true });
+    expect(testState.setUserBadgesMock).toHaveBeenCalledTimes(2);
+    expect(testState.redemptions).toHaveLength(1);
+    expect(testState.link?.redemptionCount).toBe(1);
   });
 
   it("releases reserved slot if grant throws", async () => {
