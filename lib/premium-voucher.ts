@@ -63,7 +63,8 @@ export async function redeemPremiumVoucher(
 
   const existing = await redemptionsColl.findOne({ token, redeemedBy: redeemerUserId });
   if (existing) {
-    return { error: "You have already redeemed this link" };
+    // Idempotent recovery: if logging succeeded earlier but granting failed, let retries heal state.
+    return grantPremiumToRedeemer(redeemerUserId);
   }
 
   let reservedSlot = false;
@@ -94,7 +95,8 @@ export async function redeemPremiumVoucher(
       shouldReleaseReservedSlot = false;
     } catch (err) {
       if (isDuplicateKeyError(err)) {
-        return { error: "You have already redeemed this link" };
+        // Concurrent duplicate insert means redemption already exists; treat as idempotent grant.
+        return grantPremiumToRedeemer(redeemerUserId);
       }
       return { error: "Failed to redeem link" };
     }
@@ -313,4 +315,14 @@ async function rollbackPremiumVoucherRedemptionEvent(
   } catch {
     return false;
   }
+}
+
+async function grantPremiumToRedeemer(
+  redeemerUserId: string
+): Promise<{ success: true } | { error: string }> {
+  const ok = await setUserBadges(redeemerUserId, { premiumGranted: true });
+  if (!ok) {
+    return { error: "Failed to grant Premium" };
+  }
+  return { success: true };
 }
