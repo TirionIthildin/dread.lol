@@ -123,6 +123,8 @@ export interface Profile {
   viewCount?: number;
   /** Admin-granted verified badge (member profiles only). */
   verified?: boolean;
+  /** Admin-granted Verified Creator (member profiles only). */
+  verifiedCreator?: boolean;
   /** Admin-granted staff badge (member profiles only). */
   staff?: boolean;
   /** Dread Premium badge (subscription, one-time, or admin-granted). */

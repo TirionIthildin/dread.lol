@@ -56,6 +56,50 @@ export async function createRedemptionLink(
   return { url, token };
 }
 
+/**
+ * One canonical unlimited multi-use link for a Verified Creator program badge.
+ * Drops extra links for the same badge so creators share a single URL.
+ */
+export async function ensureCreatorRedemptionLink(
+  createdBy: string,
+  badgeId: string
+): Promise<{ url: string; token: string } | { error: string }> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const badgeColl = client.db(dbName).collection(COLLECTIONS.userCreatedBadges);
+  const badgeObjId = new ObjectId(badgeId);
+  const badge = await badgeColl.findOne({ _id: badgeObjId, userId: createdBy, creatorProgram: true });
+  if (!badge) {
+    return { error: "Creator badge not found" };
+  }
+
+  const coll = client.db(dbName).collection(COLLECTIONS.badgeRedemptionLinks);
+  const all = await coll.find({ badgeId: badgeObjId, createdBy }).sort({ createdAt: 1 }).toArray();
+  const multiUnlimited = all.find(
+    (l) => !isLegacySingleUse(l as BadgeRedemptionLinkDoc) && (l as { maxRedemptions?: unknown }).maxRedemptions === null
+  );
+
+  if (multiUnlimited) {
+    const dupIds = all.filter((l) => l._id.toString() !== multiUnlimited._id.toString()).map((l) => l._id);
+    if (dupIds.length > 0) {
+      await coll.deleteMany({ _id: { $in: dupIds } });
+    }
+    const baseUrl = SITE_URL.replace(/\/$/, "");
+    return { url: `${baseUrl}/badge/redeem/${multiUnlimited.token}`, token: multiUnlimited.token };
+  }
+
+  await coll.deleteMany({ badgeId: badgeObjId, createdBy });
+  return createRedemptionLink(createdBy, badgeId, { maxRedemptions: null, expiresAt: null });
+}
+
+/** Remove all redemption links for a user-created badge (e.g. when deleting the badge). */
+export async function deleteRedemptionLinksForBadge(badgeId: string, createdBy: string): Promise<void> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const badgeObjId = new ObjectId(badgeId);
+  await client.db(dbName).collection(COLLECTIONS.badgeRedemptionLinks).deleteMany({ badgeId: badgeObjId, createdBy });
+}
+
 export async function redeemLink(
   token: string,
   redeemerUserId: string

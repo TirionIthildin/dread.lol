@@ -93,6 +93,11 @@ try {
 
   await db.collection("settings").createIndex({ key: 1 }, { unique: true });
 
+  await db.collection("user_created_badges").createIndex(
+    { userId: 1, creatorProgram: 1 },
+    { sparse: true }
+  );
+
   await db.collection("badge_redemption_links").createIndex({ token: 1 }, { unique: true });
 
   await db.collection("badge_redemption_events").createIndex({ linkId: 1, redeemedBy: 1 }, { unique: true });

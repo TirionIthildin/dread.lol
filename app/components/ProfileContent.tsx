@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield, Crown } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield, Crown, SealCheck } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 import { getOrderedSectionIds, type ProfileSectionId } from "@/lib/profile-sections";
 
@@ -196,10 +196,11 @@ function ProfileSection({
                 if (nameAnim !== "none") return <AnimatedField animation={nameAnim}>{profile.name}</AnimatedField>;
                 return profile.name;
               })()}
-              {(profile.verified || profile.staff || profile.premium || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
+              {(profile.verified || profile.verifiedCreator || profile.staff || profile.premium || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
                 <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
                   {profile.premium && <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Dread Premium"><Crown size={14} weight="fill" className="shrink-0" aria-hidden />Premium</span>}
                   {profile.verified && <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member"><Check size={14} weight="bold" className="shrink-0" aria-hidden />Verified</span>}
+                  {profile.verifiedCreator && <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/15 px-1.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400" title="Verified Creator on Dread"><SealCheck size={14} weight="fill" className="shrink-0" aria-hidden />Verified Creator</span>}
                   {profile.staff && <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="Server staff"><Shield size={14} weight="fill" className="shrink-0" aria-hidden />Staff</span>}
                   {profile.customBadges?.map((b) => {
                     const isHex = b.color?.startsWith("#");

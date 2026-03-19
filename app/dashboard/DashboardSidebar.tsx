@@ -13,6 +13,7 @@ import {
   ImagesSquare,
   LinkSimple,
   Medal,
+  PenNib,
   SignOut,
   Storefront,
   Trophy,
@@ -49,9 +50,9 @@ const discoverNavItems = [
 
 type NavItem = (typeof mainNavItems)[number];
 
-type Props = { isAdmin: boolean; session: SessionUser | null };
+type Props = { isAdmin: boolean; verifiedCreator: boolean; session: SessionUser | null };
 
-export default function DashboardSidebar({ isAdmin, session }: Props) {
+export default function DashboardSidebar({ isAdmin, verifiedCreator, session }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -101,12 +102,14 @@ export default function DashboardSidebar({ isAdmin, session }: Props) {
     );
   };
 
+  const mainNavCount = verifiedCreator ? mainNavItems.length + 1 : mainNavItems.length;
+
   const NavSection = ({
     items,
     sectionLabel,
     itemOffset = 0,
   }: {
-    items: (typeof mainNavItems | typeof discoverNavItems | typeof contentNavItems);
+    items: readonly { href: string; label: string; icon: (typeof mainNavItems)[number]["icon"] }[];
     sectionLabel?: string;
     itemOffset?: number;
   }) => (
@@ -139,16 +142,24 @@ export default function DashboardSidebar({ isAdmin, session }: Props) {
       aria-label="Dashboard navigation"
     >
       <nav className="flex flex-1 flex-col gap-4 overflow-x-auto overflow-y-auto px-2 py-4 md:px-3 md:gap-6 md:py-5 min-h-0">
-        <NavSection items={mainNavItems} sectionLabel="Main" itemOffset={0} />
+        <NavSection
+          items={
+            verifiedCreator
+              ? [...mainNavItems, { href: "/dashboard/creator", label: "Creator", icon: PenNib }]
+              : mainNavItems
+          }
+          sectionLabel="Main"
+          itemOffset={0}
+        />
         <NavSection
           items={contentNavItems}
           sectionLabel="Content"
-          itemOffset={mainNavItems.length}
+          itemOffset={mainNavCount}
         />
         <NavSection
           items={discoverNavItems}
           sectionLabel="Discover"
-          itemOffset={mainNavItems.length + contentNavItems.length}
+          itemOffset={mainNavCount + contentNavItems.length}
         />
         {isAdmin && (
           <div className="mt-auto pt-4 md:pt-6 border-t border-[var(--border)]/60">
@@ -166,7 +177,7 @@ export default function DashboardSidebar({ isAdmin, session }: Props) {
                 icon: GearSix,
               }}
               active={pathname.startsWith("/dashboard/admin")}
-              delay={20 + (mainNavItems.length + contentNavItems.length + discoverNavItems.length) * 25}
+              delay={20 + (mainNavCount + contentNavItems.length + discoverNavItems.length) * 25}
             />
           </div>
         )}

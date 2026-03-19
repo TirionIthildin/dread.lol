@@ -125,16 +125,20 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
   return { id, approved: true, isAdmin: getAdminDiscordIds().includes(session.sub), createdAt: now };
 }
 
-export async function getUserBadges(userId: string): Promise<{ verified: boolean; staff: boolean }> {
+export async function getUserBadges(userId: string): Promise<{ verified: boolean; staff: boolean; verifiedCreator: boolean }> {
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
   const row = await db.collection<UserDoc>(COLLECTIONS.users).findOne(
     { _id: userId },
-    { projection: { verified: 1, staff: 1 } }
+    { projection: { verified: 1, staff: 1, verifiedCreator: 1 } }
   );
-  if (!row) return { verified: false, staff: false };
-  return { verified: row.verified ?? false, staff: row.staff ?? false };
+  if (!row) return { verified: false, staff: false, verifiedCreator: false };
+  return {
+    verified: row.verified ?? false,
+    staff: row.staff ?? false,
+    verifiedCreator: row.verifiedCreator ?? false,
+  };
 }
 
 const DEBUG_DISCORD_FLAGS =
@@ -219,12 +223,13 @@ export async function getUserDiscordFlags(userId: string): Promise<number | null
 
 export async function setUserBadges(
   userId: string,
-  badgeFlags: { verified?: boolean; staff?: boolean; premiumGranted?: boolean }
+  badgeFlags: { verified?: boolean; staff?: boolean; premiumGranted?: boolean; verifiedCreator?: boolean }
 ): Promise<boolean> {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof badgeFlags.verified === "boolean") updates.verified = badgeFlags.verified;
   if (typeof badgeFlags.staff === "boolean") updates.staff = badgeFlags.staff;
   if (typeof badgeFlags.premiumGranted === "boolean") updates.premiumGranted = badgeFlags.premiumGranted;
+  if (typeof badgeFlags.verifiedCreator === "boolean") updates.verifiedCreator = badgeFlags.verifiedCreator;
   if (Object.keys(updates).length <= 1) return true;
 
   const client = await getDb();
@@ -447,6 +452,7 @@ export type AdminUserRow = {
   verified: boolean;
   staff: boolean;
   premiumGranted: boolean;
+  verifiedCreator: boolean;
   restricted?: boolean;
   customBadgeVouchers?: number;
   createdAt: Date;
@@ -460,7 +466,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
     .collection<UserDoc>(COLLECTIONS.users)
     .findOne(
       { _id: userId },
-      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 } }
+      { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, verifiedCreator: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 } }
     );
   return doc
     ? {
@@ -472,6 +478,7 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
         verified: doc.verified ?? false,
         staff: doc.staff ?? false,
         premiumGranted: doc.premiumGranted ?? false,
+        verifiedCreator: doc.verifiedCreator ?? false,
         restricted: doc.restricted ?? false,
         customBadgeVouchers: (doc as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
         createdAt: doc.createdAt,
@@ -486,7 +493,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find()
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, verifiedCreator: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -498,6 +505,7 @@ export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
     verified: d.verified ?? false,
     staff: d.staff ?? false,
     premiumGranted: d.premiumGranted ?? false,
+    verifiedCreator: d.verifiedCreator ?? false,
     restricted: d.restricted ?? false,
     customBadgeVouchers: (d as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
     createdAt: d.createdAt,
@@ -522,7 +530,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     .db(dbName)
     .collection(COLLECTIONS.users)
     .find(filter)
-    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
+    .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, verifiedCreator: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -534,6 +542,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     verified: d.verified ?? false,
     staff: d.staff ?? false,
     premiumGranted: d.premiumGranted ?? false,
+    verifiedCreator: d.verifiedCreator ?? false,
     restricted: d.restricted ?? false,
     customBadgeVouchers: (d as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
     createdAt: d.createdAt,
@@ -1481,7 +1490,7 @@ function parseAudioTracks(raw: string | null | undefined): { url: string; title?
 
 export function memberProfileToProfile(
   row: ProfileRow,
-  badgeFlags?: { verified: boolean; staff: boolean },
+  badgeFlags?: { verified: boolean; staff: boolean; verifiedCreator?: boolean },
   discordBadgeData?: DiscordBadgeData | null,
   customBadgesList?: CustomBadge[],
   ownerHasPremium?: boolean
@@ -1596,6 +1605,7 @@ export function memberProfileToProfile(
     ...(badgeFlags && {
       verified: badgeFlags.verified || undefined,
       staff: badgeFlags.staff || undefined,
+      verifiedCreator: badgeFlags.verifiedCreator || undefined,
     }),
     ...(ownerHasPremium === true && { premium: true }),
     ...(customBadgesList &&
