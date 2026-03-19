@@ -287,4 +287,17 @@ describe("redeemLink", () => {
     expect(testState.link?.usedAt).toBeNull();
     expect(testState.link?.usedBy).toBeNull();
   });
+
+  it("releases legacy single-use claim when badge creation throws", async () => {
+    const { redeemLink } = await import("@/lib/badge-redemption");
+    if (testState.link) {
+      testState.link.maxRedemptions = undefined;
+      testState.link.redemptionCount = undefined;
+    }
+    testState.createUserCreatedBadgeMock.mockRejectedValue(new Error("db unavailable"));
+
+    await expect(redeemLink("badge-token", "user-a")).rejects.toThrow("db unavailable");
+    expect(testState.link?.usedAt).toBeNull();
+    expect(testState.link?.usedBy).toBeNull();
+  });
 });

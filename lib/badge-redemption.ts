@@ -252,24 +252,31 @@ async function redeemLegacyLink(
     return { error: "This link has already been used" };
   }
 
-  const result = await createUserCreatedBadge(redeemerUserId, {
-    label: badge.label ?? "",
-    description: badge.description ?? null,
-    color: badge.color ?? null,
-    badgeType: (badge.badgeType as "label" | "image" | "icon") ?? "label",
-    imageUrl: badge.imageUrl ?? null,
-    iconName: badge.iconName ?? null,
-  });
+  let shouldReleaseClaim = true;
+  try {
+    const result = await createUserCreatedBadge(redeemerUserId, {
+      label: badge.label ?? "",
+      description: badge.description ?? null,
+      color: badge.color ?? null,
+      badgeType: (badge.badgeType as "label" | "image" | "icon") ?? "label",
+      imageUrl: badge.imageUrl ?? null,
+      iconName: badge.iconName ?? null,
+    });
 
-  if (!result) {
-    await releaseLegacyRedemptionClaim(coll, link._id, redeemerUserId);
-    return { error: "Failed to add badge" };
+    if (!result) {
+      return { error: "Failed to add badge" };
+    }
+
+    shouldReleaseClaim = false;
+    return {
+      success: true,
+      badge: { id: result.id, label: result.label },
+    };
+  } finally {
+    if (shouldReleaseClaim) {
+      await releaseLegacyRedemptionClaim(coll, link._id, redeemerUserId);
+    }
   }
-
-  return {
-    success: true,
-    badge: { id: result.id, label: result.label },
-  };
 }
 
 async function claimLegacyRedemption(
