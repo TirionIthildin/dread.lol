@@ -23,6 +23,8 @@ const VERIFIED_BG = "rgba(6, 182, 212, 0.15)";
 const VERIFIED_TEXT = "#06b6d4";
 const STAFF_BG = "rgba(245, 158, 11, 0.15)";
 const STAFF_TEXT = "#f59e0b";
+const VERIFIED_CREATOR_BG = "rgba(139, 92, 246, 0.15)";
+const VERIFIED_CREATOR_TEXT = "#8b5cf6";
 const DISCORD_BG = "rgba(88, 101, 242, 0.15)";
 const DISCORD_TEXT = "#5865F2";
 
@@ -174,6 +176,7 @@ export async function GET(
             {profile.name}
           </div>
           {(profile.verified ||
+            profile.verifiedCreator ||
             profile.staff ||
             (profile.customBadges?.length ?? 0) > 0 ||
             (profile.discordBadges?.length ?? 0) > 0) && (
@@ -199,6 +202,22 @@ export async function GET(
                   }}
                 >
                   ✓ Verified
+                </span>
+              )}
+              {profile.verifiedCreator && (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "4px 10px",
+                    borderRadius: 6,
+                    fontSize: 18,
+                    fontWeight: 500,
+                    backgroundColor: VERIFIED_CREATOR_BG,
+                    color: VERIFIED_CREATOR_TEXT,
+                  }}
+                >
+                  Verified Creator
                 </span>
               )}
               {profile.staff && (

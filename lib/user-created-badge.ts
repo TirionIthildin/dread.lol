@@ -15,9 +15,21 @@ export interface UserCreatedBadge {
   imageUrl?: string | null;
   iconName?: string | null;
   sortOrder: number;
+  creatorProgram?: boolean;
 }
 
-function docToBadge(doc: { _id: ObjectId; userId?: string; label?: string; description?: string | null; color?: string | null; badgeType?: string; imageUrl?: string | null; iconName?: string | null; sortOrder?: number }): UserCreatedBadge {
+function docToBadge(doc: {
+  _id: ObjectId;
+  userId?: string;
+  label?: string;
+  description?: string | null;
+  color?: string | null;
+  badgeType?: string;
+  imageUrl?: string | null;
+  iconName?: string | null;
+  sortOrder?: number;
+  creatorProgram?: boolean;
+}): UserCreatedBadge {
   return {
     id: doc._id.toString(),
     userId: doc.userId ?? "",
@@ -28,7 +40,34 @@ function docToBadge(doc: { _id: ObjectId; userId?: string; label?: string; descr
     imageUrl: doc.imageUrl ?? null,
     iconName: doc.iconName ?? null,
     sortOrder: doc.sortOrder ?? 999,
+    creatorProgram: doc.creatorProgram === true ? true : undefined,
   };
+}
+
+export async function isCreatorProgramBadge(userId: string, badgeId: string): Promise<boolean> {
+  try {
+    const client = await getDb();
+    const dbName = await getDbName();
+    const doc = await client
+      .db(dbName)
+      .collection(COLLECTIONS.userCreatedBadges)
+      .findOne({ _id: new ObjectId(badgeId), userId, creatorProgram: true }, { projection: { _id: 1 } });
+    return doc !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** The single Verified Creator program badge for this user, if any. */
+export async function getCreatorProgramBadge(userId: string): Promise<UserCreatedBadge | null> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const doc = await client
+    .db(dbName)
+    .collection(COLLECTIONS.userCreatedBadges)
+    .findOne({ userId, creatorProgram: true });
+  if (!doc?._id) return null;
+  return docToBadge(doc as Parameters<typeof docToBadge>[0]);
 }
 
 export async function getUserCreatedBadges(userId: string): Promise<UserCreatedBadge[]> {
@@ -52,6 +91,8 @@ export async function createUserCreatedBadge(
     badgeType?: "label" | "image" | "icon";
     imageUrl?: string | null;
     iconName?: string | null;
+    /** Set only by Verified Creator API; marks the single program badge. */
+    creatorProgram?: boolean;
   }
 ): Promise<UserCreatedBadge | null> {
   const client = await getDb();
@@ -59,7 +100,19 @@ export async function createUserCreatedBadge(
   const coll = client.db(dbName).collection(COLLECTIONS.userCreatedBadges);
   const now = new Date();
 
-  const doc = {
+  const doc: {
+    userId: string;
+    label: string;
+    description: string | null;
+    color: string | null;
+    badgeType: string;
+    imageUrl: string | null;
+    iconName: string | null;
+    sortOrder: number;
+    createdAt: Date;
+    updatedAt: Date;
+    creatorProgram?: true;
+  } = {
     userId,
     label: data.label.trim().slice(0, 50),
     description: (data.description?.trim() ?? "").slice(0, 200) || null,
@@ -71,6 +124,9 @@ export async function createUserCreatedBadge(
     createdAt: now,
     updatedAt: now,
   };
+  if (data.creatorProgram === true) {
+    doc.creatorProgram = true;
+  }
 
   const result = await coll.insertOne(doc);
   if (!result.acknowledged) return null;

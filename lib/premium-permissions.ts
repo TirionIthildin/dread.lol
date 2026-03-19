@@ -7,7 +7,7 @@ import { getUserPolarState } from "@/lib/polar-subscription";
 import { getBillingSettings } from "@/lib/settings";
 import type { UserDoc } from "@/lib/db/schema";
 
-export type PremiumSource = "subscription" | "product" | "granted" | null;
+export type PremiumSource = "subscription" | "product" | "granted" | "verified_creator" | null;
 
 export interface PremiumAccess {
   hasAccess: boolean;
@@ -17,6 +17,7 @@ export interface PremiumAccess {
 /**
  * Check if a user has Premium access from any source:
  * - Admin-granted free Premium (premiumGranted on user doc)
+ * - Verified Creator program (verifiedCreator on user doc)
  * - Active Polar subscription for the Premium product
  * - Owned Premium product (one-time purchase)
  */
@@ -39,6 +40,10 @@ export async function getPremiumAccess(userId: string): Promise<PremiumAccess> {
     return { hasAccess: true, source: "granted" };
   }
 
+  if (userDoc?.verifiedCreator) {
+    return { hasAccess: true, source: "verified_creator" };
+  }
+
   const productIds = billing.productIds;
   if (productIds.length === 0) return { hasAccess: false, source: null };
 
@@ -51,12 +56,12 @@ export async function getPremiumAccess(userId: string): Promise<PremiumAccess> {
   return { hasAccess: false, source: null };
 }
 
-async function getUserDocForPremium(userId: string): Promise<Pick<UserDoc, "premiumGranted"> | null> {
+async function getUserDocForPremium(userId: string): Promise<Pick<UserDoc, "premiumGranted" | "verifiedCreator"> | null> {
   const client = await getDb();
   const dbName = await getDbName();
   const doc = await client
     .db(dbName)
     .collection<UserDoc>(COLLECTIONS.users)
-    .findOne({ _id: userId }, { projection: { premiumGranted: 1 } });
+    .findOne({ _id: userId }, { projection: { premiumGranted: 1, verifiedCreator: 1 } });
   return doc;
 }

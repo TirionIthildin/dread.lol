@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
+import { isVerifiedCreator } from "@/lib/creator-program";
 import DashboardSidebar from "@/app/dashboard/DashboardSidebar";
 
 export default async function DashboardLayout({
@@ -10,6 +11,7 @@ export default async function DashboardLayout({
   const session = await getSession();
   const user = session ? await getOrCreateUser(session) : null;
   const isAdmin = user?.isAdmin ?? false;
+  const verifiedCreator = session ? await isVerifiedCreator(session.sub) : false;
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row grid-bg scanlines">
@@ -44,7 +46,7 @@ export default async function DashboardLayout({
 
       <aside className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-64 md:max-h-screen">
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <DashboardSidebar isAdmin={isAdmin} session={session} />
+          <DashboardSidebar isAdmin={isAdmin} verifiedCreator={verifiedCreator} session={session} />
         </div>
       </aside>
 

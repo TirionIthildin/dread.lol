@@ -17,6 +17,7 @@ export type AdminUser = {
   verified: boolean;
   staff: boolean;
   premiumGranted: boolean;
+  verifiedCreator: boolean;
   restricted?: boolean;
   customBadgeVouchers?: number;
   createdAt: string;
@@ -32,6 +33,7 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
   const [verified, setVerified] = useState(user.verified);
   const [staff, setStaff] = useState(user.staff);
   const [premiumGranted, setPremiumGranted] = useState(user.premiumGranted);
+  const [verifiedCreator, setVerifiedCreator] = useState(user.verifiedCreator ?? false);
   const [restricted, setRestricted] = useState(user.restricted ?? false);
   const [customBadges, setCustomBadges] = useState<CustomBadge[]>([]);
   const [userBadgeIds, setUserBadgeIds] = useState<string[]>([]);
@@ -46,9 +48,10 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     setVerified(user.verified);
     setStaff(user.staff);
     setPremiumGranted(user.premiumGranted);
+    setVerifiedCreator(user.verifiedCreator ?? false);
     setRestricted(user.restricted ?? false);
     setCustomBadgeVouchers(user.customBadgeVouchers ?? 0);
-  }, [user.id, user.verified, user.staff, user.premiumGranted, user.restricted, user.customBadgeVouchers]);
+  }, [user.id, user.verified, user.staff, user.premiumGranted, user.verifiedCreator, user.restricted, user.customBadgeVouchers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,21 +86,30 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
     });
   }
 
-  function handleBadge(badge: "verified" | "staff" | "premiumGranted", value: boolean) {
+  function handleBadge(badge: "verified" | "staff" | "premiumGranted" | "verifiedCreator", value: boolean) {
     setError(null);
     if (badge === "verified") setVerified(value);
     else if (badge === "staff") setStaff(value);
-    else setPremiumGranted(value);
+    else if (badge === "premiumGranted") setPremiumGranted(value);
+    else setVerifiedCreator(value);
     startTransition(async () => {
-      const key = badge === "premiumGranted" ? "premiumGranted" : badge;
-      const result = await setUserBadgesAction(user.id, { [key]: value });
+      const payload =
+        badge === "verified"
+          ? { verified: value }
+          : badge === "staff"
+            ? { staff: value }
+            : badge === "premiumGranted"
+              ? { premiumGranted: value }
+              : { verifiedCreator: value };
+      const result = await setUserBadgesAction(user.id, payload);
       if (result.error) {
         setError(result.error);
         if (badge === "verified") setVerified(!value);
         else if (badge === "staff") setStaff(!value);
-        else setPremiumGranted(!value);
+        else if (badge === "premiumGranted") setPremiumGranted(!value);
+        else setVerifiedCreator(!value);
       } else {
-        onUpdate({ ...user, [badge]: value });
+        onUpdate({ ...user, ...payload });
       }
     });
   }
@@ -262,6 +274,16 @@ export default function AdminUserModal({ user, onClose, onUpdate }: Props) {
                   className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
                 />
                 <span className="text-[var(--foreground)]">Premium (free)</span>
+              </label>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm disabled:opacity-50">
+                <input
+                  type="checkbox"
+                  checked={verifiedCreator}
+                  disabled={isPending}
+                  onChange={(e) => handleBadge("verifiedCreator", e.target.checked)}
+                  className="rounded border-[var(--border)] text-violet-500 focus:ring-violet-500"
+                />
+                <span className="text-[var(--foreground)]">Verified Creator</span>
               </label>
             </div>
             <div className="flex items-center justify-between gap-2 pt-2">

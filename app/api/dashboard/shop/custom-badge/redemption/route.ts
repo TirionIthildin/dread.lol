@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { getCustomBadgeAddonCount } from "@/lib/custom-badge-addon";
+import { isCreatorProgramBadge } from "@/lib/user-created-badge";
 import { createRedemptionLink } from "@/lib/badge-redemption";
 
 export async function POST(request: NextRequest) {
@@ -21,11 +22,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Account not approved" }, { status: 403 });
   }
 
-  const slotCount = await getCustomBadgeAddonCount(session.sub);
-  if (slotCount === 0) {
-    return NextResponse.json({ error: "Custom badge addon required" }, { status: 403 });
-  }
-
   let body: { badgeId?: string; maxRedemptions?: number | null; expiresAt?: string } = {};
   try {
     body = await request.json();
@@ -36,6 +32,12 @@ export async function POST(request: NextRequest) {
   const badgeId = typeof body.badgeId === "string" ? body.badgeId.trim() : "";
   if (!badgeId) {
     return NextResponse.json({ error: "badgeId is required" }, { status: 400 });
+  }
+
+  const slotCount = await getCustomBadgeAddonCount(session.sub);
+  const creatorBadge = await isCreatorProgramBadge(session.sub, badgeId);
+  if (slotCount === 0 && !creatorBadge) {
+    return NextResponse.json({ error: "Custom badge addon required" }, { status: 403 });
   }
 
   const options: { maxRedemptions?: number | null; expiresAt?: Date | null } = {};

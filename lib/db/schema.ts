@@ -17,6 +17,8 @@ export interface UserDoc {
   staff: boolean;
   /** Admin-granted free Premium (bypasses Polar payment). */
   premiumGranted?: boolean;
+  /** Admin-granted Verified Creator: Premium + profile pill + creator badge program. */
+  verifiedCreator?: boolean;
   /** Admin-granted custom badge slots (vouchers). Adds to purchased count. */
   customBadgeVouchers?: number;
   /** Profile restricted: billing issue or terminated. When true, profile shows restricted message. */
@@ -197,6 +199,23 @@ export interface UserBadgeDoc {
   _id: ObjectId;
   userId: string;
   badgeId: ObjectId;
+}
+
+/** User-designed badge (custom badge addon or Verified Creator program). */
+export interface UserCreatedBadgeDoc {
+  _id: ObjectId;
+  userId: string;
+  label: string;
+  description?: string | null;
+  color?: string | null;
+  badgeType?: string | null;
+  imageUrl?: string | null;
+  iconName?: string | null;
+  sortOrder?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  /** Single free badge from Verified Creator program (not purchased slots). */
+  creatorProgram?: boolean;
 }
 
 export interface BlogPostDoc {

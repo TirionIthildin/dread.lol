@@ -14,6 +14,7 @@ type Props = {
 function normalizeUser(u: AdminUser & { createdAt?: Date; customBadgeVouchers?: number }): AdminUser {
   return {
     ...u,
+    verifiedCreator: u.verifiedCreator ?? false,
     customBadgeVouchers: u.customBadgeVouchers ?? 0,
     createdAt: typeof u.createdAt === "string" ? u.createdAt : (u.createdAt as Date)?.toISOString?.() ?? "",
   };

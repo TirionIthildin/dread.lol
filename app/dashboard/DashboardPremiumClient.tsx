@@ -92,11 +92,13 @@ export default function DashboardPremiumClient({
   const statusLabel =
     premiumSource === "granted"
       ? "Complimentary access from admin"
-      : premiumSource === "subscription"
-        ? "Active subscription"
-        : premiumSource === "product"
-          ? "Lifetime access"
-          : null;
+      : premiumSource === "verified_creator"
+        ? "Verified Creator program"
+        : premiumSource === "subscription"
+          ? "Active subscription"
+          : premiumSource === "product"
+            ? "Lifetime access"
+            : null;
 
   return (
     <div className="space-y-8">
