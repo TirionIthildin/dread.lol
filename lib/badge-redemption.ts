@@ -252,7 +252,7 @@ async function redeemLegacyLink(
     return { error: "This link has already been used" };
   }
 
-  let redemptionCommitted = false;
+  let shouldReleaseClaim = true;
   try {
     const result = await createUserCreatedBadge(redeemerUserId, {
       label: badge.label ?? "",
@@ -267,13 +267,13 @@ async function redeemLegacyLink(
       return { error: "Failed to add badge" };
     }
 
-    redemptionCommitted = true;
+    shouldReleaseClaim = false;
     return {
       success: true,
       badge: { id: result.id, label: result.label },
     };
   } finally {
-    if (!redemptionCommitted) {
+    if (shouldReleaseClaim) {
       await releaseLegacyRedemptionClaim(coll, link._id, redeemerUserId);
     }
   }
