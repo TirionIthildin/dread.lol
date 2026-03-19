@@ -1181,7 +1181,7 @@ export default function DashboardMyProfile({
                     Show Discord presence
                   </label>
                   <p className="text-xs text-[var(--muted)]">
-                    When enabled and you're in our Discord server, your live status (online/idle/busy) and Rich Presence (e.g. "Playing X") appear on your profile.
+                    {`When enabled and you're in our Discord server, your live status (online/idle/busy) and Rich Presence (e.g. "Playing X") appear on your profile.`}
                   </p>
                   <p className="inline-flex items-center gap-1.5 text-xs text-[var(--warning)] rounded-lg border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-2.5 py-1.5" role="note">
                     <span aria-hidden>⚠️</span>
