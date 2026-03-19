@@ -12,7 +12,15 @@ const testState = vi.hoisted(() => ({
         expiresAt: Date | null;
       }
     | null,
-  redemptions: [] as Array<{ linkId: ObjectId; token: string; redeemedBy: string; creatorId: string; redeemedAt: Date }>,
+  redemptions: [] as Array<{
+    linkId: ObjectId;
+    token: string;
+    redeemedBy: string;
+    creatorId: string;
+    redeemedAt: Date;
+    grantPending?: boolean;
+    grantedAt?: Date;
+  }>,
   setUserBadgesMock: vi.fn(async () => true),
   insertErrorCode: null as number | null,
   deleteFails: false,
@@ -99,7 +107,7 @@ vi.mock("@/lib/db", () => {
                     (query.token == null || r.token === query.token) &&
                     (query.linkId == null || r.linkId.equals(query.linkId))
                 ).length,
-              insertOne: async (doc: { linkId: ObjectId; token: string; redeemedBy: string; creatorId: string; redeemedAt: Date }) => {
+              insertOne: async (doc: { linkId: ObjectId; token: string; redeemedBy: string; creatorId: string; redeemedAt: Date; grantPending?: boolean }) => {
                 if (typeof testState.insertErrorCode === "number") {
                   const err = new Error("insert failure");
                   (err as Error & { code?: number }).code = testState.insertErrorCode;
@@ -115,6 +123,25 @@ vi.mock("@/lib/db", () => {
                 }
                 testState.redemptions.push(doc);
                 return { acknowledged: true };
+              },
+              updateOne: async (
+                filter: { linkId: ObjectId; redeemedBy: string; grantPending?: boolean },
+                update: { $set?: { grantPending?: boolean; grantedAt?: Date } }
+              ) => {
+                const row = testState.redemptions.find(
+                  (r) => r.linkId.equals(filter.linkId) && r.redeemedBy === filter.redeemedBy
+                );
+                if (!row) return { matchedCount: 0, modifiedCount: 0 };
+                if (typeof filter.grantPending === "boolean" && (row.grantPending ?? false) !== filter.grantPending) {
+                  return { matchedCount: 0, modifiedCount: 0 };
+                }
+                if (Object.prototype.hasOwnProperty.call(update.$set ?? {}, "grantPending")) {
+                  row.grantPending = update.$set?.grantPending;
+                }
+                if (update.$set?.grantedAt) {
+                  row.grantedAt = update.$set.grantedAt;
+                }
+                return { matchedCount: 1, modifiedCount: 1 };
               },
               deleteOne: async (query: { linkId: ObjectId; redeemedBy: string }) => {
                 if (testState.deleteFails) return { deletedCount: 0 };
@@ -218,5 +245,28 @@ describe("redeemPremiumVoucher", () => {
     expect(testState.setUserBadgesMock).not.toHaveBeenCalled();
     expect(testState.redemptions).toHaveLength(0);
     expect(testState.link?.redemptionCount).toBe(0);
+  });
+
+  it("recovers pending redemptions that were logged before grant", async () => {
+    const { getPremiumVoucherByToken, redeemPremiumVoucher } = await import("@/lib/premium-voucher");
+    if (!testState.link) throw new Error("missing link");
+    testState.redemptions.push({
+      linkId: testState.link._id,
+      token: "premium-token",
+      redeemedBy: "user-a",
+      creatorId: testState.link.createdBy,
+      redeemedAt: new Date(),
+      grantPending: true,
+    });
+
+    const preflight = await getPremiumVoucherByToken("premium-token", "user-a");
+    expect(preflight.alreadyRedeemed).toBe(false);
+
+    const result = await redeemPremiumVoucher("premium-token", "user-a");
+
+    expect(result).toEqual({ success: true });
+    expect(testState.setUserBadgesMock).toHaveBeenCalledWith("user-a", { premiumGranted: true });
+    expect(testState.redemptions[0]?.grantPending).toBe(false);
+    expect(testState.redemptions[0]?.grantedAt).toBeInstanceOf(Date);
   });
 });

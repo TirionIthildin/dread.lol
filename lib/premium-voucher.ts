@@ -63,6 +63,15 @@ export async function redeemPremiumVoucher(
 
   const existing = await redemptionsColl.findOne({ token, redeemedBy: redeemerUserId });
   if (existing) {
+    if (isPendingPremiumGrant(existing)) {
+      const recovered = await completePendingPremiumGrant(
+        redemptionsColl,
+        link._id,
+        redeemerUserId
+      );
+      if (recovered) return { success: true };
+      return { error: "Failed to grant Premium" };
+    }
     // Idempotent recovery: if logging succeeded earlier but granting failed, let retries heal state.
     return grantPremiumToRedeemer(redeemerUserId);
   }
@@ -90,6 +99,7 @@ export async function redeemPremiumVoucher(
         redeemedBy: redeemerUserId,
         creatorId: link.createdBy,
         redeemedAt: now,
+        grantPending: true,
       });
       insertedRedemptionEvent = true;
       shouldReleaseReservedSlot = false;
@@ -116,6 +126,7 @@ export async function redeemPremiumVoucher(
       return { error: "Failed to grant Premium" };
     }
 
+    await markPremiumVoucherGrantCompleted(redemptionsColl, link._id, redeemerUserId);
     return { success: true };
   } catch (err) {
     if (insertedRedemptionEvent) {
@@ -160,17 +171,21 @@ export async function getPremiumVoucherByToken(
     return { valid: false, error: "Link expired" };
   }
 
-  if (link.maxRedemptions != null && link.maxRedemptions > 0) {
-    const count = await redemptionsColl.countDocuments({ token });
-    if (count >= link.maxRedemptions) {
-      return { valid: false, error: "This link has reached its redemption limit" };
-    }
-  }
-
+  let existingForUser: { grantPending?: boolean } | null = null;
   let alreadyRedeemed = false;
   if (redeemerUserId) {
-    const existing = await redemptionsColl.findOne({ token, redeemedBy: redeemerUserId });
-    alreadyRedeemed = !!existing;
+    existingForUser = (await redemptionsColl.findOne({
+      token,
+      redeemedBy: redeemerUserId,
+    })) as { grantPending?: boolean } | null;
+    alreadyRedeemed = !!existingForUser && !isPendingPremiumGrant(existingForUser);
+  }
+
+  if (link.maxRedemptions != null && link.maxRedemptions > 0) {
+    const count = await redemptionsColl.countDocuments({ token });
+    if (count >= link.maxRedemptions && !existingForUser) {
+      return { valid: false, error: "This link has reached its redemption limit" };
+    }
   }
 
   return {
@@ -312,6 +327,47 @@ async function rollbackPremiumVoucherRedemptionEvent(
   try {
     const result = await redemptionsColl.deleteOne({ linkId, redeemedBy: redeemerUserId });
     return result.deletedCount > 0;
+  } catch {
+    return false;
+  }
+}
+
+function isPendingPremiumGrant(
+  redemptionDoc: unknown
+): redemptionDoc is { grantPending: true } {
+  return (
+    typeof redemptionDoc === "object" &&
+    redemptionDoc !== null &&
+    "grantPending" in redemptionDoc &&
+    (redemptionDoc as { grantPending?: unknown }).grantPending === true
+  );
+}
+
+async function markPremiumVoucherGrantCompleted(
+  redemptionsColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<void> {
+  try {
+    await redemptionsColl.updateOne(
+      { linkId, redeemedBy: redeemerUserId, grantPending: true },
+      { $set: { grantPending: false, grantedAt: new Date() } }
+    );
+  } catch {
+    // Best-effort marker; grant itself has already succeeded.
+  }
+}
+
+async function completePendingPremiumGrant(
+  redemptionsColl: Collection,
+  linkId: ObjectId,
+  redeemerUserId: string
+): Promise<boolean> {
+  try {
+    const result = await grantPremiumToRedeemer(redeemerUserId);
+    if ("error" in result) return false;
+    await markPremiumVoucherGrantCompleted(redemptionsColl, linkId, redeemerUserId);
+    return true;
   } catch {
     return false;
   }
