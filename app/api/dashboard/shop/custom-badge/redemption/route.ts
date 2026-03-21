@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { getCustomBadgeAddonCount } from "@/lib/custom-badge-addon";
+import { isVerifiedCreator } from "@/lib/creator-program";
 import { isCreatorProgramBadge } from "@/lib/user-created-badge";
 import { createRedemptionLink } from "@/lib/badge-redemption";
 
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
 
   const slotCount = await getCustomBadgeAddonCount(session.sub);
   const creatorBadge = await isCreatorProgramBadge(session.sub, badgeId);
-  if (slotCount === 0 && !creatorBadge) {
+  const verifiedCreator = creatorBadge ? await isVerifiedCreator(session.sub) : false;
+  if (slotCount === 0 && (!creatorBadge || !verifiedCreator)) {
     return NextResponse.json({ error: "Custom badge addon required" }, { status: 403 });
   }
 
