@@ -269,4 +269,24 @@ describe("redeemPremiumVoucher", () => {
     expect(testState.redemptions[0]?.grantPending).toBe(false);
     expect(testState.redemptions[0]?.grantedAt).toBeInstanceOf(Date);
   });
+
+  it("treats completed redemptions as idempotent without re-granting premium", async () => {
+    const { redeemPremiumVoucher } = await import("@/lib/premium-voucher");
+    if (!testState.link) throw new Error("missing link");
+    testState.redemptions.push({
+      linkId: testState.link._id,
+      token: "premium-token",
+      redeemedBy: "user-a",
+      creatorId: testState.link.createdBy,
+      redeemedAt: new Date(),
+      grantPending: false,
+      grantedAt: new Date(),
+    });
+
+    const result = await redeemPremiumVoucher("premium-token", "user-a");
+
+    expect(result).toEqual({ success: true });
+    expect(testState.setUserBadgesMock).not.toHaveBeenCalled();
+    expect(testState.redemptions).toHaveLength(1);
+  });
 });
