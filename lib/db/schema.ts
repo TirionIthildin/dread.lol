@@ -308,6 +308,8 @@ export interface BadgeRedemptionLinkDoc {
   usedBy: string | null; // legacy single-use
   /** null = unlimited. Multi-use links ignore usedAt/usedBy. */
   maxRedemptions?: number | null;
+  /** Atomic counter used for capped multi-use links. */
+  redemptionCount?: number;
   /** Optional expiry. */
   expiresAt?: Date | null;
   createdAt: Date;
@@ -330,6 +332,8 @@ export interface PremiumVoucherLinkDoc {
   createdAt: Date;
   expiresAt?: Date | null;
   maxRedemptions?: number | null;
+  /** Atomic counter used for capped links. */
+  redemptionCount?: number;
   label?: string | null;
 }
 
@@ -341,6 +345,10 @@ export interface PremiumVoucherRedemptionDoc {
   redeemedBy: string;
   creatorId: string;
   redeemedAt: Date;
+  /** True until premiumGranted is successfully applied to the user record. */
+  grantPending?: boolean;
+  /** Set when grantPending transitions to false. */
+  grantedAt?: Date;
 }
 
 export type User = UserDoc;

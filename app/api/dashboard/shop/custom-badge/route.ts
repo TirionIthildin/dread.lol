@@ -8,7 +8,13 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { getCustomBadgeAddonCount } from "@/lib/custom-badge-addon";
-import { getUserCreatedBadges, createUserCreatedBadge, updateUserCreatedBadge, deleteUserCreatedBadge } from "@/lib/user-created-badge";
+import {
+  getUserCreatedBadges,
+  createUserCreatedBadge,
+  updateUserCreatedBadge,
+  deleteUserCreatedBadge,
+  isCreatorProgramBadge,
+} from "@/lib/user-created-badge";
 
 export async function GET() {
   const session = await getSession();
@@ -26,7 +32,8 @@ export async function GET() {
   }
 
   const badges = await getUserCreatedBadges(session.sub);
-  return NextResponse.json({ badges, slotCount });
+  const paidBadges = badges.filter((badge) => !badge.creatorProgram);
+  return NextResponse.json({ badges: paidBadges, slotCount });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -60,8 +67,15 @@ export async function PATCH(request: NextRequest) {
   }
 
   const badgeId = typeof body.badgeId === "string" ? body.badgeId.trim() : null;
+  const paidBadges = existingBadges.filter((badge) => !badge.creatorProgram);
 
   if (badgeId) {
+    if (await isCreatorProgramBadge(session.sub, badgeId)) {
+      return NextResponse.json(
+        { error: "Creator program badge is managed in the Creator page" },
+        { status: 403 }
+      );
+    }
     const badge = await updateUserCreatedBadge(badgeId, session.sub, {
       label,
       description: body.description ?? undefined,
@@ -74,7 +88,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ badge });
   }
 
-  if (existingBadges.length >= slotCount) {
+  if (paidBadges.length >= slotCount) {
     return NextResponse.json({ error: "No badge slots remaining. Purchase more to add badges." }, { status: 403 });
   }
 
@@ -102,6 +116,13 @@ export async function DELETE(request: NextRequest) {
   const badgeId = request.nextUrl.searchParams.get("id");
   if (!badgeId) {
     return NextResponse.json({ error: "Missing badge id" }, { status: 400 });
+  }
+
+  if (await isCreatorProgramBadge(session.sub, badgeId)) {
+    return NextResponse.json(
+      { error: "Creator program badge is managed in the Creator page" },
+      { status: 403 }
+    );
   }
 
   const ok = await deleteUserCreatedBadge(badgeId, session.sub);
