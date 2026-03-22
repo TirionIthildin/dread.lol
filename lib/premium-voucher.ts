@@ -72,8 +72,9 @@ export async function redeemPremiumVoucher(
       if (recovered) return { success: true };
       return { error: "Failed to grant Premium" };
     }
-    // Idempotent recovery: if logging succeeded earlier but granting failed, let retries heal state.
-    return grantPremiumToRedeemer(redeemerUserId);
+    // Completed redemption is idempotent: do not mutate premium again on retries.
+    // This prevents redeemed vouchers from bypassing a later admin revocation.
+    return { success: true };
   }
 
   let reservedSlot = false;
