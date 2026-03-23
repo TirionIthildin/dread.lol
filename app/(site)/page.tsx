@@ -5,7 +5,8 @@ import LeaderboardWidget from "@/app/components/LeaderboardWidget";
 import SignInWidget from "@/app/components/SignInWidget";
 import SiteNoticeBanner from "@/app/components/SiteNoticeBanner";
 import TerminalWindow from "@/app/components/TerminalWindow";
-import { getSiteNoticeDisplay, getSiteNoticeSettings } from "@/lib/site-notice-settings";
+import { getSiteNoticeSettings } from "@/lib/site-notice-settings";
+import { getSiteNoticeDisplay } from "@/lib/site-notice-settings-shared";
 import { SITE_URL, SITE_NAME, SITE_OG_IMAGE } from "@/lib/site";
 
 /** Richer than SITE_DESCRIPTION for search and social previews on the landing page only. */

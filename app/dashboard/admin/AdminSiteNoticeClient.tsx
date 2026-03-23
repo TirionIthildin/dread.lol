@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Megaphone } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { SITE_NOTICE_MAX_MESSAGE_LENGTH, type SiteNoticeVariant } from "@/lib/site-notice-settings";
+import {
+  SITE_NOTICE_MAX_MESSAGE_LENGTH,
+  type SiteNoticeVariant,
+} from "@/lib/site-notice-settings-shared";
 
 type SiteNoticeState = {
   enabled: boolean;

@@ -9,7 +9,7 @@ function shouldSkip(pathname: string): boolean {
   return SKIP_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   if (shouldSkip(pathname)) return NextResponse.next();
 

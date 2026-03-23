@@ -1,4 +1,4 @@
-import type { SiteNoticeVariant } from "@/lib/site-notice-settings";
+import type { SiteNoticeVariant } from "@/lib/site-notice-settings-shared";
 
 const variantClass: Record<SiteNoticeVariant, string> = {
   info: "border-[var(--accent)]/40 bg-[var(--accent-muted)] text-[var(--foreground)]",

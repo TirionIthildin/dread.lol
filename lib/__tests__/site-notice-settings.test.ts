@@ -5,7 +5,7 @@ import {
   parseSiteNoticeVariant,
   SITE_NOTICE_MAX_MESSAGE_LENGTH,
   validateSiteNoticePatch,
-} from "@/lib/site-notice-settings";
+} from "@/lib/site-notice-settings-shared";
 
 describe("normalizeSiteNoticeFromDb", () => {
   it("defaults when keys missing", () => {

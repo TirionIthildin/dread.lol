@@ -3,7 +3,8 @@ import SiteNoticeBanner from "@/app/components/SiteNoticeBanner";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { isVerifiedCreator } from "@/lib/creator-program";
 import DashboardSidebar from "@/app/dashboard/DashboardSidebar";
-import { getSiteNoticeDisplay, getSiteNoticeSettings } from "@/lib/site-notice-settings";
+import { getSiteNoticeSettings } from "@/lib/site-notice-settings";
+import { getSiteNoticeDisplay } from "@/lib/site-notice-settings-shared";
 
 export default async function DashboardLayout({
   children,

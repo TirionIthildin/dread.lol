@@ -4,8 +4,8 @@ import { requireAdmin } from "@/app/dashboard/actions";
 import {
   applySiteNoticePatch,
   getSiteNoticeSettings,
-  validateSiteNoticePatch,
 } from "@/lib/site-notice-settings";
+import { validateSiteNoticePatch } from "@/lib/site-notice-settings-shared";
 
 /** GET: site notice configuration for admin. */
 export async function GET() {
