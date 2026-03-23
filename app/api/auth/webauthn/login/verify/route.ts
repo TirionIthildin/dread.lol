@@ -8,10 +8,11 @@ import {
   updateCredentialCounter,
 } from "@/lib/auth/webauthn-credentials";
 import { findUserById } from "@/lib/auth/local-account";
+import { setMfaPending } from "@/lib/auth/mfa-pending";
 import { createSession, getSessionCookieConfig } from "@/lib/auth/session";
 import { getWebAuthnExpectedOrigin, getWebAuthnRpId } from "@/lib/auth/webauthn-config";
 import { consumeAuthenticationChallenge } from "@/lib/auth/webauthn-challenge";
-import { rateLimitByIp } from "@/lib/rate-limit";
+import { getClientIp, rateLimitByIp } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   sessionKey: z.string().min(1),
@@ -69,14 +70,30 @@ export async function POST(request: NextRequest) {
 
     await updateCredentialCounter(credDoc.credentialId, verification.authenticationInfo.newCounter);
 
-    const sessionValue = await createSession({
-      sub: user._id,
-      auth_provider: "local",
-      name: user.displayName ?? user.username ?? "Member",
-      preferred_username: user.username ?? undefined,
-      email: user.email ?? undefined,
-      picture: user.avatarUrl ?? null,
-    });
+    if (user.totpEnabled) {
+      const pendingUser = {
+        sub: user._id,
+        auth_provider: "local" as const,
+        name: user.displayName ?? user.username ?? "Member",
+        preferred_username: user.username ?? undefined,
+        email: user.email ?? undefined,
+        picture: user.avatarUrl ?? null,
+      };
+      const mfaToken = await setMfaPending(pendingUser);
+      return NextResponse.json({ ok: true, needsMfa: true, mfaToken });
+    }
+
+    const sessionValue = await createSession(
+      {
+        sub: user._id,
+        auth_provider: "local",
+        name: user.displayName ?? user.username ?? "Member",
+        preferred_username: user.username ?? undefined,
+        email: user.email ?? undefined,
+        picture: user.avatarUrl ?? null,
+      },
+      { ip: getClientIp(request), userAgent: request.headers.get("user-agent") }
+    );
     const config = getSessionCookieConfig(sessionValue);
     const res = NextResponse.json({ ok: true });
     const { name, value, ...opts } = config;

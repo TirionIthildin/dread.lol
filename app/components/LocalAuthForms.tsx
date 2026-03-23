@@ -15,6 +15,8 @@ export default function LocalAuthForms() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
 
   async function onRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -97,13 +99,54 @@ export default function LocalAuthForms() {
         body: JSON.stringify({ sessionId, A, M1 }),
         credentials: "include",
       });
-      const completeData = (await complete.json()) as { error?: string; M2?: string; ok?: boolean };
+      const completeData = (await complete.json()) as {
+        error?: string;
+        M2?: string;
+        ok?: boolean;
+        needsMfa?: boolean;
+        mfaToken?: string;
+      };
       if (!complete.ok) {
         setError(completeData.error ?? "Login failed");
         return;
       }
       if (completeData.M2 && !client.verifyServerProof(completeData.M2)) {
         setError("Server verification failed");
+        return;
+      }
+      if (completeData.needsMfa && completeData.mfaToken) {
+        setMfaToken(completeData.mfaToken);
+        setMfaCode("");
+        return;
+      }
+      window.location.href = "/dashboard";
+    } catch {
+      setError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onMfaSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!mfaToken) return;
+    const c = mfaCode.trim();
+    if (!c) {
+      setError("Enter a code.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/mfa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: c, mfaToken }),
+        credentials: "include",
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Verification failed");
         return;
       }
       window.location.href = "/dashboard";
@@ -150,9 +193,18 @@ export default function LocalAuthForms() {
         body: JSON.stringify({ sessionKey: optsData.sessionKey, response: assertion }),
         credentials: "include",
       });
+      const verifyData = (await verifyRes.json()) as {
+        error?: string;
+        needsMfa?: boolean;
+        mfaToken?: string;
+      };
       if (!verifyRes.ok) {
-        const err = (await verifyRes.json()) as { error?: string };
-        setError(err.error ?? "Passkey verification failed");
+        setError(verifyData.error ?? "Passkey verification failed");
+        return;
+      }
+      if (verifyData.needsMfa && verifyData.mfaToken) {
+        setMfaToken(verifyData.mfaToken);
+        setMfaCode("");
         return;
       }
       window.location.href = "/dashboard";
@@ -194,7 +246,42 @@ export default function LocalAuthForms() {
         </button>
       </div>
 
-      {mode === "register" ? (
+      {mfaToken ? (
+        <form onSubmit={onMfaSubmit} className="space-y-2">
+          <p className="text-[10px] text-[var(--muted)]">
+            Two-factor code from your authenticator app, or a backup code.
+          </p>
+          <input
+            className="w-full rounded border border-[var(--border)] bg-transparent px-2 py-1.5 text-xs font-mono text-[var(--foreground)]"
+            placeholder="123456"
+            value={mfaCode}
+            onChange={(e) => setMfaCode(e.target.value)}
+            autoComplete="one-time-code"
+            disabled={loading}
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 rounded bg-[var(--accent)]/20 px-2 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent)]/30 disabled:opacity-50"
+            >
+              {loading ? "…" : "Verify"}
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setMfaToken(null);
+                setMfaCode("");
+                setError(null);
+              }}
+              className="rounded border border-[var(--border)] px-2 py-1.5 text-[10px] text-[var(--muted)]"
+            >
+              Back
+            </button>
+          </div>
+        </form>
+      ) : mode === "register" ? (
         <form onSubmit={onRegister} className="space-y-2">
           <input
             className="w-full rounded border border-[var(--border)] bg-transparent px-2 py-1.5 text-xs text-[var(--foreground)]"

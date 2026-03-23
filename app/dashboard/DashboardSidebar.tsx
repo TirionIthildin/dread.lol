@@ -14,6 +14,7 @@ import {
   LinkSimple,
   Medal,
   PenNib,
+  Shield,
   SignOut,
   Storefront,
   Trophy,
@@ -31,6 +32,7 @@ const ERROR_LABELS: Record<string, string> = {
 
 const mainNavItems = [
   { href: "/dashboard", label: "My profile", icon: User },
+  { href: "/dashboard/security", label: "Security", icon: Shield },
   { href: "/dashboard/marketplace", label: "Marketplace", icon: Storefront },
   { href: "/dashboard/premium", label: "Premium", icon: CreditCard },
   { href: "/dashboard/badges", label: "Badges", icon: Medal },

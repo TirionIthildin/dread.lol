@@ -6,6 +6,7 @@ import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import type { ProfileRow } from "@/lib/db/schema";
 import { validateBackgroundUrl } from "@/lib/validate-url";
 import { resolveCardEffects } from "@/lib/profiles";
+import { parseCommissionStatus } from "@/lib/monetization-profile";
 
 /** Template data: profile fields to apply. Media URLs may be /api/files/xxx or external. */
 export interface TemplateData {
@@ -51,6 +52,8 @@ export interface TemplateData {
   languages?: string | null;
   availability?: string | null;
   currentFocus?: string | null;
+  commissionStatus?: "open" | "closed" | "waitlist" | null;
+  commissionPriceRange?: string | null;
   avatarShape?: string | null;
   layoutDensity?: string | null;
   customFont?: string | null;
@@ -96,7 +99,7 @@ export const TEMPLATE_DATA_KEYS = [
   "easterEggLinkUrl", "easterEggLinkPopupUrl", "accentColor", "terminalPrompt", "nameGreeting",
   "cardStyle", "cardOpacity", "cardBlur", "cardEffectsEnabled", "cardEffectTilt", "cardEffectSpotlight", "cardEffectGlare", "cardEffectMagneticBorder", "customTextColor", "customBackgroundColor",
   "pronouns", "location", "timezone", "timezoneRange", "birthday", "websiteUrl", "skills", "languages",
-  "availability", "currentFocus", "avatarShape", "layoutDensity", "customFont", "customFontUrl",
+  "availability", "currentFocus", "commissionStatus", "commissionPriceRange", "avatarShape", "layoutDensity", "customFont", "customFontUrl",
   "cursorStyle", "cursorImageUrl", "animationPreset", "nameAnimation", "taglineAnimation", "descriptionAnimation",
   "backgroundType", "backgroundUrl", "backgroundAudioUrl", "backgroundAudioStartSeconds",
   "backgroundEffect", "widgetsMatchAccent", "unlockOverlayText", "ogImageUrl", "gallery", "audioTracks",
@@ -255,6 +258,8 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     languages: profile.languages ?? null,
     availability: profile.availability ?? null,
     currentFocus: profile.currentFocus ?? null,
+    commissionStatus: parseCommissionStatus((profile as { commissionStatus?: string | null }).commissionStatus ?? undefined),
+    commissionPriceRange: (profile as { commissionPriceRange?: string | null }).commissionPriceRange ?? null,
     avatarShape: profile.avatarShape ?? null,
     layoutDensity: profile.layoutDensity ?? null,
     customFont: profile.customFont ?? null,
@@ -695,6 +700,8 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.languages !== undefined) update.languages = data.languages;
   if (data.availability !== undefined) update.availability = data.availability;
   if (data.currentFocus !== undefined) update.currentFocus = data.currentFocus;
+  if (data.commissionStatus !== undefined) update.commissionStatus = data.commissionStatus;
+  if (data.commissionPriceRange !== undefined) update.commissionPriceRange = data.commissionPriceRange;
   if (data.avatarShape !== undefined) update.avatarShape = data.avatarShape;
   if (data.layoutDensity !== undefined) update.layoutDensity = data.layoutDensity;
   if (data.customFont !== undefined) update.customFont = data.customFont;
@@ -822,6 +829,8 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     languages: d.languages ?? undefined,
     availability: d.availability ?? undefined,
     currentFocus: d.currentFocus ?? undefined,
+    commissionStatus: d.commissionStatus ?? undefined,
+    commissionPriceRange: d.commissionPriceRange ?? undefined,
     avatarShape: d.avatarShape ?? undefined,
     layoutDensity: d.layoutDensity ?? undefined,
     customFont: d.customFont ?? undefined,

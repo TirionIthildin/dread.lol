@@ -28,6 +28,9 @@ export const LINK_TYPES = [
   { value: "pinterest", label: "Pinterest", placeholder: "https://pinterest.com/username" },
   { value: "threads", label: "Threads", placeholder: "https://threads.net/@username" },
   { value: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/…" },
+  { value: "kofi", label: "Ko-fi", placeholder: "https://ko-fi.com/…" },
+  { value: "throne", label: "Throne", placeholder: "https://throne.com/…" },
+  { value: "amazonWishlist", label: "Amazon wishlist", placeholder: "https://www.amazon.com/hz/wishlist/…" },
   { value: "website", label: "Website", placeholder: "https://…" },
   { value: "custom", label: "Custom", placeholder: "https://…" },
 ] as const;
@@ -38,6 +41,59 @@ export interface LinkEntry {
   type: LinkType;
   value: string;
   customLabel?: string;
+}
+
+function hrefHostAndPath(href: string): string {
+  try {
+    const u = new URL(href.includes("://") ? href : `https://${href}`);
+    return `${u.hostname.toLowerCase()}${u.pathname.toLowerCase()}`;
+  } catch {
+    return href.toLowerCase();
+  }
+}
+
+/**
+ * Infer link type from stored label + URL (used for dashboard edit + Premium filtering).
+ */
+export function resolveLinkTypeFromSavedLink(label: string | undefined, href: string): LinkType {
+  const h = hrefHostAndPath(href);
+  const l = (label ?? "").toLowerCase();
+
+  if (h.includes("ko-fi.com") || l.includes("ko-fi") || l.includes("kofi")) return "kofi";
+  if (h.includes("throne.com") || l.includes("throne")) return "throne";
+  if (
+    (h.includes("amazon.") && (h.includes("/wishlist") || h.includes("/hz/wishlist") || h.includes("/gp/registry/wishlist"))) ||
+    l.includes("amazon wishlist")
+  ) {
+    return "amazonWishlist";
+  }
+
+  if (l.includes("github")) return "github";
+  if (l.includes("twitter") || l.includes("x.com")) return "twitter";
+  if (l.includes("youtube")) return "youtube";
+  if (l.includes("instagram")) return "instagram";
+  if (l.includes("tiktok")) return "tiktok";
+  if (l.includes("twitch")) return "twitch";
+  if (l.includes("spotify")) return "spotify";
+  if (l.includes("linkedin")) return "linkedin";
+  if (l.includes("reddit")) return "reddit";
+  if (l.includes("steam")) return "steam";
+  if (l.includes("paypal")) return "paypal";
+  if (l.includes("telegram")) return "telegram";
+  if (l.includes("patreon")) return "patreon";
+  if (l.includes("medium")) return "medium";
+  if (l.includes("mastodon")) return "mastodon";
+  if (l.includes("behance")) return "behance";
+  if (l.includes("figma")) return "figma";
+  if (l.includes("notion")) return "notion";
+  if (l.includes("codepen")) return "codepen";
+  if (l.includes("dev.to")) return "devto";
+  if (l.includes("soundcloud")) return "soundcloud";
+  if (l.includes("pinterest")) return "pinterest";
+  if (l.includes("threads")) return "threads";
+  if (l.includes("whatsapp")) return "whatsapp";
+  if (label?.trim()) return "custom";
+  return "website";
 }
 
 export function parseLinkEntries(profile: Pick<ProfileRow, "discord" | "roblox" | "links">): LinkEntry[] {
@@ -51,33 +107,8 @@ export function parseLinkEntries(profile: Pick<ProfileRow, "discord" | "roblox" 
         for (const x of arr) {
           if (x && typeof (x as { href?: string }).href === "string") {
             const href = (x as { href: string }).href.trim();
-            const label = (x as { label?: string }).label?.trim()?.toLowerCase();
-            let type: LinkType = "website";
-            if (label?.includes("github")) type = "github";
-            else if (label?.includes("twitter") || label?.includes("x.com")) type = "twitter";
-            else if (label?.includes("youtube")) type = "youtube";
-            else if (label?.includes("instagram")) type = "instagram";
-            else if (label?.includes("tiktok")) type = "tiktok";
-            else if (label?.includes("twitch")) type = "twitch";
-            else if (label?.includes("spotify")) type = "spotify";
-            else if (label?.includes("linkedin")) type = "linkedin";
-            else if (label?.includes("reddit")) type = "reddit";
-            else if (label?.includes("steam")) type = "steam";
-            else if (label?.includes("paypal")) type = "paypal";
-            else if (label?.includes("telegram")) type = "telegram";
-            else if (label?.includes("patreon")) type = "patreon";
-            else if (label?.includes("medium")) type = "medium";
-            else if (label?.includes("mastodon")) type = "mastodon";
-            else if (label?.includes("behance")) type = "behance";
-            else if (label?.includes("figma")) type = "figma";
-            else if (label?.includes("notion")) type = "notion";
-            else if (label?.includes("codepen")) type = "codepen";
-            else if (label?.includes("dev.to")) type = "devto";
-            else if (label?.includes("soundcloud")) type = "soundcloud";
-            else if (label?.includes("pinterest")) type = "pinterest";
-            else if (label?.includes("threads")) type = "threads";
-            else if (label?.includes("whatsapp")) type = "whatsapp";
-            else if (label) type = "custom";
+            const rawLabel = (x as { label?: string }).label;
+            const type = resolveLinkTypeFromSavedLink(rawLabel, href);
             entries.push({
               type,
               value: href,

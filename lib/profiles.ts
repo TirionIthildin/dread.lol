@@ -89,6 +89,10 @@ export interface Profile {
   availability?: string;
   /** Manual status (e.g. "Working on X") in addition to Discord presence. */
   currentFocus?: string;
+  /** Premium: commissions availability. */
+  commissionStatus?: "open" | "closed" | "waitlist";
+  /** Premium: short free-text price hint (e.g. starting range). */
+  commissionPriceRange?: string;
   /** Avatar shape: circle (default), rounded, square, soft, hexagon. */
   avatarShape?: string;
   /** Layout density: default, compact, spacious. */

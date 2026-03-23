@@ -8,6 +8,8 @@ Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and local file st
 
 - **Discord OAuth 2.0** with CSRF protection (state stored in Valkey)
 - **Session cookies** (`dread_session`): HMAC-SHA256 signed, `httpOnly`, `Secure` in production (override with `SECURE_COOKIE`), `sameSite: "lax"`, `Domain` set to the parent zone (e.g. `.dread.lol` from `NEXT_PUBLIC_SITE_DOMAIN` / `SITE_URL`) so the session is sent on the apex and all `*.dread.lol` hosts; logout clears with matching attributes
+- **Session registry**: Each sign-in is stored in Valkey under `session:<id>` with optional device metadata (IP, user-agent). A reverse index `user_sessions:<userId>` lists active session ids for “sign out everywhere” and per-device revoke on the Security dashboard
+- **Optional TOTP 2FA**: Users can enable time-based one-time passwords (RFC 6238) plus one-time backup codes. Secrets are encrypted at rest (AES-256-GCM with a key derived from `AUTH_SECRET` + user id). After Discord, SRP, or passkey primary auth, a second step may be required via Valkey `mfa_pending:<token>` (short TTL) and optional cookie `mfa_pending` for OAuth redirects
 - **Authorization**: `requireAdmin()` for admin routes; profile ownership checks for edit/delete
 - **Admin**: Hardcoded Discord user IDs; `user.approved` required for dashboard access
 
