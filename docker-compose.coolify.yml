@@ -66,6 +66,9 @@ services:
       - 'POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}'
       - 'POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-}'
       - 'POLAR_SANDBOX=${POLAR_SANDBOX:-}'
+
+      # Admin → Monitoring: schedule GET /api/cron/monitoring with Authorization: Bearer <CRON_SECRET> (e.g. Coolify cron)
+      - 'CRON_SECRET=${CRON_SECRET:-}'
     healthcheck:
       test:
         - CMD
