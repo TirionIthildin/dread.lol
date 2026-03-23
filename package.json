@@ -2,6 +2,7 @@
   "name": "dread-lol",
   "version": "0.1.0",
   "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names next,bot -c blue,magenta \"next dev\" \"node --env-file=.env scripts/discord-presence-bot.mjs\"",
     "dev:next": "next dev",
