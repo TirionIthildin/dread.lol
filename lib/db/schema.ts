@@ -358,7 +358,7 @@ export interface BadgeRedemptionEventDoc {
   redeemedAt: Date;
 }
 
-/** Shareable link for Premium voucher. Admin creates; tied to creator for attribution. */
+/** Shareable link for Premium voucher. Admin or verified creator creates; tied to creator for attribution. */
 export interface PremiumVoucherLinkDoc {
   _id: ObjectId;
   token: string;

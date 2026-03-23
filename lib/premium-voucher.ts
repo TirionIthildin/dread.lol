@@ -274,6 +274,50 @@ export async function getPremiumVoucherStats(): Promise<{
   return { byCreator, byLink };
 }
 
+/** One row for the creator dashboard: full URL (not masked), counts match admin stats aggregation. */
+export interface PremiumVoucherLinkForCreator {
+  linkId: string;
+  url: string;
+  label: string | null;
+  maxRedemptions: number | null;
+  expiresAt: Date | null;
+  redemptionCount: number;
+  createdAt: Date;
+}
+
+export async function getPremiumVoucherLinksForCreator(
+  creatorId: string
+): Promise<PremiumVoucherLinkForCreator[]> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const linksColl = client.db(dbName).collection(COLLECTIONS.premiumVoucherLinks);
+  const redemptionsColl = client.db(dbName).collection(COLLECTIONS.premiumVoucherRedemptions);
+
+  const links = await linksColl.find({ createdBy: creatorId }).sort({ createdAt: -1 }).toArray();
+  if (links.length === 0) {
+    return [];
+  }
+
+  const linkIds = links.map((l) => l._id);
+  const redemptions = await redemptionsColl.find({ linkId: { $in: linkIds } }).toArray();
+  const linkRedemptionCount = new Map<string, number>();
+  for (const r of redemptions) {
+    const key = r.linkId.toString();
+    linkRedemptionCount.set(key, (linkRedemptionCount.get(key) ?? 0) + 1);
+  }
+
+  const baseUrl = SITE_URL.replace(/\/$/, "");
+  return links.map((l) => ({
+    linkId: l._id.toString(),
+    url: `${baseUrl}/premium/redeem/${l.token}`,
+    label: (l.label as string | null | undefined) ?? null,
+    maxRedemptions: (l.maxRedemptions as number | null | undefined) ?? null,
+    expiresAt: (l.expiresAt as Date | null | undefined) ?? null,
+    redemptionCount: linkRedemptionCount.get(l._id.toString()) ?? 0,
+    createdAt: l.createdAt as Date,
+  }));
+}
+
 function maskToken(token: string): string {
   if (token.length <= 8) return "••••";
   return token.slice(0, 4) + "••••" + token.slice(-4);
