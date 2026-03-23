@@ -67,8 +67,16 @@ export interface ProfileDoc {
   cardOpacity?: number | null;
   /** Backdrop blur: none, sm, md, lg. */
   cardBlur?: "none" | "sm" | "md" | "lg" | null;
-  /** Enable 3D tilt, spotlight, glare, magnetic border, etc. on profile card. Default: false. */
+  /** @deprecated Prefer cardEffectTilt/Spotlight/Glare/MagneticBorder. If any new flag is set, legacy is ignored. */
   cardEffectsEnabled?: boolean | null;
+  /** 3D tilt on hover. */
+  cardEffectTilt?: boolean | null;
+  /** Spotlight gradient following cursor. */
+  cardEffectSpotlight?: boolean | null;
+  /** Glare / glossy highlight following cursor. */
+  cardEffectGlare?: boolean | null;
+  /** Accent border glow following cursor. */
+  cardEffectMagneticBorder?: boolean | null;
   displayStatus?: string | null;
   pronouns?: string | null;
   location?: string | null;

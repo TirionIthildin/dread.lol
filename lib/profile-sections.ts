@@ -1,5 +1,5 @@
 /**
- * Profile section/block IDs for the drag-and-drop layout editor.
+ * Profile section/block IDs for layout ordering (`sectionOrder`).
  * Each ID maps to a logical block in ProfileContent.
  */
 export const PROFILE_SECTION_IDS = [

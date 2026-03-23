@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import type { ProfileRow } from "@/lib/db/schema";
 import { validateBackgroundUrl } from "@/lib/validate-url";
+import { resolveCardEffects } from "@/lib/profiles";
 
 /** Template data: profile fields to apply. Media URLs may be /api/files/xxx or external. */
 export interface TemplateData {
@@ -34,6 +35,10 @@ export interface TemplateData {
   cardOpacity?: number | null;
   cardBlur?: "none" | "sm" | "md" | "lg" | null;
   cardEffectsEnabled?: boolean | null;
+  cardEffectTilt?: boolean | null;
+  cardEffectSpotlight?: boolean | null;
+  cardEffectGlare?: boolean | null;
+  cardEffectMagneticBorder?: boolean | null;
   customTextColor?: string | null;
   customBackgroundColor?: string | null;
   pronouns?: string | null;
@@ -89,7 +94,7 @@ export const TEMPLATE_DATA_KEYS = [
   "bannerSmall", "bannerAnimatedFire", "bannerStyle", "useTerminalLayout", "terminalTitle",
   "terminalCommands", "easterEgg", "easterEggTaglineWord", "easterEggLinkTrigger",
   "easterEggLinkUrl", "easterEggLinkPopupUrl", "accentColor", "terminalPrompt", "nameGreeting",
-  "cardStyle", "cardOpacity", "cardBlur", "cardEffectsEnabled", "customTextColor", "customBackgroundColor",
+  "cardStyle", "cardOpacity", "cardBlur", "cardEffectsEnabled", "cardEffectTilt", "cardEffectSpotlight", "cardEffectGlare", "cardEffectMagneticBorder", "customTextColor", "customBackgroundColor",
   "pronouns", "location", "timezone", "timezoneRange", "birthday", "websiteUrl", "skills", "languages",
   "availability", "currentFocus", "avatarShape", "layoutDensity", "customFont", "customFontUrl",
   "cursorStyle", "cursorImageUrl", "animationPreset", "nameAnimation", "taglineAnimation", "descriptionAnimation",
@@ -229,6 +234,10 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     cardStyle: profile.cardStyle ?? null,
     cardOpacity: profile.cardOpacity ?? null,
     cardEffectsEnabled: (profile as { cardEffectsEnabled?: boolean }).cardEffectsEnabled ?? null,
+    cardEffectTilt: (profile as { cardEffectTilt?: boolean }).cardEffectTilt ?? null,
+    cardEffectSpotlight: (profile as { cardEffectSpotlight?: boolean }).cardEffectSpotlight ?? null,
+    cardEffectGlare: (profile as { cardEffectGlare?: boolean }).cardEffectGlare ?? null,
+    cardEffectMagneticBorder: (profile as { cardEffectMagneticBorder?: boolean }).cardEffectMagneticBorder ?? null,
     cardBlur: (() => {
       const b = (profile as { cardBlur?: string | null }).cardBlur;
       if (b && ["none", "sm", "md", "lg"].includes(b)) return b as "none" | "sm" | "md" | "lg";
@@ -670,6 +679,10 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.cardOpacity !== undefined) update.cardOpacity = data.cardOpacity;
   if (data.cardBlur !== undefined) update.cardBlur = data.cardBlur;
   if (data.cardEffectsEnabled !== undefined) update.cardEffectsEnabled = data.cardEffectsEnabled;
+  if (data.cardEffectTilt !== undefined) update.cardEffectTilt = data.cardEffectTilt;
+  if (data.cardEffectSpotlight !== undefined) update.cardEffectSpotlight = data.cardEffectSpotlight;
+  if (data.cardEffectGlare !== undefined) update.cardEffectGlare = data.cardEffectGlare;
+  if (data.cardEffectMagneticBorder !== undefined) update.cardEffectMagneticBorder = data.cardEffectMagneticBorder;
   if (data.customTextColor !== undefined) update.customTextColor = data.customTextColor;
   if (data.customBackgroundColor !== undefined) update.customBackgroundColor = data.customBackgroundColor;
   if (data.pronouns !== undefined) update.pronouns = data.pronouns;
@@ -790,7 +803,13 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     cardStyle: d.cardStyle ?? undefined,
     cardOpacity: d.cardOpacity ?? undefined,
     cardBlur: d.cardBlur && ["none", "sm", "md", "lg"].includes(d.cardBlur) ? d.cardBlur : undefined,
-    cardEffectsEnabled: d.cardEffectsEnabled ?? undefined,
+    ...resolveCardEffects({
+      cardEffectsEnabled: d.cardEffectsEnabled ?? null,
+      cardEffectTilt: d.cardEffectTilt ?? null,
+      cardEffectSpotlight: d.cardEffectSpotlight ?? null,
+      cardEffectGlare: d.cardEffectGlare ?? null,
+      cardEffectMagneticBorder: d.cardEffectMagneticBorder ?? null,
+    }),
     customTextColor: d.customTextColor && /^#[0-9a-fA-F]{6}$/.test(d.customTextColor) ? d.customTextColor : undefined,
     customBackgroundColor: d.customBackgroundColor && /^#[0-9a-fA-F]{6}$/.test(d.customBackgroundColor) ? d.customBackgroundColor : undefined,
     pronouns: d.pronouns ?? undefined,

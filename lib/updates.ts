@@ -36,16 +36,6 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
   },
   {
     date: "2026-02",
-    title: "Full-page profile editor",
-    description: "Standalone editor at /editor with elements on the left, canvas in the center, and properties panel on the right. Drag to reorder on canvas.",
-  },
-  {
-    date: "2026-02",
-    title: "Elementor-style profile editor",
-    description: "Element picker sidebar: add elements by drag or click, reorder sections, edit content inline, style panel. Dashboard → Layout.",
-  },
-  {
-    date: "2026-02",
     title: "Profile card effects",
     description: "Profile cards tilt in 3D, spotlight glow, glossy reflection, magnetic border, and shine sweep—like Linktree and Carrd.",
   },
