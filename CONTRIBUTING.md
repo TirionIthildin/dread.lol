@@ -10,7 +10,7 @@ Thanks for your interest in improving the project.
 
 ## Before you open a pull request
 
-1. Run **`npm run ci`** — this runs TypeScript, ESLint, and Vitest, matching [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+1. Run **`npm run ci`** — same steps as [`.github/workflows/ci.yml`](.github/workflows/ci.yml): typecheck, ESLint, Stylelint, TSQLLint (see `.tsqllintignore` for paths), CSSLint (`lint/csslint-smoke.css`), JSHint (`public/sw.js`), and Vitest.
 2. Fix any type or lint errors introduced by your changes.
 3. Add or update **tests** when you change behavior that is testable.
 4. Keep PRs **small and focused**; unrelated refactors make review harder.

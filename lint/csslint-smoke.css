@@ -1,0 +1,4 @@
+/* CSSLint smoke check only. App styles (Tailwind v4, custom properties) are linted with `npm run lint:css` (Stylelint). */
+.lint-csslint-smoke {
+  display: none;
+}

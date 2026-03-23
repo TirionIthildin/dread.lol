@@ -1,0 +1,13 @@
+{
+  "browser": true,
+  "esversion": 11,
+  "node": true,
+  "undef": true,
+  "unused": true,
+  "globals": {
+    "caches": true,
+    "clients": true,
+    "self": true,
+    "skipWaiting": true
+  }
+}
