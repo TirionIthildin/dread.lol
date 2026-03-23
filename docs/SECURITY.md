@@ -4,6 +4,15 @@
 
 Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and local file storage on a Docker volume (`FILE_STORAGE_PATH`). This document summarizes security posture and deployment guidance.
 
+## Reporting a vulnerability
+
+**Do not** file a public GitHub issue for undisclosed security bugs (that can put users at risk).
+
+- **Preferred:** Use [GitHub Security Advisories](https://github.com/TirionIthildin/dread.lol/security/advisories) for this repository (“Report a vulnerability”) so the maintainers can triage privately.
+- Include enough detail to reproduce or understand the impact (affected routes, env, or versions). Avoid posting working exploit code in public channels.
+
+For general security architecture (sessions, headers, env), read the sections below.
+
 ## Authentication & Authorization
 
 - **Discord OAuth 2.0** with CSRF protection (state stored in Valkey)

@@ -31,6 +31,7 @@ import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
 import { SITE_URL } from "@/lib/site";
+import { isDiscordCdnHttpsUrl } from "@/lib/url-validation";
 import {
   CUSTOM_BADGE_COLORS,
   BANNER_STYLES,
@@ -165,7 +166,7 @@ function ProfileSection({
       return wrap(
         <div className={`flex items-center ${isMinimalist ? "mt-6 gap-8" : "mt-3 gap-4"}`}>
           {profile.avatar &&
-            (profile.avatar.includes("cdn.discordapp.com") ? (
+            (isDiscordCdnHttpsUrl(profile.avatar) ? (
               <Image
                 src={profile.avatar}
                 alt=""

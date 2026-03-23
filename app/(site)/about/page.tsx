@@ -113,9 +113,14 @@ export default function AboutPage() {
             <p className="text-sm text-[var(--muted)]">
               <strong className="text-[var(--foreground)] font-medium">API.</strong> A subset of HTTP routes is
               documented for public reads—see{" "}
+              <Link href="/docs" className="text-[var(--accent)] hover:underline">
+                Documentation
+              </Link>{" "}
+              (including{" "}
               <Link href="/docs/api" className="text-[var(--accent)] hover:underline">
-                API scope
+                HTTP API scope
               </Link>
+              )
               . Everything else is for the web app and may change without notice.
             </p>
           </section>

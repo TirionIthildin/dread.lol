@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import type { GalleryItem } from "@/lib/member-profiles";
+import { isDiscordCdnHttpsUrl, safeImageLinkHref } from "@/lib/url-validation";
 import {
   addGalleryItemAction,
   updateGalleryItemAction,
@@ -68,12 +69,12 @@ export default function DashboardGallery({ profileId, profileSlug, initialGaller
               <li key={item.id} className="rounded-xl border border-[var(--border)] bg-[var(--bg)]/50 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex gap-3 p-3">
                   <a
-                    href={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
+                    href={safeImageLinkHref(item.imageUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   >
-                    {item.imageUrl.includes("cdn.discordapp.com") ? (
+                    {isDiscordCdnHttpsUrl(item.imageUrl) ? (
                       <NextImage src={item.imageUrl} alt={item.title ?? "Gallery image"} width={80} height={80} className="w-full h-full object-cover" />
                     ) : (
                       <NextImage src={item.imageUrl} alt={item.title ?? "Gallery image"} width={80} height={80} className="w-full h-full object-cover" unoptimized />
