@@ -53,6 +53,10 @@ The app reads `X-Forwarded-Host` (or `Host`) and extracts the subdomain label: `
 
 **Dashboard:** `dashboard.dread.lol` serves the same app as `https://dread.lol/dashboard` (including nested routes like `/dashboard/gallery`). Middleware rewrites paths so `/dashboard/...` links work on the dashboard subdomain.
 
+**OAuth:** Register Discord (and other) redirect URIs on the apex host only, e.g. `https://dread.lol/api/auth/discord/callback`. Visiting `/api/auth/*` on a subdomain (e.g. `dashboard.dread.lol/api/auth/discord`) redirects to `https://dread.lol/...` first so third-party OAuth pages resolve static assets on the correct origin.
+
+**Sessions:** The `dread_session` cookie is set with `Domain` = `.` + your apex host (from `NEXT_PUBLIC_SITE_DOMAIN` or `SITE_URL`, e.g. `.dread.lol`) so it is sent on `dread.lol` and every `*.dread.lol` subdomain. Logout clears it with the same attributes.
+
 **Debug:** `https://username.dread.lol/api/debug/headers` shows incoming headers, extracted slug, and rewrite metadata (admin only).
 
 **Analytics:** Profile analytics use Cloudflare headers when available:

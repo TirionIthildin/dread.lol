@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCode, getUserInfo, getAvatarUrl, getUserGuilds } from "@/lib/auth/discord";
+import { redirectAuthToCanonicalOrigin } from "@/lib/auth/subdomain-canonical";
 import { logger } from "@/lib/logger";
 import {
   consumeOAuthState,
@@ -12,6 +13,9 @@ import { SITE_URL } from "@/lib/site";
 const DASHBOARD_PATH = "/dashboard";
 
 export async function GET(request: NextRequest) {
+  const subdomainRedirect = redirectAuthToCanonicalOrigin(request);
+  if (subdomainRedirect) return subdomainRedirect;
+
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");

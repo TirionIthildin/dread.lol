@@ -1,27 +1,24 @@
-import { NextResponse } from "next/server";
-import { destroySession } from "@/lib/auth/session";
-import { getCookieDomain } from "@/lib/site";
+import { NextRequest, NextResponse } from "next/server";
+import { redirectAuthToCanonicalOrigin } from "@/lib/auth/subdomain-canonical";
+import { destroySession, getSessionCookieClearOptions, SESSION_COOKIE_NAME } from "@/lib/auth/session";
+import { getCanonicalOrigin } from "@/lib/site";
 
-const SESSION_COOKIE = "dread_session";
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+export async function POST(request: NextRequest) {
+  const subdomainRedirect = redirectAuthToCanonicalOrigin(request);
+  if (subdomainRedirect) return subdomainRedirect;
 
-function getLogoutCookieOptions() {
-  const opts: { path: string; maxAge: number; domain?: string } = { path: "/", maxAge: 0 };
-  const domain = getCookieDomain();
-  if (domain) opts.domain = domain;
-  return opts;
-}
-
-export async function POST() {
   await destroySession();
-  const res = NextResponse.redirect(new URL("/dashboard", BASE_URL));
-  res.cookies.set(SESSION_COOKIE, "", getLogoutCookieOptions());
+  const res = NextResponse.redirect(new URL("/dashboard", getCanonicalOrigin()));
+  res.cookies.set(SESSION_COOKIE_NAME, "", getSessionCookieClearOptions());
   return res;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const subdomainRedirect = redirectAuthToCanonicalOrigin(request);
+  if (subdomainRedirect) return subdomainRedirect;
+
   await destroySession();
-  const res = NextResponse.redirect(new URL("/dashboard", BASE_URL));
-  res.cookies.set(SESSION_COOKIE, "", getLogoutCookieOptions());
+  const res = NextResponse.redirect(new URL("/dashboard", getCanonicalOrigin()));
+  res.cookies.set(SESSION_COOKIE_NAME, "", getSessionCookieClearOptions());
   return res;
 }

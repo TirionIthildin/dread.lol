@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { redirectAuthToCanonicalOrigin } from "@/lib/auth/subdomain-canonical";
 import { consumePendingRegistration } from "@/lib/auth/auth-valkey";
 import { findUserById } from "@/lib/auth/local-account";
 import { createSession, getSessionCookieConfig } from "@/lib/auth/session";
@@ -7,6 +8,9 @@ import type { UserDoc } from "@/lib/db/schema";
 import { SITE_URL } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
+  const subdomainRedirect = redirectAuthToCanonicalOrigin(request);
+  if (subdomainRedirect) return subdomainRedirect;
+
   const token = request.nextUrl.searchParams.get("token");
   const base = SITE_URL.replace(/\/$/, "");
 

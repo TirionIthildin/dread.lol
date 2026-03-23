@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCode, getUserInfo } from "@/lib/auth/roblox";
+import { redirectAuthToCanonicalOrigin } from "@/lib/auth/subdomain-canonical";
 import { consumeOAuthState, getSession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
@@ -8,6 +9,9 @@ import { SITE_URL } from "@/lib/site";
 const DASHBOARD_PATH = "/dashboard";
 
 export async function GET(request: NextRequest) {
+  const subdomainRedirect = redirectAuthToCanonicalOrigin(request);
+  if (subdomainRedirect) return subdomainRedirect;
+
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");

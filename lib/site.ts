@@ -87,11 +87,25 @@ export function getBaseDomain(): string {
   }
 }
 
-/** Cookie domain for subdomain sharing (e.g. ".dread.lol"). Undefined for localhost. */
+/**
+ * Parent domain for `Set-Cookie` `Domain` so the session is sent on apex and all subdomains
+ * (`dread.lol`, `dashboard.dread.lol`, `*.dread.lol`). Uses `NEXT_PUBLIC_SITE_DOMAIN` or the
+ * hostname from `SITE_URL` (www stripped). Returns `undefined` on localhost so the cookie is host-only.
+ */
 export function getCookieDomain(): string | undefined {
   const base = getBaseDomain();
   if (!base || base === "localhost" || base.startsWith("127.")) return undefined;
   return `.${base}`;
+}
+
+/**
+ * Whether session cookies use the `Secure` flag. Production uses HTTPS; set `SECURE_COOKIE=false`
+ * only for rare local HTTP tests against a production build.
+ */
+export function shouldUseSecureCookies(): boolean {
+  if (process.env.SECURE_COOKIE === "false") return false;
+  if (process.env.SECURE_COOKIE === "true") return true;
+  return process.env.NODE_ENV === "production";
 }
 
 export const SITE_NAME = "Dread.Lol" as const;

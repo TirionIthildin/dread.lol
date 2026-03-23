@@ -7,7 +7,7 @@ Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and local file st
 ## Authentication & Authorization
 
 - **Discord OAuth 2.0** with CSRF protection (state stored in Valkey)
-- **Session cookies** (`dread_session`): HMAC-SHA256 signed, `httpOnly`, `secure` in production, `sameSite: "lax"`
+- **Session cookies** (`dread_session`): HMAC-SHA256 signed, `httpOnly`, `Secure` in production (override with `SECURE_COOKIE`), `sameSite: "lax"`, `Domain` set to the parent zone (e.g. `.dread.lol` from `NEXT_PUBLIC_SITE_DOMAIN` / `SITE_URL`) so the session is sent on the apex and all `*.dread.lol` hosts; logout clears with matching attributes
 - **Authorization**: `requireAdmin()` for admin routes; profile ownership checks for edit/delete
 - **Admin**: Hardcoded Discord user IDs; `user.approved` required for dashboard access
 
@@ -31,6 +31,8 @@ Next.js adds the following headers globally:
 | `VALKEY_URL` | Yes | May contain credentials |
 | `DISCORD_OAUTH_CLIENT_ID` | No | Public |
 | `NEXT_PUBLIC_*` | No | Exposed to client |
+| `SECURE_COOKIE` | No | Optional `true`/`false` to force session cookie `Secure` or disable it (default: secure in production) |
+| `NEXT_PUBLIC_SITE_DOMAIN` | No | Apex host without subdomain (e.g. `dread.lol`); sets cookie `Domain` for `*.dread.lol` |
 
 ## Trusted Proxy Headers
 
