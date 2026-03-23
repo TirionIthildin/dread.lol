@@ -1,0 +1,41 @@
+# Mirrors GitLab quality-check: typecheck, lint, unit tests (Vitest).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitattributes"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitattributes"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Typecheck, lint, test
+        run: npm run ci

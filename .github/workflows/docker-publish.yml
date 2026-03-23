@@ -6,14 +6,21 @@ name: Docker
 # documentation.
 
 on:
-  schedule:
-    - cron: '15 13 * * *'
+  # Rebuild without a code change (e.g. base image refresh). Add `schedule:` + cron here if you need nightly rebuilds.
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   # Use docker.io for Docker Hub if empty
