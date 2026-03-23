@@ -29,6 +29,7 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import ProfileAdminToolbar from "@/app/components/ProfileAdminToolbar";
 import { getClientIp, getUserAgent, getReferer, getCfCountry } from "@/lib/request";
+import { profileIconsFromAvatar } from "@/lib/profile-metadata";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
 
@@ -61,6 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: canonicalUrl },
+    ...profileIconsFromAvatar(profile.avatar),
     ...(noindex && { robots: { index: false, follow: true } }),
     openGraph: {
       type: "website",

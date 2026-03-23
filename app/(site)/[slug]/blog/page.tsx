@@ -13,6 +13,7 @@ import {
 } from "@/lib/member-profiles";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getBlogPostsForProfile } from "@/lib/blog";
+import { profileIconsFromAvatar } from "@/lib/profile-metadata";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Profile } from "@/lib/profiles";
 import { getThemeClass } from "@/lib/profile-themes";
@@ -32,6 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: canonicalUrl },
+    ...profileIconsFromAvatar(profile.avatar),
     openGraph: {
       type: "website",
       url: canonicalUrl,
