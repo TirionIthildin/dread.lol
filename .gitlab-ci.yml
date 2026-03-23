@@ -1,6 +1,56 @@
+# Dread.lol — quality gates run before Docker build; deploy unchanged.
+# Playwright E2E: not in default pipeline (build+start+multi-browser is heavy). Run e2e-smoke manually or on schedule.
 stages:
+  - quality
   - build
   - deploy
+
+quality-check:
+  stage: quality
+  image: node:22-bookworm
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+      - .npm/
+  before_script:
+    - npm ci --prefer-offline
+  script:
+    - npm run typecheck
+    - npm run lint
+    - npm run test
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      exists:
+        - package-lock.json
+
+# Optional: install deps + Chromium only, build app, run smoke E2E. Trigger manually in GitLab.
+e2e-smoke:
+  stage: quality
+  image: mcr.microsoft.com/playwright:v1.58.2-jammy
+  needs: []
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+      - .npm/
+  variables:
+    CI: "true"
+  before_script:
+    - npm ci --prefer-offline
+    - npx playwright install --with-deps chromium
+  script:
+    - npm run test:e2e:ci
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+      exists:
+        - package-lock.json
 
 docker-build:
   stage: build

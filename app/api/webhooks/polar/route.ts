@@ -2,25 +2,19 @@
  * Polar webhooks – subscription/order events.
  * Polar is the source of truth; we sync state into our DB for display and limits.
  * When POLAR_WEBHOOK_SECRET is not set, returns 503.
+ *
+ * **Idempotency:** `@polar-sh/nextjs` verifies the webhook signature; each handler uses
+ * `updateOne(..., { upsert: true })` with filter `{ polarSubscriptionId }` or `{ polarOrderId }`, so
+ * duplicate deliveries update the same document rather than creating duplicates.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { Webhooks } from "@polar-sh/nextjs";
 import { getDb, getDbName, COLLECTIONS, type UserDoc } from "@/lib/db";
-
-function getExternalId(obj: unknown): string | null {
-  if (!obj || typeof obj !== "object") return null;
-  const r = obj as Record<string, unknown>;
-  const customer = r.customer as Record<string, unknown> | undefined;
-  const v =
-    customer?.external_id ??
-    customer?.externalId ??
-    r.customer_external_id;
-  return typeof v === "string" ? v : null;
-}
+import { getPolarExternalId } from "@/lib/polar-webhook-helpers";
 
 async function syncSubscription(data: unknown) {
   const sub = data as Record<string, unknown>;
-  const externalId = getExternalId(sub);
+  const externalId = getPolarExternalId(sub);
   if (!externalId) return;
 
   const client = await getDb();
@@ -68,7 +62,7 @@ async function syncSubscription(data: unknown) {
 
 async function syncOrder(data: unknown) {
   const order = data as Record<string, unknown>;
-  const externalId = getExternalId(order);
+  const externalId = getPolarExternalId(order);
   if (!externalId) return;
 
   const client = await getDb();

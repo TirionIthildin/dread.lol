@@ -8,26 +8,16 @@ interface ProfileCursorEffectProps {
   children: React.ReactNode;
   cursorStyle?: string;
   accentColor?: string;
-  /** When true (e.g. in page editor), effect only shows when cursor is inside the container and is rendered inside it (not portaled). */
-  scoped?: boolean;
 }
 
-export default function ProfileCursorEffect({
-  children,
-  cursorStyle,
-  accentColor,
-  scoped = false,
-}: ProfileCursorEffectProps) {
+export default function ProfileCursorEffect({ children, cursorStyle, accentColor }: ProfileCursorEffectProps) {
   const [trail, setTrail] = useState<{ x: number; y: number; id: number }[]>([]);
   const [isHovering, setIsHovering] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const trailIdRef = useRef(0);
-  const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const trailDotRef = useRef<HTMLDivElement>(null);
   const posRef = useRef({ x: 0, y: 0 });
-  const hasReceivedMoveRef = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -51,21 +41,7 @@ export default function ProfileCursorEffect({
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (leaveTimeoutRef.current) {
-        clearTimeout(leaveTimeoutRef.current);
-        leaveTimeoutRef.current = null;
-      }
       requestAnimationFrame(() => {
-        if (scoped && containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          const inside =
-            e.clientX >= rect.left &&
-            e.clientX <= rect.right &&
-            e.clientY >= rect.top &&
-            e.clientY <= rect.bottom;
-          if (!inside) return;
-        }
-        hasReceivedMoveRef.current = true;
         setIsHovering(true);
         updateCursorPosition(e.clientX, e.clientY);
         if (cursorStyle === "trail") {
@@ -76,33 +52,16 @@ export default function ProfileCursorEffect({
         }
       });
     },
-    [cursorStyle, scoped, updateCursorPosition]
+    [cursorStyle, updateCursorPosition]
   );
 
   const clearHover = useCallback(() => {
     setIsHovering(false);
     setTrail([]);
-    hasReceivedMoveRef.current = false;
   }, []);
 
   const handleMouseEnter = useCallback(() => {
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
     setIsHovering(true);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    if (scoped) {
-      leaveTimeoutRef.current = setTimeout(clearHover, 50);
-    }
-  }, [scoped, clearHover]);
-
-  useEffect(() => {
-    return () => {
-      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
-    };
   }, []);
 
   useEffect(() => {
@@ -126,7 +85,7 @@ export default function ProfileCursorEffect({
       document.documentElement.removeEventListener("mouseout", handleGlobalMouseOut);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [cursorStyle, handleMouseMove, scoped, clearHover]);
+  }, [cursorStyle, handleMouseMove, clearHover]);
 
   useEffect(() => {
     if (cursorStyle !== "trail" || trail.length === 0) return;
@@ -135,10 +94,7 @@ export default function ProfileCursorEffect({
   }, [cursorStyle, trail.length]);
 
   const showEffect =
-    !reducedMotion &&
-    (cursorStyle === "glow" || cursorStyle === "trail") &&
-    isHovering &&
-    (scoped ? hasReceivedMoveRef.current : true);
+    !reducedMotion && (cursorStyle === "glow" || cursorStyle === "trail") && isHovering;
 
   const cursorMarkup =
     showEffect && cursorStyle === "glow" ? (
@@ -184,18 +140,9 @@ export default function ProfileCursorEffect({
     ) : null;
 
   return (
-    <div
-      ref={containerRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className={scoped ? "relative overflow-hidden" : "relative"}
-    >
+    <div onMouseEnter={handleMouseEnter} className="relative">
       {children}
-      {scoped
-        ? cursorMarkup
-        : typeof document !== "undefined" &&
-          document.body &&
-          createPortal(cursorMarkup, document.body)}
+      {typeof document !== "undefined" && document.body && createPortal(cursorMarkup, document.body)}
     </div>
   );
 }

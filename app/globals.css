@@ -1115,10 +1115,7 @@
     cursor: none;
   }
 
-  /* Profile card 3D / hover effects (ProfileCardEffect wrapper) */
-  .profile-card-effect-wrapper {
-    contain: layout;
-  }
+  /* Profile card 3D / hover effects (ProfileCardEffect wrapper; no layout containment — avoids clipping 3D tilt) */
   .profile-card-effect-wrapper[data-active="true"] {
     box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 8%, transparent),
       0 25px 60px -15px rgba(0, 0, 0, 0.35);
@@ -1163,7 +1160,7 @@
     transition: opacity 0.3s ease, background-position 0.6s ease;
     z-index: 2;
   }
-  .profile-card-effect-wrapper:hover .profile-card-hover-effects::after {
+  .profile-card-effect-wrapper[data-glare="true"]:hover .profile-card-hover-effects::after {
     opacity: 1;
     background-position: -100% 0;
   }

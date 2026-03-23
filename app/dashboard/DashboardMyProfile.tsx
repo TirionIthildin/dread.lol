@@ -3,14 +3,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import {
-  PencilSimple,
-  Eye,
-  Notebook,
-  Link as LinkIcon,
   Image as ImageIcon,
-  Palette,
-  SlidersHorizontal,
-  Terminal,
   UploadSimple,
   DiscordLogo,
   MusicNotes,
@@ -20,7 +13,6 @@ import {
   Play,
   DotsSixVertical,
   GridFour,
-  ListChecks,
   Snowflake,
   CloudRain,
   CircleHalf,
@@ -28,9 +20,7 @@ import {
   Sparkle,
   Square,
   SquaresFour,
-  ClockCounterClockwise,
-  ArrowCounterClockwise,
-  FloppyDisk,
+  PencilSimple,
   CalendarBlank,
   Buildings,
   ArrowSquareOut,
@@ -38,19 +28,11 @@ import {
   Crown,
 } from "@phosphor-icons/react";
 import { useActionState, useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import ConfirmDialog from "@/app/components/ConfirmDialog";
 import SearchableSelect from "@/app/components/SearchableSelect";
 import type { ProfileRow } from "@/lib/db/schema";
-import {
-  updateProfileAction,
-  saveProfileVersionAction,
-  restoreProfileVersionAction,
-  deleteProfileVersionAction,
-  type ProfileFormState,
-} from "@/app/dashboard/actions";
+import { updateProfileAction, type ProfileFormState } from "@/app/dashboard/actions";
 import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
 import type { ProfileVersionRow } from "@/lib/profile-versions";
 import { ACCENT_COLOR_OPTIONS, ACCENT_COLORS, BANNER_STYLE_OPTIONS, isValidHexColor } from "@/lib/profile-themes";
@@ -59,49 +41,23 @@ import DiscordWidgetsDisplay, { normalizeWidgetData } from "@/app/components/Dis
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import DashboardLinks from "@/app/dashboard/DashboardLinks";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
-import type { Profile } from "@/lib/profiles";
-
-const dashIcon = { size: 18, weight: "regular" as const, className: "shrink-0" };
-const PREVIEW_STORAGE_KEY = "dread-preview-profile";
-const PREVIEW_MESSAGE_TYPE = "dread-preview-update";
-const TAGLINE_MAX = 120;
-const DESCRIPTION_MAX = 2000;
-
-type EditorSectionId = "basics" | "discord" | "extras" | "links" | "banner" | "terminal" | "fun" | "widgets" | "audio" | "versions";
-const EDITOR_SECTIONS: { id: EditorSectionId; label: string; icon: React.ReactNode }[] = [
-  { id: "basics", label: "Basics", icon: <Notebook {...dashIcon} aria-hidden /> },
-  { id: "extras", label: "Extras", icon: <ListChecks {...dashIcon} aria-hidden /> },
-  { id: "discord", label: "Discord", icon: <DiscordLogo {...dashIcon} aria-hidden /> },
-  { id: "links", label: "Links", icon: <LinkIcon {...dashIcon} aria-hidden /> },
-  { id: "banner", label: "Text art", icon: <ImageIcon {...dashIcon} aria-hidden /> },
-  { id: "terminal", label: "Terminal", icon: <Terminal {...dashIcon} aria-hidden /> },
-  { id: "fun", label: "Styling", icon: <SlidersHorizontal {...dashIcon} aria-hidden /> },
-  { id: "widgets", label: "Widgets", icon: <SquaresFour {...dashIcon} aria-hidden /> },
-  { id: "audio", label: "Audio Player", icon: <MusicNotes {...dashIcon} aria-hidden /> },
-  { id: "versions", label: "Versions", icon: <ClockCounterClockwise {...dashIcon} aria-hidden /> },
-];
-
-const MAX_WIDGETS = 4;
-
-
-function parseTerminalCommandsForEditor(raw: string | null): { command: string; output: string }[] {
-  if (!raw?.trim()) return [];
-  try {
-    const arr = JSON.parse(raw) as unknown;
-    if (!Array.isArray(arr)) return [];
-    return arr.filter(
-      (x): x is { command: string; output: string } =>
-        x != null && typeof x === "object" && typeof (x as { command?: string }).command === "string" && typeof (x as { output?: string }).output === "string"
-    ).map((x) => ({ command: x.command, output: x.output }));
-  } catch {
-    return [];
-  }
-}
-
-// .png, .jpg, .jpeg, .gif, .webp
-const BACKGROUND_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/x-gif", "image/webp"];
-// .mp4, .m4v, .webm, .mov, .mkv
-const BACKGROUND_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/webm", "video/quicktime", "video/x-matroska"];
+import { resolveCardEffects, type Profile } from "@/lib/profiles";
+import { ProfileEditorLayout } from "@/app/dashboard/profile-editor/ProfileEditorLayout";
+import { SubmitButton } from "@/app/dashboard/profile-editor/SubmitButton";
+import { useProfileEditorPreviewSync } from "@/app/dashboard/profile-editor/useProfileEditorPreviewSync";
+import { useEditorSectionUrlSync } from "@/app/dashboard/profile-editor/useEditorSectionUrlSync";
+import { parseTerminalCommandsForEditor } from "@/app/dashboard/profile-editor/utils";
+import {
+  TAGLINE_MAX,
+  DESCRIPTION_MAX,
+  BACKGROUND_IMAGE_TYPES,
+  BACKGROUND_VIDEO_TYPES,
+  MAX_WIDGETS,
+  TIMEZONE_SELECT_GROUPS,
+} from "@/app/dashboard/profile-editor/constants";
+import type { EditorSectionId } from "@/app/dashboard/profile-editor/types";
+import { TerminalSection } from "@/app/dashboard/profile-editor/sections/TerminalSection";
+import { VersionsSection } from "@/app/dashboard/profile-editor/sections/VersionsSection";
 interface DashboardMyProfileProps {
   profile: ProfileRow;
   /** Base profile for live preview (from memberProfileToProfile). */
@@ -118,232 +74,6 @@ interface DashboardMyProfileProps {
   robloxLinked?: boolean;
   /** Whether the user has Premium (for gating effects, colors, analytics). */
   hasPremiumAccess?: boolean;
-}
-
-/** Grouped IANA timezones for local time display. */
-const TIMEZONE_GROUPS: { label: string; zones: string[] }[] = [
-  { label: "Americas", zones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Anchorage", "America/Phoenix", "America/Toronto", "America/Vancouver", "America/Montreal", "America/Mexico_City", "America/Sao_Paulo", "America/Buenos_Aires"] },
-  { label: "Europe", zones: ["Europe/London", "Europe/Berlin", "Europe/Paris", "Europe/Amsterdam", "Europe/Dublin", "Europe/Madrid", "Europe/Rome", "Europe/Stockholm", "Europe/Copenhagen", "Europe/Warsaw", "Europe/Prague", "Europe/Vienna", "Europe/Zurich", "Europe/Athens", "Europe/Helsinki", "Europe/Istanbul"] },
-  { label: "Asia / Pacific", zones: ["Asia/Tokyo", "Asia/Seoul", "Asia/Shanghai", "Asia/Hong_Kong", "Asia/Singapore", "Asia/Bangkok", "Asia/Kolkata", "Asia/Dubai", "Australia/Sydney", "Australia/Melbourne", "Pacific/Auckland"] },
-];
-
-const TIMEZONE_SELECT_GROUPS = TIMEZONE_GROUPS.map((g) => ({
-  label: g.label,
-  options: g.zones.map((tz) => ({ value: tz, label: tz.replace(/_/g, " ") })),
-}));
-
-function SubmitButton({ onRevert }: { onRevert?: () => void }) {
-  const { pending } = useFormStatus();
-  return (
-    <div className="sticky bottom-0 pt-6 pb-2 -mb-2 flex items-center gap-3 bg-gradient-to-t from-[var(--surface)] via-[var(--surface)] to-transparent">
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex items-center gap-2 rounded-lg border-2 border-[var(--accent)] bg-[var(--accent)]/20 px-5 py-2.5 text-sm font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] disabled:opacity-50 disabled:pointer-events-none"
-      >
-        <FloppyDisk size={18} weight="regular" />
-        {pending ? "Saving…" : "Save changes"}
-      </button>
-      {onRevert && (
-        <button
-          type="button"
-          onClick={onRevert}
-          disabled={pending}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-5 py-2.5 text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] disabled:opacity-50 disabled:pointer-events-none"
-        >
-          <ArrowCounterClockwise size={18} weight="regular" />
-          Revert changes
-        </button>
-      )}
-      <span className="text-xs text-[var(--muted)]">⌘/Ctrl+Enter to save</span>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  icon,
-  children,
-}: { active: boolean; onClick: () => void; icon?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? "true" : undefined}
-      className={`min-w-[5rem] flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-b-2 -mb-px ${
-        active
-          ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface)]"
-          : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--border)]"
-      }`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-function ProfileVersionsPanel({
-  profileId,
-  versions,
-  onSaved,
-  onRestored,
-  onDeleted,
-}: {
-  profileId: string;
-  versions: ProfileVersionRow[];
-  onSaved: () => void;
-  onRestored: () => void;
-  onDeleted: () => void;
-}) {
-  const [saveName, setSaveName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [restoreId, setRestoreId] = useState<string | null>(null);
-  const [restoring, setRestoring] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const handleSave = useCallback(async () => {
-    const name = saveName.trim();
-    if (!name) {
-      setSaveError("Enter a name for this version");
-      return;
-    }
-    setSaveError(null);
-    setSaving(true);
-    try {
-      const result = await saveProfileVersionAction(profileId, name);
-      if (result.error) {
-        setSaveError(result.error);
-      } else {
-        setSaveName("");
-        toast.success("Version saved");
-        onSaved();
-      }
-    } finally {
-      setSaving(false);
-    }
-  }, [profileId, saveName, onSaved]);
-
-  const handleRestore = useCallback(async () => {
-    if (!restoreId) return;
-    setRestoring(true);
-    try {
-      const result = await restoreProfileVersionAction(restoreId);
-      if (result.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("Profile restored");
-        setRestoreId(null);
-        onRestored();
-      }
-    } finally {
-      setRestoring(false);
-    }
-  }, [restoreId, onRestored]);
-
-  const handleDelete = useCallback(async () => {
-    if (!deleteId) return;
-    setDeleting(true);
-    try {
-      const result = await deleteProfileVersionAction(deleteId);
-      if (result.error) {
-        toast.error(result.error);
-      } else {
-        toast.success("Version deleted");
-        setDeleteId(null);
-        onDeleted();
-      }
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteId, onDeleted]);
-
-  return (
-    <>
-      <div className="flex flex-wrap gap-2">
-        <input
-          type="text"
-          value={saveName}
-          onChange={(e) => setSaveName(e.target.value.slice(0, 80))}
-          placeholder="e.g. Summer 2025"
-          maxLength={80}
-          className="flex-1 min-w-[12rem] rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-        />
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50 disabled:pointer-events-none"
-        >
-          <FloppyDisk size={16} weight="regular" />
-          {saving ? "Saving…" : "Save current"}
-        </button>
-      </div>
-      {saveError && <p className="text-xs text-[var(--warning)]">{saveError}</p>}
-      {versions.length > 0 ? (
-        <ul className="space-y-2">
-          {versions.map((v) => (
-            <li
-              key={v.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/60 px-3 py-2.5"
-            >
-              <div className="min-w-0 flex-1">
-                <span className="text-sm font-medium text-[var(--foreground)] truncate block">{v.name}</span>
-                <span className="text-[10px] text-[var(--muted)]">
-                  {new Date(v.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setRestoreId(v.id)}
-                  className="rounded p-2 text-[var(--muted)] hover:bg-[var(--accent)]/15 hover:text-[var(--accent)] transition-colors"
-                  title="Restore"
-                  aria-label={`Restore ${v.name}`}
-                >
-                  <ArrowCounterClockwise size={16} weight="regular" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteId(v.id)}
-                  className="rounded p-2 text-[var(--muted)] hover:bg-[var(--warning)]/15 hover:text-[var(--warning)] transition-colors"
-                  title="Delete"
-                  aria-label={`Delete ${v.name}`}
-                >
-                  <Trash size={16} weight="regular" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-xs text-[var(--muted)]">No saved versions yet. Save your current profile above.</p>
-      )}
-
-      <ConfirmDialog
-        open={restoreId !== null}
-        title="Restore this version?"
-        message="Your current profile will be replaced. Make sure to save any unsaved changes in the Editor first."
-        confirmLabel="Restore"
-        variant="default"
-        loading={restoring}
-        onConfirm={handleRestore}
-        onCancel={() => setRestoreId(null)}
-      />
-      <ConfirmDialog
-        open={deleteId !== null}
-        title="Delete this version?"
-        message="This cannot be undone."
-        confirmLabel="Delete"
-        variant="danger"
-        loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteId(null)}
-      />
-    </>
-  );
 }
 
 type DashboardTab = "editor" | "preview";
@@ -615,7 +345,11 @@ export default function DashboardMyProfile({
 
   const [cardOpacityValue, setCardOpacityValue] = useState((profile as { cardOpacity?: number }).cardOpacity ?? 95);
   const [cardBlurValue, setCardBlurValue] = useState((profile as { cardBlur?: string }).cardBlur ?? "sm");
-  const [cardEffectsEnabledValue, setCardEffectsEnabledValue] = useState((profile as { cardEffectsEnabled?: boolean }).cardEffectsEnabled ?? false);
+  const cardEffectsInitial = resolveCardEffects(profile);
+  const [cardEffectTilt, setCardEffectTilt] = useState(cardEffectsInitial.cardEffectTilt);
+  const [cardEffectSpotlight, setCardEffectSpotlight] = useState(cardEffectsInitial.cardEffectSpotlight);
+  const [cardEffectGlare, setCardEffectGlare] = useState(cardEffectsInitial.cardEffectGlare);
+  const [cardEffectMagneticBorder, setCardEffectMagneticBorder] = useState(cardEffectsInitial.cardEffectMagneticBorder);
   const slugCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
   const router = useRouter();
@@ -653,17 +387,19 @@ export default function DashboardMyProfile({
     if (state?.success) router.refresh();
   }, [state?.success, router]);
 
-  // Ctrl+Enter / Cmd+Enter to save
+  // Ctrl+Enter / Cmd+Enter — main profile form or links form
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        const form = document.getElementById("profile-editor-form") as HTMLFormElement | null;
-        if (form && tab === "editor") form.requestSubmit();
+        if (tab !== "editor") return;
+        const id = activeEditorSection === "links" ? "profile-links-form" : "profile-editor-form";
+        const form = document.getElementById(id) as HTMLFormElement | null;
+        form?.requestSubmit();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [tab]);
+  }, [tab, activeEditorSection]);
 
   const formKey = `${profile.id}-${(profile as { updatedAt?: Date }).updatedAt?.getTime?.() ?? 0}`;
 
@@ -688,7 +424,10 @@ export default function DashboardMyProfile({
         backgroundEffect: backgroundEffectValue && backgroundEffectValue !== "none" ? backgroundEffectValue : undefined,
         cardOpacity: cardOpacityValue,
         cardBlur: ["none", "sm", "md", "lg"].includes(cardBlurValue) ? (cardBlurValue as "none" | "sm" | "md" | "lg") : baseProfileForPreview.cardBlur,
-        cardEffectsEnabled: cardEffectsEnabledValue,
+        cardEffectTilt,
+        cardEffectSpotlight,
+        cardEffectGlare,
+        cardEffectMagneticBorder,
         widgetsMatchAccent: widgetsMatchAccent,
         discordWidgets: widgetPreviewFiltered ?? undefined,
         robloxWidgets:
@@ -723,7 +462,10 @@ export default function DashboardMyProfile({
     widgetsMatchAccent,
     cardOpacityValue,
     cardBlurValue,
-    cardEffectsEnabledValue,
+    cardEffectTilt,
+    cardEffectSpotlight,
+    cardEffectGlare,
+    cardEffectMagneticBorder,
     widgetPreviewFiltered,
     widgetRobloxAccountAge,
     widgetRobloxProfile,
@@ -732,15 +474,9 @@ export default function DashboardMyProfile({
     audioTracksValue,
   ]);
 
-  useEffect(() => {
-    if (!previewProfile || typeof window === "undefined") return;
-    try {
-      sessionStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(previewProfile));
-      previewIframeRef.current?.contentWindow?.postMessage({ type: PREVIEW_MESSAGE_TYPE }, window.location.origin);
-    } catch {
-      /* ignore */
-    }
-  }, [previewProfile]);
+  useProfileEditorPreviewSync(previewProfile, previewIframeRef);
+
+  useEditorSectionUrlSync(activeEditorSection, setActiveEditorSection);
 
   const handleRevert = useCallback(() => {
     setSlugValue(profile.slug);
@@ -772,7 +508,13 @@ export default function DashboardMyProfile({
     setWidgetsMatchAccent((profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false);
     setCardOpacityValue((profile as { cardOpacity?: number }).cardOpacity ?? 95);
     setCardBlurValue((profile as { cardBlur?: string }).cardBlur ?? "sm");
-    setCardEffectsEnabledValue((profile as { cardEffectsEnabled?: boolean }).cardEffectsEnabled ?? false);
+    {
+      const ce = resolveCardEffects(profile);
+      setCardEffectTilt(ce.cardEffectTilt);
+      setCardEffectSpotlight(ce.cardEffectSpotlight);
+      setCardEffectGlare(ce.cardEffectGlare);
+      setCardEffectMagneticBorder(ce.cardEffectMagneticBorder);
+    }
     setCustomFontValue((() => {
       const p = profile as { customFont?: string; customFontUrl?: string };
       return p.customFontUrl ? "custom" : (p.customFont ?? "");
@@ -816,80 +558,24 @@ export default function DashboardMyProfile({
   }, [profile]);
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col overflow-hidden xl:h-[calc(100vh-6rem)]">
-      {/* Tabs only on smaller screens; xl+ shows side-by-side */}
-      <nav
-        className="xl:hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden shrink-0 mb-4"
-        aria-label="Profile editor"
-      >
-        <div className="flex">
-          <TabButton active={tab === "editor"} onClick={() => setTab("editor")} icon={<PencilSimple {...dashIcon} />}>
-            Editor
-          </TabButton>
-          <TabButton active={tab === "preview"} onClick={() => setTab("preview")} icon={<Eye {...dashIcon} />}>
-            Preview
-          </TabButton>
-        </div>
-      </nav>
-
-      {/* Side-by-side layout on xl; stacked on smaller */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden xl:flex-row xl:gap-4">
-        {/* Editor panel - full width on <xl, left half on xl+ */}
-        <section
-          className={`animate-dashboard-panel flex flex-1 flex-col min-h-0 xl:flex-[1.2] rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
-            tab === "preview" ? "hidden xl:flex" : ""
-          } xl:min-w-0`}
-          aria-label="Profile editor"
-        >
-          <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
-            <div className="flex items-center gap-2">
-              <PencilSimple size={18} weight="regular" className="text-[var(--accent)]" aria-hidden />
-              <span className="text-sm font-medium text-[var(--foreground)]">Editor</span>
-              <span className="text-xs text-[var(--muted)] hidden sm:inline">— edit your profile</span>
-            </div>
-            <Link
-              href={`/${profile.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] hover:underline"
-            >
-              <ArrowSquareOut size={14} weight="regular" />
-              Preview in new tab
-            </Link>
-          </div>
-          <div className="grid min-h-0 flex-1 grid-cols-[14rem_1fr] xl:grid-cols-[14rem_1fr]">
-            <nav
-              className="flex w-52 flex-col gap-1 overflow-hidden border-r border-[var(--border)] bg-[var(--bg)]/50 p-3 xl:w-56"
-              aria-label="Editor sections"
-            >
-            {EDITOR_SECTIONS.map(({ id, label, icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveEditorSection(id)}
-                aria-current={activeEditorSection === id ? "true" : undefined}
-                className={`inline-flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                  activeEditorSection === id
-                    ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30"
-                    : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] border border-transparent"
-                }`}
-              >
-                {icon}
-                <span className="truncate">{label}</span>
-              </button>
-            ))}
-            <div className="mt-auto pt-4 border-t border-[var(--border)]">
-              <Link
-                href="/marketplace"
-                className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium text-[var(--foreground)] hover:border-[var(--accent)]/50 hover:bg-[var(--surface-hover)] transition-colors"
-              >
-                Browse templates →
-              </Link>
-            </div>
-          </nav>
-          <div className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-5 lg:p-6 overscroll-contain">
+    <ProfileEditorLayout
+      tab={tab}
+      setTab={setTab}
+      activeEditorSection={activeEditorSection}
+      onSelectSection={setActiveEditorSection}
+      profileSlug={slugValue || profile.slug}
+      previewIframeRef={previewIframeRef}
+      editorHeaderHint={
+        activeEditorSection === "links" ? (
+          <span className="text-xs text-[var(--muted)] hidden sm:inline">
+            Use &quot;Save links&quot; below — ⌘/Ctrl+Enter saves this tab.
+          </span>
+        ) : null
+      }
+      editorScrollChildren={
+        <>
           {activeEditorSection === "links" ? (
-            <DashboardLinks profile={profile} embedded />
+            <DashboardLinks profile={profile} embedded formId="profile-links-form" />
           ) : (
           <form id="profile-editor-form" key={formKey} action={formAction} className="space-y-5 max-w-3xl">
             <input type="hidden" name="profileId" value={profile.id} />
@@ -1280,16 +966,49 @@ export default function DashboardMyProfile({
                   className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
               </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input
-                  type="checkbox"
-                  name="cardEffectsEnabled"
-                  checked={cardEffectsEnabledValue}
-                  onChange={(e) => setCardEffectsEnabledValue(e.target.checked)}
-                  className="rounded border-[var(--border)]"
-                />
-                Card effects <span className="text-[var(--muted)]/70">(3D tilt, spotlight, glare on hover)</span>
-              </label>
+              <div className="space-y-2 rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/30 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Card hover effects</p>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--foreground)]">
+                  <input
+                    type="checkbox"
+                    name="cardEffectTilt"
+                    checked={cardEffectTilt}
+                    onChange={(e) => setCardEffectTilt(e.target.checked)}
+                    className="rounded border-[var(--border)]"
+                  />
+                  3D tilt <span className="text-[var(--muted)]/70">(extra padding reduces edge clipping)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--foreground)]">
+                  <input
+                    type="checkbox"
+                    name="cardEffectSpotlight"
+                    checked={cardEffectSpotlight}
+                    onChange={(e) => setCardEffectSpotlight(e.target.checked)}
+                    className="rounded border-[var(--border)]"
+                  />
+                  Spotlight <span className="text-[var(--muted)]/70">(accent glow follows cursor)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--foreground)]">
+                  <input
+                    type="checkbox"
+                    name="cardEffectGlare"
+                    checked={cardEffectGlare}
+                    onChange={(e) => setCardEffectGlare(e.target.checked)}
+                    className="rounded border-[var(--border)]"
+                  />
+                  Glare <span className="text-[var(--muted)]/70">(glossy highlight + shine sweep)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--foreground)]">
+                  <input
+                    type="checkbox"
+                    name="cardEffectMagneticBorder"
+                    checked={cardEffectMagneticBorder}
+                    onChange={(e) => setCardEffectMagneticBorder(e.target.checked)}
+                    className="rounded border-[var(--border)]"
+                  />
+                  Accent border <span className="text-[var(--muted)]/70">(animated edge highlight)</span>
+                </label>
+              </div>
               <label className="block text-xs font-medium text-[var(--muted)]">
                 Languages <span className="text-[var(--muted)]/70">(e.g. EN, ES, FR)</span>
                 <input
@@ -1390,79 +1109,12 @@ export default function DashboardMyProfile({
               </div>
             </div>
 
-            <div className={activeEditorSection === "terminal" ? "block space-y-3" : "hidden"}>
-              <p className="text-xs font-medium text-[var(--muted)] mb-1">Show your profile as a terminal with custom commands (like the homepage)</p>
-              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-[var(--muted)]">
-                <input
-                  type="checkbox"
-                  name="useTerminalLayout"
-                  defaultChecked={profile.useTerminalLayout ?? false}
-                  className="rounded border-[var(--border)]"
-                />
-                Enable terminal commands
-              </label>
-              <label className="block text-xs font-medium text-[var(--muted)]">
-                Window title
-                <input
-                  type="text"
-                  name="terminalTitle"
-                  defaultValue={profile.terminalTitle ?? ""}
-                  placeholder="user@slug:~"
-                  maxLength={80}
-                  className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] font-mono"
-                />
-              </label>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--muted)]">Custom commands (command → output). Output supports Markdown.</p>
-                {terminalCommandEntries.map((entry, index) => (
-                  <div key={index} className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/60 p-2">
-                    <label className="min-w-0 flex-1 text-xs font-medium text-[var(--muted)]">
-                      Command
-                      <input
-                        type="text"
-                        value={entry.command}
-                        onChange={(e) =>
-                          setTerminalCommandEntries((prev) =>
-                            prev.map((p, i) => (i === index ? { ...p, command: e.target.value } : p))
-                          )
-                        }
-                        placeholder="cat intro.txt"
-                        className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm font-mono focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                      />
-                    </label>
-                    <label className="min-w-0 flex-1 text-xs font-medium text-[var(--muted)]">
-                      Output
-                      <input
-                        type="text"
-                        value={entry.output}
-                        onChange={(e) =>
-                          setTerminalCommandEntries((prev) =>
-                            prev.map((p, i) => (i === index ? { ...p, output: e.target.value } : p))
-                          )
-                        }
-                        placeholder="Hello, I'm …"
-                        className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setTerminalCommandEntries((prev) => prev.filter((_, i) => i !== index))}
-                      className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--warning)]"
-                      aria-label="Remove command"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setTerminalCommandEntries((prev) => [...prev, { command: "", output: "" }])}
-                  className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--bg)]/40 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-                >
-                  + Add command
-                </button>
-              </div>
-            </div>
+            <TerminalSection
+              visible={activeEditorSection === "terminal"}
+              profile={profile}
+              terminalCommandEntries={terminalCommandEntries}
+              setTerminalCommandEntries={setTerminalCommandEntries}
+            />
 
             <div className={activeEditorSection === "fun" ? "block space-y-3" : "hidden"}>
               <p className="text-xs font-medium text-[var(--muted)] mb-1">Page theme, accent color, terminal prompt, greeting, card look</p>
@@ -2708,28 +2360,14 @@ export default function DashboardMyProfile({
               </div>
             </div>
 
-            <div className={activeEditorSection === "versions" ? "block space-y-4" : "hidden"}>
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden transition-all hover:border-[var(--border-bright)]">
-                <div className="px-4 py-3 border-b border-[var(--border)]/50 flex items-center gap-2">
-                  <div className="rounded-lg bg-[var(--accent)]/10 p-1.5">
-                    <ClockCounterClockwise size={18} weight="duotone" className="text-[var(--accent)]" aria-hidden />
-                  </div>
-                  <span className="text-sm font-medium text-[var(--foreground)]">Save & restore</span>
-                </div>
-                <div className="p-4 space-y-4">
-                  <p className="text-xs text-[var(--muted)]">
-                    Save up to 5 snapshots of your profile (including gallery and short links). Each version keeps its own copy of uploaded files.
-                  </p>
-                  <ProfileVersionsPanel
-                    profileId={profile.id}
-                    versions={initialVersions}
-                    onSaved={() => router.refresh()}
-                    onRestored={() => router.refresh()}
-                    onDeleted={() => router.refresh()}
-                  />
-                </div>
-              </div>
-            </div>
+            <VersionsSection
+              visible={activeEditorSection === "versions"}
+              profile={profile}
+              versions={initialVersions}
+              onSaved={() => router.refresh()}
+              onRestored={() => router.refresh()}
+              onDeleted={() => router.refresh()}
+            />
 
             {state?.success && (
               <p className="text-sm text-[var(--terminal)]" role="status">
@@ -2749,43 +2387,8 @@ export default function DashboardMyProfile({
             <SubmitButton onRevert={handleRevert} />
           </form>
           )}
-          </div>
-        </div>
-      </section>
-
-      {/* Preview panel - right side on xl, full width when tab=preview on <xl */}
-      <section
-        className={`animate-dashboard-panel flex flex-col flex-1 min-h-0 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
-          tab === "editor" ? "hidden xl:flex" : ""
-        }`}
-        aria-label="Profile preview"
-      >
-        <div className="border-b border-[var(--border)] px-4 py-3 flex items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
-          <div className="flex items-center gap-2">
-            <Eye size={18} weight="regular" className="text-[var(--terminal)]" aria-hidden />
-            <span className="text-sm font-medium text-[var(--foreground)]">Live preview</span>
-            <span className="text-xs text-[var(--muted)] hidden sm:inline">— updates as you type</span>
-          </div>
-          <Link
-            href={`/${profile.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
-            Open in tab
-          </Link>
-        </div>
-        <div className="flex-1 min-h-0 relative bg-[var(--bg)]">
-          <iframe
-            ref={previewIframeRef}
-            src="/live-preview"
-            title="Live profile preview"
-            className="absolute inset-0 w-full h-full rounded-b-xl border-0"
-          />
-        </div>
-      </section>
-      </div>
-
-    </div>
+        </>
+      }
+    />
   );
 }
