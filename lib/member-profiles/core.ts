@@ -1649,6 +1649,9 @@ export function memberProfileToProfile(
     ...((row as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim() && {
       showCryptoWidgets: (row as { showCryptoWidgets: string }).showCryptoWidgets.trim(),
     }),
+    ...((row as { showGithubWidgets?: string | null }).showGithubWidgets?.trim() && {
+      showGithubWidgets: (row as { showGithubWidgets: string }).showGithubWidgets.trim(),
+    }),
     unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,

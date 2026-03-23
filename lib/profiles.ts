@@ -185,6 +185,18 @@ export interface Profile {
   showRobloxWidgets?: string;
   /** Comma-separated CoinGecko coin ids (same order as dashboard); used when fetching prices. */
   showCryptoWidgets?: string;
+  /** Comma-separated GitHub widget keys (lastPush, publicRepos, contributions). */
+  showGithubWidgets?: string;
+  /** Fetched GitHub stats (merged on profile page, not stored in DB). */
+  githubWidgets?: {
+    login: string;
+    profileUrl: string;
+    avatarUrl?: string;
+    lastPush?: { at: string; repoName?: string };
+    publicRepos?: number;
+    contributions?: { total: number; heatmap: number[][] };
+    contributionsUnavailable?: boolean;
+  };
   /** Fetched spot prices (merged on profile page, not stored in DB). */
   cryptoWidgets?: {
     coins: Array<{

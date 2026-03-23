@@ -11,6 +11,12 @@ export const BACKGROUND_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/webm",
 
 export const MAX_WIDGETS = 4;
 
+/** Background type toggles in profile editor (Styling). */
+export const PROFILE_BG_TYPE_OPTIONS = ["grid", "gradient", "solid", "dither", "image", "video"] as const;
+
+/** Background overlay effects (Premium). */
+export const PROFILE_BG_EFFECT_OPTIONS = ["none", "snow", "rain", "blur", "retro-computer"] as const;
+
 /** Grouped IANA timezones for local time display. */
 export const TIMEZONE_GROUPS: { label: string; zones: string[] }[] = [
   {

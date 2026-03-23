@@ -26,6 +26,7 @@ import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
 import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
+import GithubWidgetsDisplay from "@/app/components/GithubWidgetsDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
@@ -294,6 +295,22 @@ function ProfileSection({
               data={profile.robloxWidgets}
               matchAccent={profile.widgetsMatchAccent}
               orderFromCsv={profile.showRobloxWidgets}
+            />
+          </div>
+        ) : null
+      );
+    case "github-widgets":
+      return wrap(
+        profile.githubWidgets &&
+        (profile.githubWidgets.lastPush ||
+          profile.githubWidgets.publicRepos != null ||
+          profile.githubWidgets.contributions ||
+          profile.githubWidgets.contributionsUnavailable) ? (
+          <div className="mt-4">
+            <GithubWidgetsDisplay
+              data={profile.githubWidgets}
+              matchAccent={profile.widgetsMatchAccent}
+              orderFromCsv={profile.showGithubWidgets}
             />
           </div>
         ) : null

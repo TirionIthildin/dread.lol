@@ -9,6 +9,7 @@ import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-bad
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
 import { getCryptoWidgetData } from "@/lib/crypto-widgets";
+import { getGithubWidgetData } from "@/lib/github-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
@@ -56,7 +57,7 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [discordBadgeData, premiumAccess, widgetPreviewData, versions, robloxLinked, robloxWidgetData, cryptoWidgetData] =
+    const [discordBadgeData, premiumAccess, widgetPreviewData, versions, robloxLinked, robloxWidgetData, cryptoWidgetData, githubWidgetPreviewData] =
       await Promise.all([
         getUserDiscordBadgeData(userId),
         getPremiumAccess(userId),
@@ -70,6 +71,10 @@ async function MemberProfileSection({
         hasRobloxLinked(userId),
         getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
         getCryptoWidgetData((profile as { showCryptoWidgets?: string | null }).showCryptoWidgets).catch(() => null),
+        getGithubWidgetData(
+          (profile as { githubUsername?: string | null }).githubUsername,
+          (profile as { showGithubWidgets?: string | null }).showGithubWidgets
+        ).catch(() => null),
       ]);
     const availableDiscordBadges = [
       ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
@@ -95,6 +100,7 @@ async function MemberProfileSection({
           availableDiscordBadges={availableDiscordBadges}
           widgetPreviewData={widgetPreviewData}
           cryptoWidgetPreviewData={cryptoWidgetData}
+          githubWidgetPreviewData={githubWidgetPreviewData}
           robloxLinked={robloxLinked}
           hasPremiumAccess={premiumAccess.hasAccess}
         />

@@ -7,6 +7,7 @@ import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { parseEnabledCryptoIds } from "@/lib/crypto-widgets";
+import { normalizeGithubUsername } from "@/lib/github-widgets";
 import { isPremiumNameAnimation, isPremiumFieldAnimation } from "@/lib/premium-features";
 import { filterLinksForPremiumAccess, parseCommissionStatus } from "@/lib/monetization-profile";
 import { canUseDashboard } from "@/lib/dashboard-access";
@@ -181,19 +182,32 @@ export async function updateProfileAction(
     : undefined;
 
   const widgetSelection = (() => {
-    const order: Array<{ src: "discord" | "roblox"; val: string }> = [];
+    const order: Array<{ src: "discord" | "roblox" | "github"; val: string }> = [];
     if (formData.get("showDiscordWidgetAccountAge") === "on") order.push({ src: "discord", val: "accountAge" });
     if (formData.get("showDiscordWidgetJoined") === "on") order.push({ src: "discord", val: "joined" });
     if (formData.get("showDiscordWidgetServerCount") === "on") order.push({ src: "discord", val: "serverCount" });
     if (formData.get("showDiscordWidgetServerInvite") === "on") order.push({ src: "discord", val: "serverInvite" });
     if (formData.get("showRobloxWidgetAccountAge") === "on") order.push({ src: "roblox", val: "accountAge" });
     if (formData.get("showRobloxWidgetProfile") === "on") order.push({ src: "roblox", val: "profile" });
+    if (formData.get("showGithubWidgetLastPush") === "on") order.push({ src: "github", val: "lastPush" });
+    if (formData.get("showGithubWidgetPublicRepos") === "on") order.push({ src: "github", val: "publicRepos" });
+    if (formData.get("showGithubWidgetContributions") === "on") order.push({ src: "github", val: "contributions" });
     const taken = order.slice(0, 4);
     return {
       discord: taken.filter((x) => x.src === "discord").map((x) => x.val),
       roblox: taken.filter((x) => x.src === "roblox").map((x) => x.val),
+      github: taken.filter((x) => x.src === "github").map((x) => x.val),
     };
   })();
+
+  const rawGithubUsername = (formData.get("githubUsername") as string)?.trim();
+  const githubUsernameNormalized = normalizeGithubUsername(rawGithubUsername);
+  if (rawGithubUsername && !githubUsernameNormalized) {
+    return { error: "Enter a valid GitHub username (letters, numbers, hyphens)." };
+  }
+  if (widgetSelection.github.length > 0 && !githubUsernameNormalized) {
+    return { error: "Enter your GitHub username to use GitHub widgets." };
+  }
 
   try {
     await updateMemberProfile(profileId, session.sub, {
@@ -330,6 +344,8 @@ export async function updateProfileAction(
         })(),
       }),
       showRobloxWidgets: widgetSelection.roblox.length > 0 ? widgetSelection.roblox.join(",") : null,
+      githubUsername: githubUsernameNormalized ?? null,
+      showGithubWidgets: widgetSelection.github.length > 0 ? widgetSelection.github.join(",") : null,
       showCryptoWidgets: (() => {
         const raw = (formData.get("showCryptoWidgets") as string)?.trim();
         if (!raw) return null;
