@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const parsed = pasteCreateSchema.safeParse(body);
     if (!parsed.success) {
-      const msg = parsed.error.errors[0]?.message ?? "Invalid request";
+      const msg = parsed.error.issues[0]?.message ?? "Invalid request";
       return NextResponse.json({ error: msg }, { status: 400 });
     }
     const { content, language } = parsed.data;
