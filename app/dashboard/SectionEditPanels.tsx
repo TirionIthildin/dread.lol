@@ -50,7 +50,7 @@ export function SectionEditPanel({
   hasPremium = false,
 }: SectionEditPanelProps) {
   const def = sectionId === "style" ? { label: "Style & appearance" } : SECTION_DEFINITIONS.find((d) => d.id === sectionId);
-  if (!def && sectionId !== "style") return null;
+  const unknownSection = !def && sectionId !== "style";
 
   const handleSave = useCallback(
     async (fields: Record<string, unknown>) => {
@@ -66,6 +66,8 @@ export function SectionEditPanel({
     },
     [profileId, profile, onProfileChange]
   );
+
+  if (unknownSection) return null;
 
   if (sectionId === "style") {
     return <StylePanel profile={profile} onSave={handleSave} onProfileChange={onProfileChange} hasPremium={hasPremium} />;
