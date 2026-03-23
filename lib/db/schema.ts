@@ -1,6 +1,6 @@
 /**
  * MongoDB schema types. Collections: users, profiles, profile_views, vouches,
- * gallery_items, profile_short_links, badges, user_badges.
+ * gallery_items, profile_short_links, profile_aliases, badges, user_badges.
  * Run indexes: npm run db:migrate-prod (or node scripts/migrate.mjs)
  */
 import type { Binary, ObjectId } from "mongodb";
@@ -383,6 +383,14 @@ export interface PremiumVoucherRedemptionDoc {
   grantPending?: boolean;
   /** Set when grantPending transitions to false. */
   grantedAt?: Date;
+}
+
+/** Alternate URL slug that resolves to a profile (same namespace as profiles.slug). */
+export interface ProfileAliasDoc {
+  _id: ObjectId;
+  profileId: ObjectId;
+  slug: string;
+  createdAt: Date;
 }
 
 /** WebAuthn credential for local auth users (passkeys). */

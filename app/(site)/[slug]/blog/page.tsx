@@ -27,8 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const profile = memberProfileToProfile(resolvedRow);
   const title = `${profile.name}'s blog`;
   const description = `Micro-blog by ${profile.name} on ${SITE_NAME}`;
-  const canonicalUrl = `${SITE_URL}/${slug}/blog`;
-  const rssUrl = `${SITE_URL}/${slug}/blog/rss.xml`;
+  const canonicalSlug = memberRow.slug;
+  const canonicalUrl = `${SITE_URL}/${canonicalSlug}/blog`;
+  const rssUrl = `${SITE_URL}/${canonicalSlug}/blog/rss.xml`;
   return {
     title,
     description,

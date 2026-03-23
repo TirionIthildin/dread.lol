@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { getMemberProfileBySlug, getMemberProfileById } from "@/lib/member-profiles";
+import { isAliasSlugTaken, isPrimarySlugTaken } from "@/lib/member-profiles";
 import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 
 export async function GET(request: Request) {
@@ -21,13 +21,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ available: false, error: "This slug is reserved" });
   }
 
-  let ownsCurrentProfile = false;
-  if (profileId) {
-    const profile = await getMemberProfileById(profileId);
-    ownsCurrentProfile = profile?.userId === session.sub;
+  const primaryTaken = await isPrimarySlugTaken(slug, profileId ?? undefined);
+  const aliasTaken = await isAliasSlugTaken(slug);
+
+  if (primaryTaken) {
+    return NextResponse.json({ available: false });
   }
 
-  const existing = await getMemberProfileBySlug(slug);
-  const available = !existing || (ownsCurrentProfile && profileId && existing.id === profileId);
+  if (aliasTaken) {
+    return NextResponse.json({ available: false });
+  }
+
+  const available = !primaryTaken && !aliasTaken;
   return NextResponse.json({ available });
 }

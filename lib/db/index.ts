@@ -27,6 +27,7 @@ export const COLLECTIONS = {
   vouches: "vouches",
   galleryItems: "gallery_items",
   profileShortLinks: "profile_short_links",
+  profileAliases: "profile_aliases",
   badges: "badges",
   userBadges: "user_badges",
   userGuilds: "user_guilds",

@@ -86,6 +86,7 @@ services:
     tmpfs:
       - /tmp
       - /var/tmp
+      - /app/.next/cache
     cap_drop:
       - ALL
     cap_add:

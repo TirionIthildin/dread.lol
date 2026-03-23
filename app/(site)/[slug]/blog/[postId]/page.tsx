@@ -31,7 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${post.title} · ${profile.name}'s blog`;
   const description =
     post.content.slice(0, 160).replace(/\s+/g, " ").trim() + (post.content.length > 160 ? "…" : "");
-  const canonicalUrl = `${SITE_URL}/${slug}/blog/${postId}`;
+  const canonicalSlug = memberRow.slug;
+  const canonicalUrl = `${SITE_URL}/${canonicalSlug}/blog/${postId}`;
   return {
     title,
     description,

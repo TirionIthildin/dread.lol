@@ -51,9 +51,9 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 
 ## File Access
 
-`/api/files/[id]` serves user-uploaded files from disk under `FILE_STORAGE_PATH`. During migration, `SEAWEED_MASTER_URL` may still be set so legacy blobs can be read until they are copied onto the volume. File ids (UUID or legacy Seaweed `volumeId,fileId`) are public once generated—do not store sensitive content if exposure is a concern.
+`/api/files/[id]` serves user-uploaded files from disk under `FILE_STORAGE_PATH`. File ids (UUID or legacy Seaweed-style `volumeId,fileId` if present on disk) are public once generated—do not store sensitive content if exposure is a concern.
 
-**Docker:** The app image runs as user `nextjs` (uid 1001). The uploads volume mount must be writable by that uid (e.g. `chown 1001:1001` on the host path or volume init).
+**Docker:** The container entrypoint runs as root to `chown` `FILE_STORAGE_PATH` for the `nextjs` user (uid 1001), then the app process runs as `nextjs`.
 
 **Backups:** Include the uploads volume in backup and restore procedures; it is the source of truth for on-disk blobs.
 

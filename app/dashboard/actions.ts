@@ -16,6 +16,8 @@ export {
 
 export { addShortLinkAction, deleteShortLinkAction } from "./actions/short-links";
 
+export { createProfileAliasAction, deleteProfileAliasAction } from "./actions/profile-aliases";
+
 export {
   requireAdmin,
   setUserBadgesAction,

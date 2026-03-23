@@ -69,6 +69,9 @@ try {
 
   await db.collection("profile_short_links").createIndex({ profileId: 1, slug: 1 }, { unique: true });
 
+  await db.collection("profile_aliases").createIndex({ slug: 1 }, { unique: true });
+  await db.collection("profile_aliases").createIndex({ profileId: 1 });
+
   await db.collection("badges").createIndex({ key: 1 }, { unique: true });
   await db.collection("badges").createIndex({ sortOrder: 1 });
 

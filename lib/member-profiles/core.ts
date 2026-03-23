@@ -24,6 +24,7 @@ import { isDiscordSnowflake } from "@/lib/auth/local-ids";
 import { resolveDiscordAvatarUrl } from "@/lib/discord-avatar";
 import { escapeRegex } from "@/lib/regex";
 import { getBaseDomain } from "@/lib/site";
+import { resolveMemberProfileBySlug } from "./profile-aliases";
 
 export interface MemberProfileWithViews {
   profile: ProfileRow;
@@ -639,10 +640,8 @@ export async function getOrCreateMemberProfile(
 }
 
 export async function getMemberProfileBySlug(slug: string): Promise<ProfileRow | null> {
-  const client = await getDb();
-  const dbName = await getDbName();
-  const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne({ slug });
-  return doc ? toProfileRow(doc) : null;
+  const resolved = await resolveMemberProfileBySlug(slug);
+  return resolved?.profile ?? null;
 }
 
 export async function getMemberProfileById(profileId: string): Promise<ProfileRow | null> {

@@ -11,6 +11,12 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Profile aliases",
+    description:
+      "Add alternate URLs that show your main profile (1 slot on free accounts, 5 with Premium). Separate from short links, which redirect to external sites.",
+  },
+  {
+    date: "2026-03",
     title: "Creator Premium voucher links",
     description:
       "Verified creators can create shareable Premium voucher links (optional cap and expiry) and see redemption stats on the Creator dashboard.",
