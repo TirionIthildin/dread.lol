@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Eye } from "@phosphor-icons/react/dist/ssr";
 import type { VouchedByUser } from "@/lib/member-profiles";
+import { isDiscordCdnHttpsUrl } from "@/lib/url-validation";
 
 const iconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
 
@@ -106,7 +107,7 @@ export default function ProfileVouches({
                 className="inline-flex items-center gap-1 rounded-full border border-[var(--border)]/60 bg-[var(--bg)]/80 px-2 py-0.5 text-xs text-[var(--foreground)]"
                 title={displayName(u)}
               >
-                {u.avatarUrl && u.avatarUrl.includes("cdn.discordapp.com") ? (
+                {u.avatarUrl && isDiscordCdnHttpsUrl(u.avatarUrl) ? (
                   <Image
                     src={u.avatarUrl}
                     alt=""

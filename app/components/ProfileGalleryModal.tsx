@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { X } from "@phosphor-icons/react";
+import { isDiscordCdnHttpsUrl, safeImageLinkHref } from "@/lib/url-validation";
 
 type GalleryItem = {
   id: number;
@@ -99,12 +100,12 @@ export default function ProfileGalleryModal({ slug, onClose }: Props) {
                   className="rounded-xl border border-[var(--border)] overflow-hidden bg-[var(--bg)]/40 shadow-sm transition-shadow duration-200 hover:shadow-md hover:border-[var(--border)]"
                 >
                   <a
-                    href={item.imageUrl.startsWith("/") ? item.imageUrl : item.imageUrl}
+                    href={safeImageLinkHref(item.imageUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset rounded-t-xl"
                   >
-                    {item.imageUrl.includes("cdn.discordapp.com") ? (
+                    {isDiscordCdnHttpsUrl(item.imageUrl) ? (
                       <Image
                         src={item.imageUrl}
                         alt={item.title ?? "Gallery image"}

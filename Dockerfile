@@ -43,6 +43,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/content ./content
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json /app/package-lock.json* ./
 RUN npm install discord.js ioredis mongodb --omit=dev --ignore-scripts && npm cache clean --force

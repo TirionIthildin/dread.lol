@@ -10,7 +10,18 @@ import { getValkey } from "@/lib/valkey";
 const FLAGS_KEY_PREFIX = "discord:flags:";
 const PREMIUM_KEY_PREFIX = "discord:premium:";
 const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 hours
-const DISCORD_API = "https://discord.com/api/v10";
+const DISCORD_API_ORIGIN = "https://discord.com";
+
+/**
+ * Build a fixed Discord REST user URL. Only https://discord.com/api/v10/users/{snowflake}.
+ * Satisfies static analysis that outbound requests are not SSRF to arbitrary hosts.
+ */
+export function getDiscordApiUserUrl(discordUserId: string): string | null {
+  if (!/^\d{17,20}$/.test(discordUserId)) return null;
+  const u = new URL(`/api/v10/users/${discordUserId}`, DISCORD_API_ORIGIN);
+  if (u.origin !== DISCORD_API_ORIGIN) return null;
+  return u.href;
+}
 
 function debug(...args: unknown[]) {
   const enabled =
@@ -90,7 +101,8 @@ export async function fetchDiscordUserFromApi(
     debug("API skip: DISCORD_BOT_TOKEN not set");
     return null;
   }
-  const url = `${DISCORD_API}/users/${discordUserId}`;
+  const url = getDiscordApiUserUrl(discordUserId);
+  if (!url) return null;
   debug("API fetch", { userId: discordUserId, url });
   try {
     const res = await fetch(url, {

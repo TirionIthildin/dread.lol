@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: `API scope — ${SITE_NAME}`,
+  title: "API scope",
   description: `Public JSON endpoints and usage notes for ${SITE_NAME}.`,
   robots: "index, follow",
 };
@@ -12,17 +12,8 @@ const base = SITE_URL.replace(/\/$/, "");
 
 export default function ApiDocsPage() {
   return (
-    <article className="relative z-10 w-full max-w-2xl mx-auto px-4 py-8">
+    <article className="relative z-10 w-full max-w-2xl">
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-        <p className="text-xs text-[var(--muted)] mb-6">
-          <Link href="/" className="text-[var(--accent)] hover:underline">
-            ← Home
-          </Link>
-          <span className="mx-2">·</span>
-          <Link href="/about" className="text-[var(--accent)] hover:underline">
-            About
-          </Link>
-        </p>
         <h1 className="text-xl font-semibold text-[var(--foreground)] mb-2">HTTP API scope</h1>
         <p className="text-sm text-[var(--muted)] mb-6">
           {SITE_NAME} is primarily a web application. These routes are documented so integrations (widgets, scripts,

@@ -1,5 +1,6 @@
 import { SITE_URL } from "@/lib/site";
 import { getAllMemberProfileSlugs } from "@/lib/member-profiles";
+import { getSiteDocPageSlugs } from "@/lib/site-docs";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,13 @@ export default async function sitemap() {
     { url: `${SITE_URL}/about`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.75 },
     { url: `${SITE_URL}/changelog`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.65 },
     { url: `${SITE_URL}/status`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.5 },
+    { url: `${SITE_URL}/docs`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 0.6 },
+    ...getSiteDocPageSlugs().map((slug) => ({
+      url: `${SITE_URL}/docs/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.55,
+    })),
     { url: `${SITE_URL}/docs/api`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.55 },
     { url: `${SITE_URL}/dashboard/leaderboard`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.6 },
     { url: `${SITE_URL}/marketplace`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.7 },

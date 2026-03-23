@@ -21,8 +21,8 @@ export default function HomePageContent() {
           Premium
         </Link>
         <span className="mx-1 text-[var(--muted)]/60">·</span>
-        <Link href="/docs/api" className="text-[var(--accent)] hover:underline">
-          API
+        <Link href="/docs" className="text-[var(--accent)] hover:underline">
+          Docs
         </Link>
         <span className="mx-1 text-[var(--muted)]/60">·</span>
         <Link href="/changelog" className="text-[var(--accent)] hover:underline">
@@ -52,8 +52,8 @@ export default function HomePageContent() {
           Marketplace
         </Link>
         <span>·</span>
-        <Link href="/docs/api" className="hover:text-[var(--accent)] hover:underline">
-          API
+        <Link href="/docs" className="hover:text-[var(--accent)] hover:underline">
+          Docs
         </Link>
         <span>·</span>
         <Link href="/changelog" className="hover:text-[var(--accent)] hover:underline">

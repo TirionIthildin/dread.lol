@@ -44,20 +44,37 @@ export interface LinkEntry {
   customLabel?: string;
 }
 
-function hrefHostAndPath(href: string): string {
-  try {
-    const u = new URL(href.includes("://") ? href : `https://${href}`);
-    return `${u.hostname.toLowerCase()}${u.pathname.toLowerCase()}`;
-  } catch {
-    return href.toLowerCase();
-  }
+/** Match retail Amazon hostnames (avoids substring tricks on path-only matches). */
+function isAmazonRetailHostname(hostname: string): boolean {
+  const suffixes = [
+    "amazon.com",
+    "amazon.co.uk",
+    "amazon.de",
+    "amazon.fr",
+    "amazon.it",
+    "amazon.es",
+    "amazon.nl",
+    "amazon.pl",
+    "amazon.se",
+    "amazon.com.be",
+    "amazon.com.tr",
+    "amazon.in",
+    "amazon.jp",
+    "amazon.com.au",
+    "amazon.com.mx",
+    "amazon.com.br",
+    "amazon.ca",
+    "amazon.cn",
+  ];
+  const h = hostname.toLowerCase();
+  return suffixes.some((s) => h === s || h.endsWith(`.${s}`));
 }
 
 /**
  * Infer link type from stored label + URL (used for dashboard edit + Premium filtering).
  */
-function isCryptoExchangeOrWalletHost(h: string): boolean {
-  const hosts = [
+function isCryptoExchangeOrWalletHost(hostname: string): boolean {
+  const domains = [
     "coinbase.com",
     "binance.com",
     "binance.us",
@@ -80,19 +97,30 @@ function isCryptoExchangeOrWalletHost(h: string): boolean {
     "cex.io",
     "robinhood.com",
   ];
-  return hosts.some((x) => h.includes(x));
+  const h = hostname.toLowerCase();
+  return domains.some((d) => h === d || h.endsWith(`.${d}`));
 }
 
 export function resolveLinkTypeFromSavedLink(label: string | undefined, href: string): LinkType {
-  const h = hrefHostAndPath(href);
   const l = (label ?? "").toLowerCase();
+  let hostname: string;
+  let pathname: string;
+  try {
+    const raw = href.trim();
+    const u = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    hostname = u.hostname.toLowerCase();
+    pathname = u.pathname.toLowerCase();
+  } catch {
+    return label?.trim() ? "custom" : "website";
+  }
 
-  if (isCryptoExchangeOrWalletHost(h)) return "cryptoWallet";
+  if (isCryptoExchangeOrWalletHost(hostname)) return "cryptoWallet";
 
-  if (h.includes("ko-fi.com") || l.includes("ko-fi") || l.includes("kofi")) return "kofi";
-  if (h.includes("throne.com") || l.includes("throne")) return "throne";
+  if (hostname === "ko-fi.com" || hostname.endsWith(".ko-fi.com") || l.includes("ko-fi") || l.includes("kofi")) return "kofi";
+  if (hostname === "throne.com" || hostname.endsWith(".throne.com") || l.includes("throne")) return "throne";
   if (
-    (h.includes("amazon.") && (h.includes("/wishlist") || h.includes("/hz/wishlist") || h.includes("/gp/registry/wishlist"))) ||
+    (isAmazonRetailHostname(hostname) &&
+      (pathname.includes("/wishlist") || pathname.includes("/hz/wishlist") || pathname.includes("/gp/registry/wishlist"))) ||
     l.includes("amazon wishlist")
   ) {
     return "amazonWishlist";

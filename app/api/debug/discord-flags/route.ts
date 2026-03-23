@@ -11,6 +11,7 @@ import {
   getDiscordFlagsFromRedis,
   getDiscordPremiumFromRedis,
   fetchDiscordUserFromApi,
+  getDiscordApiUserUrl,
   setDiscordFlagsInRedis,
   setDiscordPremiumInRedis,
 } from "@/lib/discord-flags";
@@ -54,6 +55,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Could not resolve userId" }, { status: 400 });
   }
 
+  if (!/^\d{17,20}$/.test(discordUserId)) {
+    return NextResponse.json({ error: "Invalid Discord user id" }, { status: 400 });
+  }
+
   const trace: Record<string, unknown> = { userId: discordUserId };
 
   const flagsRedis = await getDiscordFlagsFromRedis(discordUserId);
@@ -79,7 +84,11 @@ export async function GET(request: Request) {
     apiTrace.note = "DISCORD_BOT_TOKEN not set, skipping API fetch";
   } else {
     try {
-      const res = await fetch(`https://discord.com/api/v10/users/${discordUserId}`, {
+      const apiUrl = getDiscordApiUserUrl(discordUserId);
+      if (!apiUrl) {
+        apiTrace.error = "Invalid Discord user id for API URL";
+      } else {
+      const res = await fetch(apiUrl, {
         headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN!}` },
       });
       const body = await res.text();
@@ -97,6 +106,7 @@ export async function GET(request: Request) {
         premium_type: parsed?.premium_type,
         hasId: parsed && "id" in parsed,
       };
+      }
     } catch (apiErr) {
       apiTrace.error = apiErr instanceof Error ? apiErr.message : String(apiErr);
     }

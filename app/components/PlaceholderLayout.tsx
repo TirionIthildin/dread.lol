@@ -1,13 +1,18 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 interface PlaceholderLayoutProps {
   children: React.ReactNode;
 }
 
 /**
- * Placeholder-style layout: no top nav, centered main.
+ * Placeholder-style layout: no top nav, centered main (top-aligned for long /docs pages).
  */
 export default function PlaceholderLayout({ children }: PlaceholderLayoutProps) {
+  const pathname = usePathname();
+  const docsLayout = pathname?.startsWith("/docs") ?? false;
+
   return (
     <div className="min-h-screen flex flex-col grid-bg scanlines">
       <a
@@ -42,7 +47,9 @@ export default function PlaceholderLayout({ children }: PlaceholderLayoutProps) 
 
       <main
         id="main-content"
-        className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 overflow-auto"
+        className={`flex-1 flex flex-col items-center p-3 min-h-0 overflow-auto ${
+          docsLayout ? "justify-start" : "justify-center"
+        }`}
         tabIndex={-1}
       >
         {children}
