@@ -17,6 +17,7 @@ const OAUTH_STATE_PREFIX = "oauth:state:";
 const OAUTH_STATE_TTL = 600; // 10 minutes (Discord redirect can be slow)
 const MAX_UA_LEN = 512;
 const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
+const SESSION_SCAN_COUNT = 200;
 
 export interface SessionUser {
   sub: string;
@@ -246,17 +247,55 @@ export function getSessionCookieClearOptions() {
   };
 }
 
+function idFromSessionKey(key: string): string | null {
+  if (!key.startsWith(SESSION_PREFIX)) return null;
+  const id = key.slice(SESSION_PREFIX.length);
+  return id ? id : null;
+}
+
+/**
+ * Backward-compat fallback: discover sessions for users that predate USER_SESSIONS indexing.
+ * Kept for revoke/list correctness after session schema migration.
+ */
+async function findLegacySessionIdsForUser(userId: string, knownIds: Set<string>): Promise<string[]> {
+  const redis = getValkey();
+  let cursor = "0";
+  const out: string[] = [];
+  do {
+    const [nextCursor, keys] = await redis.scan(
+      cursor,
+      "MATCH",
+      `${SESSION_PREFIX}*`,
+      "COUNT",
+      String(SESSION_SCAN_COUNT)
+    );
+    cursor = nextCursor;
+    for (const key of keys) {
+      const id = idFromSessionKey(key);
+      if (!id || knownIds.has(id)) continue;
+      const data = await redis.get(key);
+      if (!data) continue;
+      const parsed = parseStoredSession(data);
+      if (parsed?.user.sub === userId) out.push(id);
+    }
+  } while (cursor !== "0");
+  return out;
+}
+
 /** List active sessions for a user (stale ids are removed from the index). */
 export async function listSessionsForUser(userId: string): Promise<SessionListEntry[]> {
   const redis = getValkey();
   const ids = await redis.smembers(USER_SESSIONS_PREFIX + userId);
+  const indexedIds = new Set(ids);
+  const legacyIds = await findLegacySessionIdsForUser(userId, indexedIds);
+  const allIds = [...ids, ...legacyIds];
   const out: SessionListEntry[] = [];
   const setKey = USER_SESSIONS_PREFIX + userId;
-  for (const id of ids) {
+  for (const id of allIds) {
     const key = SESSION_PREFIX + id;
     const data = await redis.get(key);
     if (!data) {
-      await redis.srem(setKey, id);
+      if (indexedIds.has(id)) await redis.srem(setKey, id);
       continue;
     }
     const parsed = parseStoredSession(data);
@@ -278,8 +317,15 @@ export async function revokeSessionForUser(userId: string, sessionId: string): P
   const redis = getValkey();
   const setKey = USER_SESSIONS_PREFIX + userId;
   const isMember = await redis.sismember(setKey, sessionId);
-  if (!isMember) return false;
   const key = SESSION_PREFIX + sessionId;
+  if (!isMember) {
+    const data = await redis.get(key);
+    if (!data) return false;
+    const parsed = parseStoredSession(data);
+    if (!parsed || parsed.user.sub !== userId) return false;
+    await redis.del(key);
+    return true;
+  }
   const data = await redis.get(key);
   if (data) {
     const parsed = parseStoredSession(data);
@@ -295,10 +341,13 @@ export async function revokeAllSessionsForUser(userId: string): Promise<number> 
   const redis = getValkey();
   const setKey = USER_SESSIONS_PREFIX + userId;
   const ids = await redis.smembers(setKey);
+  const knownIds = new Set(ids);
+  const legacyIds = await findLegacySessionIdsForUser(userId, knownIds);
+  const allIds = [...ids, ...legacyIds];
   let n = 0;
-  for (const id of ids) {
-    await redis.del(SESSION_PREFIX + id);
-    n++;
+  for (const id of allIds) {
+    const removed = await redis.del(SESSION_PREFIX + id);
+    if (removed > 0) n++;
   }
   await redis.del(setKey);
   return n;
