@@ -342,7 +342,7 @@ export default function LocalAuthForms() {
               disabled={loading}
               className="w-full rounded border border-[var(--border)] px-2 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface)] disabled:opacity-50"
             >
-              {loading ? "…" : "Sign in (SRP)"}
+              {loading ? "…" : "Sign in"}
             </button>
           </form>
           <form onSubmit={onPasskeyLogin}>
@@ -360,7 +360,8 @@ export default function LocalAuthForms() {
       {error && <p className="text-[10px] text-[var(--warning)]">{error}</p>}
       {message && <p className="text-[10px] text-[var(--accent)]">{message}</p>}
       <p className="text-[9px] text-[var(--muted)] leading-tight">
-        Passwords use SRP-6a: only a verifier is stored. Add a passkey from the dashboard after login.
+        We never store your password in plain text. Add a passkey from the dashboard after login for quicker
+        sign-in.
       </p>
     </div>
   );

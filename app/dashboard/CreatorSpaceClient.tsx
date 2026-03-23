@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import NextImage from "next/image";
-import { LinkSimple, Trash } from "@phosphor-icons/react";
+import { Gift, LinkSimple, Plus, Trash } from "@phosphor-icons/react";
 import { BADGE_ICON_OPTIONS } from "@/lib/phosphor-icon-names";
 import BadgeIconClient from "@/app/components/BadgeIconClient";
 import SearchableSelect from "@/app/components/SearchableSelect";
@@ -57,6 +57,24 @@ export default function CreatorSpaceClient() {
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
 
+  const [voucherLinks, setVoucherLinks] = useState<
+    {
+      linkId: string;
+      url: string;
+      label: string | null;
+      maxRedemptions: number | null;
+      expiresAt: string | null;
+      redemptionCount: number;
+      createdAt: string;
+    }[]
+  >([]);
+  const [voucherLoading, setVoucherLoading] = useState(true);
+  const [voucherLabel, setVoucherLabel] = useState("");
+  const [voucherMax, setVoucherMax] = useState("");
+  const [voucherExpires, setVoucherExpires] = useState("");
+  const [voucherCreatePending, setVoucherCreatePending] = useState(false);
+  const [voucherCreatedUrl, setVoucherCreatedUrl] = useState<string | null>(null);
+
   const [formLabel, setFormLabel] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formColor, setFormColor] = useState("");
@@ -93,6 +111,49 @@ export default function CreatorSpaceClient() {
     load();
   }, [load]);
 
+  const loadVouchers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/creator/premium-voucher");
+      if (!res.ok) {
+        setVoucherLinks([]);
+        return;
+      }
+      const data = await res.json();
+      const raw = (data.links ?? []) as Array<{
+        linkId: string;
+        url: string;
+        label: string | null;
+        maxRedemptions: number | null;
+        expiresAt: string | null;
+        redemptionCount: number;
+        createdAt: string;
+      }>;
+      setVoucherLinks(
+        raw.map((l) => ({
+          ...l,
+          expiresAt:
+            l.expiresAt == null
+              ? null
+              : typeof l.expiresAt === "string"
+                ? l.expiresAt
+                : new Date(l.expiresAt as unknown as Date).toISOString(),
+          createdAt:
+            typeof l.createdAt === "string"
+              ? l.createdAt
+              : new Date((l.createdAt as unknown) as Date).toISOString(),
+        }))
+      );
+    } catch {
+      setVoucherLinks([]);
+    } finally {
+      setVoucherLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVouchers();
+  }, [loadVouchers]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formLabel.trim()) {
@@ -125,6 +186,48 @@ export default function CreatorSpaceClient() {
       toast.error("Failed to save");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCreateVoucher(e: React.FormEvent) {
+    e.preventDefault();
+    setVoucherCreatePending(true);
+    setVoucherCreatedUrl(null);
+    try {
+      const body: { maxRedemptions?: number | null; expiresAt?: string; label?: string } = {};
+      const cap = voucherMax.trim();
+      if (cap) {
+        const n = parseInt(cap, 10);
+        if (Number.isFinite(n) && n > 0) body.maxRedemptions = n;
+      }
+      if (voucherExpires.trim()) {
+        const d = new Date(voucherExpires);
+        if (!Number.isNaN(d.getTime())) body.expiresAt = d.toISOString();
+      }
+      if (voucherLabel.trim()) body.label = voucherLabel.trim();
+
+      const res = await fetch("/api/dashboard/creator/premium-voucher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+      } else if (data.url) {
+        setVoucherCreatedUrl(data.url);
+        setVoucherLabel("");
+        setVoucherMax("");
+        setVoucherExpires("");
+        toast.success("Premium voucher link created");
+        loadVouchers();
+      } else {
+        toast.error("Failed to create link");
+      }
+    } catch {
+      toast.error("Failed to create link");
+    } finally {
+      setVoucherCreatePending(false);
     }
   }
 
@@ -318,6 +421,145 @@ export default function CreatorSpaceClient() {
           )}
         </div>
       )}
+
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 p-6 space-y-4 max-w-xl">
+        <h2 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
+          <Gift size={18} className="text-[var(--accent)]" />
+          Premium voucher links
+        </h2>
+        <p className="text-xs text-[var(--muted)] leading-relaxed">
+          Separate from your badge link above: these URLs grant site Premium when someone redeems (one redemption per
+          Discord account per link). Share them for giveaways or campaigns.
+        </p>
+
+        {voucherCreatedUrl ? (
+          <div className="space-y-3">
+            <p className="text-sm text-[var(--muted)]">Link created. Copy and share it.</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={voucherCreatedUrl}
+                className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-xs font-mono"
+              />
+              <CopyButton copyValue={voucherCreatedUrl} ariaLabel="Copy voucher link">
+                Copy
+              </CopyButton>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVoucherCreatedUrl(null)}
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              Create another
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleCreateVoucher} className="space-y-4">
+            <div>
+              <label htmlFor="voucher-label" className="block text-xs font-medium text-[var(--muted)] mb-1">
+                Label <span className="text-[var(--muted)]/80">(optional, for your reference)</span>
+              </label>
+              <input
+                id="voucher-label"
+                type="text"
+                value={voucherLabel}
+                onChange={(e) => setVoucherLabel(e.target.value)}
+                placeholder="e.g. Summer campaign"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--foreground)]"
+              />
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <label htmlFor="voucher-max" className="block text-xs font-medium text-[var(--muted)] mb-1">
+                  Max redemptions
+                </label>
+                <input
+                  id="voucher-max"
+                  type="number"
+                  min={1}
+                  value={voucherMax}
+                  onChange={(e) => setVoucherMax(e.target.value)}
+                  placeholder="Unlimited"
+                  className="w-32 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="voucher-expires" className="block text-xs font-medium text-[var(--muted)] mb-1">
+                  Expiry date
+                </label>
+                <input
+                  id="voucher-expires"
+                  type="date"
+                  value={voucherExpires}
+                  onChange={(e) => setVoucherExpires(e.target.value)}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={voucherCreatePending}
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+            >
+              <Plus size={18} weight="regular" />
+              {voucherCreatePending ? "Creating…" : "Create link"}
+            </button>
+          </form>
+        )}
+
+        <div className="pt-2 border-t border-[var(--border)]/60">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)] mb-2">Your links</h3>
+          {voucherLoading ? (
+            <p className="text-sm text-[var(--muted)]">Loading…</p>
+          ) : voucherLinks.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">No Premium voucher links yet.</p>
+          ) : (
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="py-2 pr-3 text-left font-medium text-[var(--muted)]">Label</th>
+                    <th className="py-2 pr-3 text-right font-medium text-[var(--muted)]">Redemptions</th>
+                    <th className="py-2 pr-3 text-left font-medium text-[var(--muted)]">Expires</th>
+                    <th className="py-2 pr-3 text-left font-medium text-[var(--muted)]">Created</th>
+                    <th className="py-2 text-left font-medium text-[var(--muted)]">Link</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {voucherLinks.map((l) => (
+                    <tr key={l.linkId} className="border-b border-[var(--border)]/50 align-top">
+                      <td className="py-2 pr-3 text-[var(--foreground)]">{l.label ?? "—"}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums">
+                        {l.redemptionCount}
+                        {l.maxRedemptions != null && l.maxRedemptions > 0 ? (
+                          <span className="text-[var(--muted)]"> / {l.maxRedemptions}</span>
+                        ) : (
+                          <span className="text-[var(--muted)]"> / ∞</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-[var(--muted)]">
+                        {l.expiresAt ? new Date(l.expiresAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="py-2 pr-3 text-[var(--muted)]">
+                        {l.createdAt ? new Date(l.createdAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="py-2">
+                        <div className="flex flex-wrap items-center gap-1 max-w-[14rem]">
+                          <code className="text-[10px] text-[var(--foreground)] break-all flex-1 min-w-0">{l.url}</code>
+                          <CopyButton copyValue={l.url} ariaLabel="Copy voucher link">
+                            Copy
+                          </CopyButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

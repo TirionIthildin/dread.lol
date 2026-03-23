@@ -11,6 +11,12 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Creator Premium voucher links",
+    description:
+      "Verified creators can create shareable Premium voucher links (optional cap and expiry) and see redemption stats on the Creator dashboard.",
+  },
+  {
+    date: "2026-03",
     title: "Admin: Discord system monitoring",
     description:
       "Configure a Discord webhook and optional CRON_SECRET-backed schedule to push host, process, MongoDB, and Valkey snapshots.",
