@@ -66,7 +66,6 @@ export interface FunSectionProps {
   setBackgroundAudioUrlValue: (v: string) => void;
   backgroundAudioUploading: boolean;
   backgroundAudioUploadError: string | null;
-  setBackgroundAudioUploadError: (v: string | null) => void;
   backgroundAudioFileRef: RefObject<HTMLInputElement | null>;
   backgroundAudioStartSecondsValue: string;
   setBackgroundAudioStartSecondsValue: (v: string) => void;
@@ -122,7 +121,6 @@ export function FunSection(props: FunSectionProps) {
     setBackgroundAudioUrlValue,
     backgroundAudioUploading,
     backgroundAudioUploadError,
-    setBackgroundAudioUploadError,
     backgroundAudioFileRef,
     backgroundAudioStartSecondsValue,
     setBackgroundAudioStartSecondsValue,
@@ -734,7 +732,6 @@ export function FunSection(props: FunSectionProps) {
                       </div>
                     ) : (
                       <div className="aspect-video relative flex items-center justify-center bg-[var(--bg)]">
-                        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                         <video src={backgroundUrlValue} muted playsInline className="w-full h-full object-cover" />
                         <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
                           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--accent)]/20">
@@ -852,7 +849,6 @@ export function FunSection(props: FunSectionProps) {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                     <audio src={backgroundAudioUrlValue} controls className="h-8 flex-1 min-w-0 max-w-full sm:max-w-[160px] opacity-90" preload="metadata" />
                     <div className="flex gap-2 shrink-0">
                       <button

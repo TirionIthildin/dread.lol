@@ -1,5 +1,5 @@
 /** @type {import('stylelint').Config} */
-export default {
+const config = {
   extends: ["stylelint-config-recommended", "stylelint-config-tailwindcss"],
   ignoreFiles: ["**/node_modules/**", "**/.next/**", "**/dist/**"],
   rules: {
@@ -7,3 +7,5 @@ export default {
     "selector-class-pattern": null,
   },
 };
+
+export default config;

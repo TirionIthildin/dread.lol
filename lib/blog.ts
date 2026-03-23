@@ -3,7 +3,7 @@
  */
 import { ObjectId } from "mongodb";
 import { getDb, getDbName, COLLECTIONS, type BlogPostDoc, type BlogPostRow } from "@/lib/db";
-import { getMemberProfileBySlug, getMemberProfileById } from "@/lib/member-profiles";
+import { getMemberProfileById } from "@/lib/member-profiles";
 
 const MAX_CONTENT_BYTES = 128 * 1024; // 128KB
 const MAX_TITLE_LENGTH = 200;

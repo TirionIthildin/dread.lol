@@ -12,7 +12,6 @@ import {
   ArrowSquareOut,
 } from "@phosphor-icons/react/dist/ssr";
 import { getSession } from "@/lib/auth/session";
-import { getBillingSettings } from "@/lib/settings";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import {
   getOrCreateUser,
@@ -46,10 +45,7 @@ const iconProps = { size: 18, weight: "regular" as const, className: "shrink-0" 
 export default async function DashboardAnalyticsPage() {
   const session = await getSession();
   if (!session) redirect("/dashboard");
-  const [user, billing] = await Promise.all([
-    getOrCreateUser(session),
-    getBillingSettings(),
-  ]);
+  const user = await getOrCreateUser(session);
   if (!canUseDashboard(user)) redirect("/dashboard");
 
   const [profile, premiumAccess] = await Promise.all([

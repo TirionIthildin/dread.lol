@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ProfileRow } from "@/lib/db/schema";
 import { updateProfileAction, type ProfileFormState } from "@/app/dashboard/actions";
-import { normalizeSlug, SLUG_MAX_LENGTH } from "@/lib/slug";
+import { normalizeSlug } from "@/lib/slug";
 import type { ProfileVersionRow } from "@/lib/profile-versions";
 import type { CryptoWidgetData } from "@/lib/crypto-widgets";
 import type { GithubWidgetData } from "@/lib/github-widgets";
 import { normalizeGithubUsername, parseEnabledGithubWidgets } from "@/lib/github-widgets";
 import { parseEnabledCryptoIds } from "@/lib/crypto-widgets";
 import DashboardLinks from "@/app/dashboard/DashboardLinks";
-import DiscordWidgetsDisplay, { normalizeWidgetData } from "@/app/components/DiscordWidgetsDisplay";
+import { normalizeWidgetData } from "@/app/components/DiscordWidgetsDisplay";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
 import { resolveCardEffects, type Profile } from "@/lib/profiles";
 import { ProfileEditorLayout } from "@/app/dashboard/profile-editor/ProfileEditorLayout";
@@ -21,7 +21,13 @@ import { SubmitButton } from "@/app/dashboard/profile-editor/SubmitButton";
 import { useProfileEditorPreviewSync } from "@/app/dashboard/profile-editor/useProfileEditorPreviewSync";
 import { useEditorSectionUrlSync } from "@/app/dashboard/profile-editor/useEditorSectionUrlSync";
 import { parseTerminalCommandsForEditor } from "@/app/dashboard/profile-editor/utils";
-import { BACKGROUND_IMAGE_TYPES, BACKGROUND_VIDEO_TYPES, MAX_WIDGETS } from "@/app/dashboard/profile-editor/constants";
+import {
+  BACKGROUND_IMAGE_TYPES,
+  BACKGROUND_VIDEO_TYPES,
+  MAX_WIDGETS,
+} from "@/app/dashboard/profile-editor/constants";
+
+const BG_EFFECT_OPTIONS = ["none", "snow", "rain", "blur", "retro-computer"] as const;
 import type { EditorSectionId } from "@/app/dashboard/profile-editor/types";
 import { ProfileEditorFormFields } from "@/app/dashboard/profile-editor/ProfileEditorFormFields";
 import { ProfileEditorOnboarding } from "@/app/dashboard/profile-editor/ProfileEditorOnboarding";
@@ -84,7 +90,6 @@ export default function DashboardMyProfile({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
-  const BG_OPTIONS = ["grid", "gradient", "solid", "dither", "image", "video"] as const;
   const [backgroundTypeValue, setBackgroundTypeValue] = useState<string>(() => {
     const t = (profile as { backgroundType?: string }).backgroundType ?? "grid";
     return ["image", "video", "grid", "gradient", "solid", "dither"].includes(t) ? t : "grid";
@@ -111,7 +116,6 @@ export default function DashboardMyProfile({
   const backgroundAudioFileRef = useRef<HTMLInputElement>(null);
   const [backgroundDragOver, setBackgroundDragOver] = useState(false);
   const [audioDragOver, setAudioDragOver] = useState(false);
-  const BG_EFFECT_OPTIONS = ["none", "snow", "rain", "blur", "retro-computer"] as const;
   const [backgroundEffectValue, setBackgroundEffectValue] = useState<string>(() => {
     const v = (profile as { backgroundEffect?: string }).backgroundEffect ?? "";
     return BG_EFFECT_OPTIONS.includes(v as (typeof BG_EFFECT_OPTIONS)[number]) ? v : "none";
@@ -230,14 +234,14 @@ export default function DashboardMyProfile({
 
   useEffect(() => {
     setSelectedCryptoIds(parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets));
-  }, [profile.id, (profile as { showCryptoWidgets?: string }).showCryptoWidgets]);
+  }, [profile]);
 
   useEffect(() => {
     setGithubUsernameInput((profile as { githubUsername?: string | null }).githubUsername ?? "");
     setWidgetGithubLastPush((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("lastPush") ?? false);
     setWidgetGithubPublicRepos((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("publicRepos") ?? false);
     setWidgetGithubContributions((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("contributions") ?? false);
-  }, [profile.id, (profile as { githubUsername?: string | null }).githubUsername, (profile as { showGithubWidgets?: string }).showGithubWidgets]);
+  }, [profile]);
 
   useEffect(() => {
     const idsCsv = selectedCryptoIds.join(",");
@@ -264,11 +268,7 @@ export default function DashboardMyProfile({
     return () => {
       cancelled = true;
     };
-  }, [
-    selectedCryptoIds,
-    (profile as { showCryptoWidgets?: string }).showCryptoWidgets,
-    cryptoWidgetPreviewData,
-  ]);
+  }, [profile, selectedCryptoIds, cryptoWidgetPreviewData]);
 
   useEffect(() => {
     const login = normalizeGithubUsername(githubUsernameInput);
@@ -306,13 +306,7 @@ export default function DashboardMyProfile({
     return () => {
       cancelled = true;
     };
-  }, [
-    githubUsernameInput,
-    selectedGithubWidgetsCsv,
-    (profile as { githubUsername?: string | null }).githubUsername,
-    (profile as { showGithubWidgets?: string }).showGithubWidgets,
-    githubWidgetPreviewData,
-  ]);
+  }, [profile, githubUsernameInput, selectedGithubWidgetsCsv, githubWidgetPreviewData]);
 
   const handleBackgroundFileUpload = useCallback(async (file: File) => {
     const type = file.type?.toLowerCase().split(";")[0]?.trim();
@@ -847,7 +841,6 @@ export default function DashboardMyProfile({
                 setBackgroundAudioUrlValue={setBackgroundAudioUrlValue}
                 backgroundAudioUploading={backgroundAudioUploading}
                 backgroundAudioUploadError={backgroundAudioUploadError}
-                setBackgroundAudioUploadError={setBackgroundAudioUploadError}
                 backgroundAudioFileRef={backgroundAudioFileRef}
                 backgroundAudioStartSecondsValue={backgroundAudioStartSecondsValue}
                 setBackgroundAudioStartSecondsValue={setBackgroundAudioStartSecondsValue}
