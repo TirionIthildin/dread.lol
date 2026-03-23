@@ -1646,6 +1646,9 @@ export function memberProfileToProfile(
     backgroundAudioStartSeconds: (row as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? undefined,
     backgroundEffect: stripPremium && isPremiumBackgroundEffect(bgEffect) ? undefined : (bgEffect ?? undefined),
     widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
+    ...((row as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim() && {
+      showCryptoWidgets: (row as { showCryptoWidgets: string }).showCryptoWidgets.trim(),
+    }),
     unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,

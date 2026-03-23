@@ -20,6 +20,7 @@ import {
   Sparkle,
   Square,
   SquaresFour,
+  Coins,
   PencilSimple,
   CalendarBlank,
   Buildings,
@@ -40,6 +41,14 @@ import { ACCENT_COLOR_OPTIONS, ACCENT_COLORS, BANNER_STYLE_OPTIONS, isValidHexCo
 import { getDiscordBadgeInfo } from "@/lib/discord-badges";
 import DiscordWidgetsDisplay, { normalizeWidgetData } from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
+import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
+import type { CryptoWidgetData } from "@/lib/crypto-widgets";
+import {
+  parseEnabledCryptoIds,
+  ALLOWED_CRYPTO_IDS,
+  CRYPTO_DISPLAY,
+  MAX_CRYPTO_WIDGET_COINS,
+} from "@/lib/crypto-widgets";
 import DashboardLinks from "@/app/dashboard/DashboardLinks";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
 import { resolveCardEffects, type Profile } from "@/lib/profiles";
@@ -71,6 +80,8 @@ interface DashboardMyProfileProps {
   availableDiscordBadges?: string[];
   /** Pre-fetched widget data for live preview (dates may arrive as ISO strings). */
   widgetPreviewData?: DiscordWidgetData | null;
+  /** Pre-fetched crypto spot prices for dashboard preview. */
+  cryptoWidgetPreviewData?: CryptoWidgetData | null;
   /** Whether the user has linked their Roblox account via OAuth. */
   robloxLinked?: boolean;
   /** Whether the user has Premium (for gating effects, colors, analytics). */
@@ -86,6 +97,7 @@ export default function DashboardMyProfile({
   discordAvatarUrl,
   availableDiscordBadges = [],
   widgetPreviewData = null,
+  cryptoWidgetPreviewData = null,
   robloxLinked = false,
   hasPremiumAccess = false,
 }: DashboardMyProfileProps) {
@@ -159,6 +171,10 @@ export default function DashboardMyProfile({
   const [widgetRobloxProfile, setWidgetRobloxProfile] = useState(() =>
     (profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("profile") ?? false
   );
+  const [selectedCryptoIds, setSelectedCryptoIds] = useState<string[]>(() =>
+    parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets)
+  );
+  const [cryptoPreviewData, setCryptoPreviewData] = useState<CryptoWidgetData | null>(() => cryptoWidgetPreviewData ?? null);
   const [widgetsMatchAccent, setWidgetsMatchAccent] = useState(() =>
     (profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false
   );
@@ -189,6 +205,41 @@ export default function DashboardMyProfile({
     }
     return Object.keys(out).length > 0 ? out : null;
   })();
+
+  useEffect(() => {
+    setSelectedCryptoIds(parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets));
+  }, [profile.id, (profile as { showCryptoWidgets?: string }).showCryptoWidgets]);
+
+  useEffect(() => {
+    const idsCsv = selectedCryptoIds.join(",");
+    if (!idsCsv) {
+      setCryptoPreviewData(null);
+      return;
+    }
+    const saved = parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets).join(",");
+    if (idsCsv === saved && cryptoWidgetPreviewData?.coins?.length) {
+      setCryptoPreviewData(cryptoWidgetPreviewData);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/crypto-widget-preview?ids=${encodeURIComponent(idsCsv)}`)
+      .then((r) => r.json())
+      .then((j: CryptoWidgetData) => {
+        if (cancelled) return;
+        if (j?.coins?.length) setCryptoPreviewData(j);
+        else setCryptoPreviewData(null);
+      })
+      .catch(() => {
+        if (!cancelled) setCryptoPreviewData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedCryptoIds,
+    (profile as { showCryptoWidgets?: string }).showCryptoWidgets,
+    cryptoWidgetPreviewData,
+  ]);
 
   const handleBackgroundFileUpload = useCallback(async (file: File) => {
     const type = file.type?.toLowerCase().split(";")[0]?.trim();
@@ -431,6 +482,7 @@ export default function DashboardMyProfile({
         cardEffectMagneticBorder,
         widgetsMatchAccent: widgetsMatchAccent,
         discordWidgets: widgetPreviewFiltered ?? undefined,
+        cryptoWidgets: cryptoPreviewData ?? undefined,
         robloxWidgets:
           widgetRobloxAccountAge || widgetRobloxProfile
             ? {
@@ -470,6 +522,7 @@ export default function DashboardMyProfile({
     widgetPreviewFiltered,
     widgetRobloxAccountAge,
     widgetRobloxProfile,
+    cryptoPreviewData,
     showAudioPlayerValue,
     audioVisualizerStyleValue,
     audioTracksValue,
@@ -506,6 +559,7 @@ export default function DashboardMyProfile({
     setDiscordInviteInput((profile as { discordInviteUrl?: string }).discordInviteUrl ?? "");
     setWidgetRobloxAccountAge((profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("accountAge") ?? false);
     setWidgetRobloxProfile((profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("profile") ?? false);
+    setSelectedCryptoIds(parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets));
     setWidgetsMatchAccent((profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false);
     setCardOpacityValue((profile as { cardOpacity?: number }).cardOpacity ?? 95);
     setCardBlurValue((profile as { cardBlur?: string }).cardBlur ?? "sm");
@@ -580,6 +634,7 @@ export default function DashboardMyProfile({
           ) : (
           <form id="profile-editor-form" key={formKey} action={formAction} className="space-y-5 max-w-3xl">
             <input type="hidden" name="profileId" value={profile.id} />
+            <input type="hidden" name="showCryptoWidgets" value={selectedCryptoIds.join(",")} />
             <input type="hidden" name="terminalCommands" value={JSON.stringify(terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()))} />
             <div className={activeEditorSection === "basics" ? "block space-y-6" : "hidden"}>
               {/* Profile URL & name */}
@@ -2155,6 +2210,44 @@ export default function DashboardMyProfile({
                             </Link>
                           </div>
                         )}
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
+                            <Coins size={16} weight="duotone" className="shrink-0" aria-hidden />
+                            Crypto prices
+                          </p>
+                          <p className="text-[11px] text-[var(--muted)] mb-2">
+                            USD spot data via CoinGecko (max {MAX_CRYPTO_WIDGET_COINS} coins). Separate from the {MAX_WIDGETS} Discord/Roblox widgets above.
+                          </p>
+                          <div className="max-h-48 overflow-y-auto rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/40 p-2 space-y-1.5">
+                            {ALLOWED_CRYPTO_IDS.map((id) => {
+                              const meta = CRYPTO_DISPLAY[id];
+                              const label = meta ? `${meta.name} (${meta.symbol})` : id;
+                              const checked = selectedCryptoIds.includes(id);
+                              return (
+                                <label
+                                  key={id}
+                                  className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-pointer text-sm ${
+                                    checked ? "bg-amber-500/10 border border-amber-500/25" : "hover:bg-[var(--surface)]/80"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => {
+                                      setSelectedCryptoIds((prev) => {
+                                        if (prev.includes(id)) return prev.filter((x) => x !== id);
+                                        if (prev.length >= MAX_CRYPTO_WIDGET_COINS) return prev;
+                                        return [...prev, id];
+                                      });
+                                    }}
+                                    className="rounded border-[var(--border)]"
+                                  />
+                                  <span className="text-[var(--foreground)]">{label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </>
                     );
                   })()}
@@ -2198,7 +2291,9 @@ export default function DashboardMyProfile({
                       </button>
                     </div>
                   )}
-                  {(widgetPreviewFiltered || ((widgetRobloxAccountAge || widgetRobloxProfile) && baseProfileForPreview?.robloxWidgets)) && (
+                  {(widgetPreviewFiltered ||
+                    ((widgetRobloxAccountAge || widgetRobloxProfile) && baseProfileForPreview?.robloxWidgets) ||
+                    (cryptoPreviewData && cryptoPreviewData.coins.length > 0)) && (
                     <div className="pt-2 border-t border-[var(--border)]">
                       <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] mb-2">Preview</p>
                       <div className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/60 p-3 space-y-3">
@@ -2215,6 +2310,9 @@ export default function DashboardMyProfile({
                             }}
                             matchAccent={widgetsMatchAccent}
                           />
+                        )}
+                        {cryptoPreviewData && cryptoPreviewData.coins.length > 0 && (
+                          <CryptoWidgetsDisplay data={cryptoPreviewData} matchAccent={widgetsMatchAccent} />
                         )}
                       </div>
                     </div>

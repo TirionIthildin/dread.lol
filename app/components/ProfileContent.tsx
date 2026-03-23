@@ -25,6 +25,7 @@ import ProfileBlogButton from "@/app/components/ProfileBlogButton";
 import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
 import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
+import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
@@ -294,6 +295,14 @@ function ProfileSection({
               matchAccent={profile.widgetsMatchAccent}
               orderFromCsv={profile.showRobloxWidgets}
             />
+          </div>
+        ) : null
+      );
+    case "crypto-widgets":
+      return wrap(
+        profile.cryptoWidgets && profile.cryptoWidgets.coins.length > 0 ? (
+          <div className="mt-4">
+            <CryptoWidgetsDisplay data={profile.cryptoWidgets} matchAccent={profile.widgetsMatchAccent} />
           </div>
         ) : null
       );

@@ -6,6 +6,7 @@ import { updateMemberProfile, getOrCreateUser, getProfileSlugByUserId } from "@/
 import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 import { getPremiumAccess } from "@/lib/premium-permissions";
+import { parseEnabledCryptoIds } from "@/lib/crypto-widgets";
 import { isPremiumNameAnimation, isPremiumFieldAnimation } from "@/lib/premium-features";
 import { filterLinksForPremiumAccess, parseCommissionStatus } from "@/lib/monetization-profile";
 import { canUseDashboard } from "@/lib/dashboard-access";
@@ -329,6 +330,12 @@ export async function updateProfileAction(
         })(),
       }),
       showRobloxWidgets: widgetSelection.roblox.length > 0 ? widgetSelection.roblox.join(",") : null,
+      showCryptoWidgets: (() => {
+        const raw = (formData.get("showCryptoWidgets") as string)?.trim();
+        if (!raw) return null;
+        const ids = parseEnabledCryptoIds(raw);
+        return ids.length > 0 ? ids.join(",") : null;
+      })(),
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();
         const url = validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim());

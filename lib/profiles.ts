@@ -183,6 +183,18 @@ export interface Profile {
   showDiscordWidgets?: string;
   /** Comma-separated Roblox widget order (e.g. "accountAge,profile"). Determines display order. */
   showRobloxWidgets?: string;
+  /** Comma-separated CoinGecko coin ids (same order as dashboard); used when fetching prices. */
+  showCryptoWidgets?: string;
+  /** Fetched spot prices (merged on profile page, not stored in DB). */
+  cryptoWidgets?: {
+    coins: Array<{
+      id: string;
+      name: string;
+      symbol: string;
+      priceUsd: number;
+      change24hPct: number | null;
+    }>;
+  };
   /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
   discordWidgets?: {
     accountAge?: { createdAt: Date; label: string };

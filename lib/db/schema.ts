@@ -148,6 +148,8 @@ export interface ProfileDoc {
   discordInviteUrl?: string | null;
   /** Roblox widgets to show: comma-separated accountAge,profile (requires OAuth link). */
   showRobloxWidgets?: string | null;
+  /** Comma-separated CoinGecko coin ids for spot price widget (max 6, allowlisted). */
+  showCryptoWidgets?: string | null;
   /** When true, widgets use profile accent color instead of brand colors. */
   widgetsMatchAccent?: boolean | null;
   showAudioPlayer?: boolean;

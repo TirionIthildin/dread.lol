@@ -8,6 +8,7 @@ import { getPremiumAccess } from "@/lib/premium-permissions";
 import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
 import { getDiscordWidgetData } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
+import { getCryptoWidgetData } from "@/lib/crypto-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
@@ -55,19 +56,21 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [discordBadgeData, premiumAccess, widgetPreviewData, versions, robloxLinked, robloxWidgetData] = await Promise.all([
-      getUserDiscordBadgeData(userId),
-      getPremiumAccess(userId),
-      getDiscordWidgetData(
-        profile.userId,
-        ["accountAge", "joined", "serverCount", "serverInvite"],
-        profile.discordInviteUrl,
-        profile.createdAt
-      ).catch(() => null),
-      getProfileVersions(userId),
-      hasRobloxLinked(userId),
-      getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
-    ]);
+    const [discordBadgeData, premiumAccess, widgetPreviewData, versions, robloxLinked, robloxWidgetData, cryptoWidgetData] =
+      await Promise.all([
+        getUserDiscordBadgeData(userId),
+        getPremiumAccess(userId),
+        getDiscordWidgetData(
+          profile.userId,
+          ["accountAge", "joined", "serverCount", "serverInvite"],
+          profile.discordInviteUrl,
+          profile.createdAt
+        ).catch(() => null),
+        getProfileVersions(userId),
+        hasRobloxLinked(userId),
+        getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
+        getCryptoWidgetData((profile as { showCryptoWidgets?: string | null }).showCryptoWidgets).catch(() => null),
+      ]);
     const availableDiscordBadges = [
       ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
       ...getPremiumBadgeKeys(discordBadgeData.premiumType),
@@ -75,6 +78,7 @@ async function MemberProfileSection({
     const resolvedProfile = await resolveProfileAvatar(profile);
     const baseProfileForPreview = memberProfileToProfile(resolvedProfile, undefined, discordBadgeData, undefined, premiumAccess.hasAccess);
     if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
+    if (cryptoWidgetData) baseProfileForPreview.cryptoWidgets = cryptoWidgetData;
     return (
       <Suspense
         fallback={
@@ -90,6 +94,7 @@ async function MemberProfileSection({
           discordAvatarUrl={session.picture ?? undefined}
           availableDiscordBadges={availableDiscordBadges}
           widgetPreviewData={widgetPreviewData}
+          cryptoWidgetPreviewData={cryptoWidgetData}
           robloxLinked={robloxLinked}
           hasPremiumAccess={premiumAccess.hasAccess}
         />

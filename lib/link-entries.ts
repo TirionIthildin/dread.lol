@@ -14,6 +14,7 @@ export const LINK_TYPES = [
   { value: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/username" },
   { value: "reddit", label: "Reddit", placeholder: "https://reddit.com/user/username" },
   { value: "steam", label: "Steam", placeholder: "https://steamcommunity.com/id/…" },
+  { value: "cryptoWallet", label: "Crypto / wallet", placeholder: "https://coinbase.com/… or exchange profile" },
   { value: "paypal", label: "PayPal", placeholder: "https://paypal.me/username" },
   { value: "telegram", label: "Telegram", placeholder: "https://t.me/username" },
   { value: "patreon", label: "Patreon", placeholder: "https://patreon.com/username" },
@@ -55,9 +56,38 @@ function hrefHostAndPath(href: string): string {
 /**
  * Infer link type from stored label + URL (used for dashboard edit + Premium filtering).
  */
+function isCryptoExchangeOrWalletHost(h: string): boolean {
+  const hosts = [
+    "coinbase.com",
+    "binance.com",
+    "binance.us",
+    "kraken.com",
+    "gemini.com",
+    "crypto.com",
+    "okx.com",
+    "bybit.com",
+    "metamask.io",
+    "ledger.com",
+    "trezor.io",
+    "rainbow.me",
+    "phantom.app",
+    "exodus.com",
+    "blockchain.com",
+    "kucoin.com",
+    "gate.io",
+    "huobi.com",
+    "bitstamp.net",
+    "cex.io",
+    "robinhood.com",
+  ];
+  return hosts.some((x) => h.includes(x));
+}
+
 export function resolveLinkTypeFromSavedLink(label: string | undefined, href: string): LinkType {
   const h = hrefHostAndPath(href);
   const l = (label ?? "").toLowerCase();
+
+  if (isCryptoExchangeOrWalletHost(h)) return "cryptoWallet";
 
   if (h.includes("ko-fi.com") || l.includes("ko-fi") || l.includes("kofi")) return "kofi";
   if (h.includes("throne.com") || l.includes("throne")) return "throne";

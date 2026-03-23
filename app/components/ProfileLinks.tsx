@@ -31,6 +31,7 @@ import {
   Coffee,
   Crown,
   ShoppingCart,
+  CurrencyCircleDollar,
 } from "@phosphor-icons/react";
 import CopyButton from "@/app/components/CopyButton";
 import { resolveLinkTypeFromSavedLink } from "@/lib/link-entries";
@@ -42,6 +43,7 @@ const linkButtonClass =
 
 function LinkIconForLabel({ label, href }: { label: string; href: string }) {
   const resolved = resolveLinkTypeFromSavedLink(label, href);
+  if (resolved === "cryptoWallet") return <CurrencyCircleDollar {...iconProps} />;
   if (resolved === "kofi") return <Coffee {...iconProps} />;
   if (resolved === "throne") return <Crown {...iconProps} />;
   if (resolved === "amazonWishlist") return <ShoppingCart {...iconProps} />;
