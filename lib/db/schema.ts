@@ -18,6 +18,12 @@ export interface UserDoc {
   /** SRP-6a salt (hex) and verifier (hex); optional if passkey-only. */
   srpSalt?: string | null;
   srpVerifier?: string | null;
+  /** TOTP 2FA (optional). */
+  totpEnabled?: boolean;
+  /** AES-256-GCM encrypted TOTP secret (base64). */
+  totpSecretEnc?: string | null;
+  /** scrypt hashes of one-time backup codes (salt+hash base64 each). */
+  totpBackupCodesHash?: string[] | null;
   username?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
@@ -105,6 +111,10 @@ export interface ProfileDoc {
   availability?: string | null;
   /** Manual status, e.g. "Working on X", "Taking a break" (in addition to Discord presence). */
   currentFocus?: string | null;
+  /** Premium: commissions open / closed / waitlist. */
+  commissionStatus?: "open" | "closed" | "waitlist" | null;
+  /** Premium: short text, e.g. starting price range. */
+  commissionPriceRange?: string | null;
   layoutDensity?: string | null;
   noindex?: boolean;
   metaDescription?: string | null;
@@ -138,6 +148,8 @@ export interface ProfileDoc {
   discordInviteUrl?: string | null;
   /** Roblox widgets to show: comma-separated accountAge,profile (requires OAuth link). */
   showRobloxWidgets?: string | null;
+  /** Comma-separated CoinGecko coin ids for spot price widget (max 6, allowlisted). */
+  showCryptoWidgets?: string | null;
   /** When true, widgets use profile accent color instead of brand colors. */
   widgetsMatchAccent?: boolean | null;
   showAudioPlayer?: boolean;

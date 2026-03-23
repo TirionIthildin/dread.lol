@@ -4,31 +4,10 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 import TerminalWindow from "@/app/components/TerminalWindow";
+import { FeatureUpdateList } from "@/app/components/FeatureUpdateList";
 import { FEATURE_UPDATES } from "@/lib/updates";
 
 const INITIAL_COUNT = 5;
-
-function UpdateList({ updates }: { updates: typeof FEATURE_UPDATES }) {
-  return (
-    <ul className="space-y-2.5">
-      {updates.map((update, i) => (
-        <li key={i} className="border-l-2 border-[var(--accent)]/40 pl-3">
-          <span className="text-[10px] font-mono text-[var(--muted)]">
-            [{update.date}]
-          </span>{" "}
-          <span className="text-sm font-medium text-[var(--foreground)]">
-            {update.title}
-          </span>
-          {update.description && (
-            <p className="text-xs text-[var(--muted)] mt-0.5">
-              {update.description}
-            </p>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function UpdatesModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -72,7 +51,7 @@ function UpdatesModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
-          <UpdateList updates={FEATURE_UPDATES} />
+          <FeatureUpdateList updates={FEATURE_UPDATES} />
         </div>
       </div>
     </div>
@@ -94,7 +73,7 @@ export default function FeatureUpdates() {
           <p className="text-xs text-[var(--muted)] uppercase tracking-wider">
             Recent updates
           </p>
-          <UpdateList updates={visibleUpdates} />
+          <FeatureUpdateList updates={visibleUpdates} />
           {hasMore && (
             <button
               type="button"

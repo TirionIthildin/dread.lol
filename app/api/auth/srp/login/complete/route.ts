@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteSrpLoginState, getSrpLoginState } from "@/lib/auth/auth-valkey";
 import { findLocalUserByUsername } from "@/lib/auth/local-account";
+import { setMfaPending } from "@/lib/auth/mfa-pending";
 import { createSession, getSessionCookieConfig } from "@/lib/auth/session";
-import { rateLimitByIp } from "@/lib/rate-limit";
+import { getClientIp, rateLimitByIp } from "@/lib/rate-limit";
 import { SrpServerSession } from "@/lib/srp/srp6a";
 
 const bodySchema = z.object({
@@ -49,14 +50,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    const sessionValue = await createSession({
-      sub: user._id,
-      auth_provider: "local",
-      name: user.displayName ?? user.username ?? "Member",
-      preferred_username: user.username ?? undefined,
-      email: user.email ?? undefined,
-      picture: user.avatarUrl ?? null,
-    });
+    if (user.totpEnabled) {
+      const pendingUser = {
+        sub: user._id,
+        auth_provider: "local" as const,
+        name: user.displayName ?? user.username ?? "Member",
+        preferred_username: user.username ?? undefined,
+        email: user.email ?? undefined,
+        picture: user.avatarUrl ?? null,
+      };
+      const mfaToken = await setMfaPending(pendingUser);
+      return NextResponse.json({ ok: true, M2: m2, needsMfa: true, mfaToken });
+    }
+
+    const sessionValue = await createSession(
+      {
+        sub: user._id,
+        auth_provider: "local",
+        name: user.displayName ?? user.username ?? "Member",
+        preferred_username: user.username ?? undefined,
+        email: user.email ?? undefined,
+        picture: user.avatarUrl ?? null,
+      },
+      { ip: getClientIp(request), userAgent: request.headers.get("user-agent") }
+    );
     const config = getSessionCookieConfig(sessionValue);
     const res = NextResponse.json({ ok: true, M2: m2 });
     const { name, value, ...opts } = config;

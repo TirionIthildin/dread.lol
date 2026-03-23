@@ -23,6 +23,7 @@ import { getProfileRestrictionStatus } from "@/lib/profile-restriction";
 import RestrictedProfileMessage from "@/app/components/RestrictedProfileMessage";
 import { getDiscordWidgetData, type DiscordWidgetType } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, type RobloxWidgetType } from "@/lib/roblox-widgets";
+import { getCryptoWidgetData, parseEnabledCryptoIds } from "@/lib/crypto-widgets";
 import { getDiscordPresence } from "@/lib/discord-presence";
 import { getDiscordLastSeen } from "@/lib/discord-lastseen";
 import { getSession } from "@/lib/auth/session";
@@ -122,7 +123,7 @@ export default async function ProfilePage({ params }: Props) {
     getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
   ]);
-  const [similarProfiles, mutualGuilds, discordWidgetData, robloxWidgetData] = await Promise.all([
+  const [similarProfiles, mutualGuilds, discordWidgetData, robloxWidgetData, cryptoWidgetData] = await Promise.all([
     getSimilarProfiles(memberRow.id, memberRow.tags ?? [], 6),
     session && session.sub !== memberRow.userId
       ? getMutualGuilds(session.sub, memberRow.userId)
@@ -157,6 +158,11 @@ export default async function ProfilePage({ params }: Props) {
       if (enabled.length === 0) return Promise.resolve(null);
       return getRobloxWidgetData(memberRow.userId, enabled);
     })(),
+    (() => {
+      const raw = (memberRow as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim();
+      if (!raw || parseEnabledCryptoIds(raw).length === 0) return Promise.resolve(null);
+      return getCryptoWidgetData(raw).catch(() => null);
+    })(),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent, {
     referrer: referrer ?? undefined,
@@ -175,8 +181,11 @@ export default async function ProfilePage({ params }: Props) {
   if (showPageViews) profile.viewCount = viewCount;
   if (discordWidgetData) profile.discordWidgets = discordWidgetData;
   if (robloxWidgetData) profile.robloxWidgets = robloxWidgetData;
+  if (cryptoWidgetData) profile.cryptoWidgets = cryptoWidgetData;
   profile.showDiscordWidgets = memberRow.showDiscordWidgets ?? undefined;
   profile.showRobloxWidgets = (memberRow as { showRobloxWidgets?: string | null }).showRobloxWidgets ?? undefined;
+  const cryptoRaw = (memberRow as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim();
+  if (cryptoRaw) profile.showCryptoWidgets = cryptoRaw;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;
   const showLastSeen = showDiscordPresence && (!discordPresence?.status || discordPresence?.status === "offline");
   if (showDiscordPresence && discordPresence) {

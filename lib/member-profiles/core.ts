@@ -18,6 +18,7 @@ import {
   isPremiumFieldAnimation,
   isPremiumBackgroundEffect,
 } from "@/lib/premium-features";
+import { filterLinksForPremiumAccess, parseCommissionStatus } from "@/lib/monetization-profile";
 import type { SessionUser } from "@/lib/auth/session";
 import { isDiscordSnowflake } from "@/lib/auth/local-ids";
 import { resolveDiscordAvatarUrl } from "@/lib/discord-avatar";
@@ -1543,7 +1544,12 @@ export function memberProfileToProfile(
   const descAnim = (row as { descriptionAnimation?: string | null }).descriptionAnimation ?? undefined;
   const bgEffect = (row as { backgroundEffect?: string | null }).backgroundEffect ?? undefined;
   const stripPremium = ownerHasPremium === false;
-  const links = parseLinks(row.links ?? null);
+  const rawLinks = parseLinks(row.links ?? null);
+  const linksFiltered =
+    stripPremium && rawLinks?.length
+      ? filterLinksForPremiumAccess(rawLinks, false)
+      : rawLinks;
+  const links = linksFiltered && linksFiltered.length > 0 ? linksFiltered : undefined;
   const easterEggLink =
     row.easterEggLinkTrigger && row.easterEggLinkUrl
       ? {
@@ -1605,6 +1611,17 @@ export function memberProfileToProfile(
     languages: row.languages ?? undefined,
     availability: row.availability ?? undefined,
     currentFocus: row.currentFocus ?? undefined,
+    ...(() => {
+      if (stripPremium) return {};
+      const st = (row as { commissionStatus?: string | null }).commissionStatus;
+      const s = parseCommissionStatus(typeof st === "string" ? st : undefined);
+      if (!s) return {};
+      const pr = (row as { commissionPriceRange?: string | null }).commissionPriceRange?.trim();
+      return {
+        commissionStatus: s,
+        ...(pr ? { commissionPriceRange: pr.slice(0, 80) } : {}),
+      };
+    })(),
     avatarShape: row.avatarShape ?? undefined,
     layoutDensity: row.layoutDensity ?? undefined,
     customFont: row.customFont ?? undefined,
@@ -1629,6 +1646,9 @@ export function memberProfileToProfile(
     backgroundAudioStartSeconds: (row as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? undefined,
     backgroundEffect: stripPremium && isPremiumBackgroundEffect(bgEffect) ? undefined : (bgEffect ?? undefined),
     widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
+    ...((row as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim() && {
+      showCryptoWidgets: (row as { showCryptoWidgets: string }).showCryptoWidgets.trim(),
+    }),
     unlockOverlayText: (row as { unlockOverlayText?: string | null }).unlockOverlayText ?? undefined,
     noindex: row.noindex ?? undefined,
     metaDescription: row.metaDescription ?? undefined,

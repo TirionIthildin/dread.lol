@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useEffect } from "react";
+import { PREMIUM_MONETIZATION_LINK_TYPES } from "@/lib/monetization-profile";
+import { useActionState, useState, useEffect, useMemo } from "react";
 import { useFormStatus } from "react-dom";
 import { FloppyDisk, Link as LinkIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -24,6 +25,8 @@ interface DashboardLinksProps {
   embedded?: boolean;
   /** Stable id for keyboard save / programmatic submit from profile editor. */
   formId?: string;
+  /** When false, Ko-fi / Throne / Amazon wishlist types are hidden (Premium-only). */
+  hasPremiumAccess?: boolean;
 }
 
 function SaveButton() {
@@ -40,8 +43,22 @@ function SaveButton() {
   );
 }
 
-export default function DashboardLinks({ profile, embedded, formId }: DashboardLinksProps) {
+export default function DashboardLinks({ profile, embedded, formId, hasPremiumAccess = false }: DashboardLinksProps) {
   const [linkEntries, setLinkEntries] = useState<LinkEntry[]>(() => parseLinkEntries(profile));
+
+  const linkTypeOptions = useMemo(() => {
+    const inUse = new Set(
+      linkEntries
+        .filter((e) => (PREMIUM_MONETIZATION_LINK_TYPES as readonly string[]).includes(e.type))
+        .map((e) => e.type)
+    );
+    return LINK_TYPES.filter(
+      (t) =>
+        hasPremiumAccess ||
+        !(PREMIUM_MONETIZATION_LINK_TYPES as readonly string[]).includes(t.value) ||
+        inUse.has(t.value)
+    );
+  }, [hasPremiumAccess, linkEntries]);
 
   const [state, formAction] = useActionState<ProfileFormState, FormData>(updateLinksAction, null);
 
@@ -110,6 +127,15 @@ export default function DashboardLinks({ profile, embedded, formId }: DashboardL
           <div className="p-4 space-y-3">
             <p className="text-xs text-[var(--muted)]">
               Add links with icons that appear as buttons on your profile (Discord, GitHub, Twitch, etc.).
+              {!hasPremiumAccess && (
+                <>
+                  {" "}
+                  <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">
+                    Premium
+                  </Link>{" "}
+                  unlocks Ko-fi, Throne, and Amazon wishlist buttons.
+                </>
+              )}
             </p>
             <div className="space-y-3">
               {linkEntries.map((entry, index) => (
@@ -127,7 +153,7 @@ export default function DashboardLinks({ profile, embedded, formId }: DashboardL
                             prev.map((p, i) => (i === index ? { ...p, type: v as LinkEntry["type"] } : p))
                           )
                         }
-                        options={LINK_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                        options={linkTypeOptions.map((t) => ({ value: t.value, label: t.label }))}
                         placeholder="Select…"
                         searchPlaceholder="Search…"
                         searchThreshold={8}
@@ -164,7 +190,9 @@ export default function DashboardLinks({ profile, embedded, formId }: DashboardL
                         )
                       }
                       placeholder={
-                        LINK_TYPES.find((t) => t.value === entry.type)?.placeholder ?? "https://…"
+                        linkTypeOptions.find((t) => t.value === entry.type)?.placeholder ??
+                          LINK_TYPES.find((t) => t.value === entry.type)?.placeholder ??
+                          "https://…"
                       }
                       className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-2 py-2 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                     />

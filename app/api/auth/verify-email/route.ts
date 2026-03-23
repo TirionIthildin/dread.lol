@@ -5,6 +5,7 @@ import { findUserById } from "@/lib/auth/local-account";
 import { createSession, getSessionCookieConfig } from "@/lib/auth/session";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import type { UserDoc } from "@/lib/db/schema";
+import { getClientIp } from "@/lib/rate-limit";
 import { SITE_URL } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
@@ -51,14 +52,17 @@ export async function GET(request: NextRequest) {
   const dbName = await getDbName();
   await client.db(dbName).collection(COLLECTIONS.users).insertOne(doc as never);
 
-  const sessionValue = await createSession({
-    sub: pending.userId,
-    auth_provider: "local",
-    name: pending.username,
-    preferred_username: pending.username,
-    email: pending.email,
-    picture: null,
-  });
+  const sessionValue = await createSession(
+    {
+      sub: pending.userId,
+      auth_provider: "local",
+      name: pending.username,
+      preferred_username: pending.username,
+      email: pending.email,
+      picture: null,
+    },
+    { ip: getClientIp(request), userAgent: request.headers.get("user-agent") }
+  );
   const config = getSessionCookieConfig(sessionValue);
   const res = NextResponse.redirect(new URL("/dashboard?welcome=1", base));
   const { name, value, ...opts } = config;

@@ -15,7 +15,6 @@ import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getBlogPostsForProfile } from "@/lib/blog";
 import { profileIconsFromAvatar } from "@/lib/profile-metadata";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-import type { Profile } from "@/lib/profiles";
 import { getThemeClass } from "@/lib/profile-themes";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -29,10 +28,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${profile.name}'s blog`;
   const description = `Micro-blog by ${profile.name} on ${SITE_NAME}`;
   const canonicalUrl = `${SITE_URL}/${slug}/blog`;
+  const rssUrl = `${SITE_URL}/${slug}/blog/rss.xml`;
   return {
     title,
     description,
-    alternates: { canonical: canonicalUrl },
+    alternates: { canonical: canonicalUrl, types: { "application/rss+xml": rssUrl } },
     ...profileIconsFromAvatar(profile.avatar),
     openGraph: {
       type: "website",
@@ -82,9 +82,15 @@ export default async function ProfileBlogPage({ params }: Props) {
             </Link>
           </div>
           <div className="pt-4 px-4 pb-6">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               <Article size={24} weight="regular" className="text-[var(--accent)]" aria-hidden />
               <h1 className="text-lg font-semibold text-[var(--foreground)]">{profile.name}&apos;s blog</h1>
+              <a
+                href={`/${slug}/blog/rss.xml`}
+                className="ml-auto text-[10px] font-mono text-[var(--muted)] hover:text-[var(--accent)]"
+              >
+                RSS
+              </a>
             </div>
             {posts.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">No posts yet.</p>

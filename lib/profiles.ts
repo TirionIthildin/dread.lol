@@ -89,6 +89,10 @@ export interface Profile {
   availability?: string;
   /** Manual status (e.g. "Working on X") in addition to Discord presence. */
   currentFocus?: string;
+  /** Premium: commissions availability. */
+  commissionStatus?: "open" | "closed" | "waitlist";
+  /** Premium: short free-text price hint (e.g. starting range). */
+  commissionPriceRange?: string;
   /** Avatar shape: circle (default), rounded, square, soft, hexagon. */
   avatarShape?: string;
   /** Layout density: default, compact, spacious. */
@@ -179,6 +183,18 @@ export interface Profile {
   showDiscordWidgets?: string;
   /** Comma-separated Roblox widget order (e.g. "accountAge,profile"). Determines display order. */
   showRobloxWidgets?: string;
+  /** Comma-separated CoinGecko coin ids (same order as dashboard); used when fetching prices. */
+  showCryptoWidgets?: string;
+  /** Fetched spot prices (merged on profile page, not stored in DB). */
+  cryptoWidgets?: {
+    coins: Array<{
+      id: string;
+      name: string;
+      symbol: string;
+      priceUsd: number;
+      change24hPct: number | null;
+    }>;
+  };
   /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
   discordWidgets?: {
     accountAge?: { createdAt: Date; label: string };

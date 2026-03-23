@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield, Crown, SealCheck } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield, Crown, SealCheck, PaintBrush } from "@phosphor-icons/react/dist/ssr";
 import type { Profile } from "@/lib/profiles";
 import { getOrderedSectionIds, type ProfileSectionId } from "@/lib/profile-sections";
 
@@ -25,6 +25,7 @@ import ProfileBlogButton from "@/app/components/ProfileBlogButton";
 import DiscordPresenceDisplay from "@/app/components/DiscordPresenceDisplay";
 import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
+import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
@@ -226,6 +227,27 @@ function ProfileSection({
                 {profile.availability?.trim() && <p className="text-xs text-[var(--accent)] inline-flex items-center gap-1.5"><Briefcase {...profileMetaIconProps} aria-hidden />{profile.availability.trim()}</p>}
               </div>
             )}
+            {profile.commissionStatus && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ${
+                    profile.commissionStatus === "open"
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      : profile.commissionStatus === "waitlist"
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                        : "bg-[var(--muted)]/15 text-[var(--muted)]"
+                  }`}
+                >
+                  <PaintBrush {...profileMetaIconProps} aria-hidden />
+                  {profile.commissionStatus === "open" && "Commissions open"}
+                  {profile.commissionStatus === "closed" && "Commissions closed"}
+                  {profile.commissionStatus === "waitlist" && "Waitlist"}
+                </span>
+                {profile.commissionPriceRange?.trim() && profile.commissionStatus !== "closed" && (
+                  <span className="text-xs text-[var(--muted)]">{profile.commissionPriceRange.trim()}</span>
+                )}
+              </div>
+            )}
             {profile.currentFocus?.trim() && <p className="text-xs text-[var(--muted)] mt-1 inline-flex items-center gap-1.5"><Target {...profileMetaIconProps} aria-hidden />{profile.currentFocus.trim()}</p>}
             {profile.discordPresence && <div className="mt-2.5 w-full min-w-0"><DiscordPresenceDisplay presence={profile.discordPresence} style={(profile.discordPresenceStyle as "pills" | "minimal" | "stacked" | "inline" | "widget") ?? "widget"} /></div>}
             {profile.discordLastSeen && <p className="text-xs text-[var(--muted)] mt-1.5">Last active in Discord {formatLastSeen(new Date(profile.discordLastSeen))}</p>}
@@ -273,6 +295,14 @@ function ProfileSection({
               matchAccent={profile.widgetsMatchAccent}
               orderFromCsv={profile.showRobloxWidgets}
             />
+          </div>
+        ) : null
+      );
+    case "crypto-widgets":
+      return wrap(
+        profile.cryptoWidgets && profile.cryptoWidgets.coins.length > 0 ? (
+          <div className="mt-4">
+            <CryptoWidgetsDisplay data={profile.cryptoWidgets} matchAccent={profile.widgetsMatchAccent} />
           </div>
         ) : null
       );

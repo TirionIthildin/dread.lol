@@ -11,6 +11,24 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Crypto spot prices & wallet link",
+    description:
+      "Optional profile widget with USD prices for major coins (CoinGecko). New Crypto / wallet link type with icons for common exchanges.",
+  },
+  {
+    date: "2026-03",
+    title: "Premium tip links and commissions",
+    description:
+      "Ko-fi, Throne, and Amazon wishlist as profile link buttons with icons. Commissions open/closed/waitlist plus optional price hint on your page.",
+  },
+  {
+    date: "2026-03",
+    title: "Security & site: 2FA, sessions, RSS, changelog",
+    description:
+      "Optional TOTP + backup codes, session list and sign-out everywhere, profile blog RSS, public changelog and status pages.",
+  },
+  {
+    date: "2026-03",
     title: "Local accounts: email, SRP-6a, passkeys",
     description:
       "Register with username + email (Resend verification) and SRP password; sign in with SRP or WebAuthn passkeys. Discord sign-in unchanged.",

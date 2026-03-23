@@ -6,7 +6,9 @@ import { updateMemberProfile, getOrCreateUser, getProfileSlugByUserId } from "@/
 import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 import { getPremiumAccess } from "@/lib/premium-permissions";
+import { parseEnabledCryptoIds } from "@/lib/crypto-widgets";
 import { isPremiumNameAnimation, isPremiumFieldAnimation } from "@/lib/premium-features";
+import { filterLinksForPremiumAccess, parseCommissionStatus } from "@/lib/monetization-profile";
 import { canUseDashboard } from "@/lib/dashboard-access";
 function parseAudioTracksValue(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
@@ -61,6 +63,19 @@ function parseLinksValue(linksRaw: string | null | undefined): string | null {
   return parsed.length > 0 ? JSON.stringify(parsed) : null;
 }
 
+/** Remove Premium-only monetization links when the owner does not have Premium. */
+function applyPremiumFilterToLinksJson(parsed: string | null, hasPremium: boolean): string | null {
+  if (!parsed) return null;
+  try {
+    const arr = JSON.parse(parsed) as { label: string; href: string }[];
+    if (!Array.isArray(arr)) return parsed;
+    const filtered = filterLinksForPremiumAccess(arr, hasPremium);
+    return filtered.length > 0 ? JSON.stringify(filtered) : null;
+  } catch {
+    return parsed;
+  }
+}
+
 /** Update only link-related profile fields (websiteUrl, discord, roblox, links). */
 export async function updateLinksAction(
   _prevState: ProfileFormState,
@@ -72,7 +87,11 @@ export async function updateLinksAction(
   if (!canUseDashboard(user)) return { error: "Account not approved" };
   const profileId = formData.get("profileId");
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
-  const linksJson = parseLinksValue((formData.get("links") as string) ?? undefined);
+  const premiumAccess = await getPremiumAccess(session.sub);
+  const linksJson = applyPremiumFilterToLinksJson(
+    parseLinksValue((formData.get("links") as string) ?? undefined),
+    premiumAccess.hasAccess
+  );
   const websiteUrl = (() => {
     const v = (formData.get("websiteUrl") as string)?.trim();
     if (!v) return null;
@@ -132,7 +151,6 @@ export async function updateProfileAction(
     return { error: "That URL slug is reserved." };
   }
   // Link-related fields only updated when present (i.e. from Links page). Main profile form omits them.
-  const linksJson = formData.has("links") ? parseLinksValue((formData.get("links") as string) ?? undefined) : undefined;
 
   const rawAvatar = (formData.get("avatarUrl") as string)?.trim();
   const avatarUrl =
@@ -157,6 +175,10 @@ export async function updateProfileAction(
 
   const premiumAccess = await getPremiumAccess(session.sub);
   const hasPremium = premiumAccess.hasAccess;
+
+  const linksJson = formData.has("links")
+    ? applyPremiumFilterToLinksJson(parseLinksValue((formData.get("links") as string) ?? undefined), hasPremium)
+    : undefined;
 
   const widgetSelection = (() => {
     const order: Array<{ src: "discord" | "roblox"; val: string }> = [];
@@ -268,6 +290,15 @@ export async function updateProfileAction(
       languages: ((formData.get("languages") as string)?.trim() || null)?.slice(0, 80) ?? null,
       availability: ((formData.get("availability") as string)?.trim() || null)?.slice(0, 60) ?? null,
       currentFocus: ((formData.get("currentFocus") as string)?.trim() || null)?.slice(0, 120) ?? null,
+      ...(hasPremium
+        ? {
+            commissionStatus: parseCommissionStatus(formData.get("commissionStatus") as string | null),
+            commissionPriceRange: (() => {
+              const v = (formData.get("commissionPriceRange") as string)?.trim();
+              return v ? v.slice(0, 80) : null;
+            })(),
+          }
+        : {}),
       avatarShape: (formData.get("avatarShape") as string)?.trim() || undefined,
       layoutDensity: (formData.get("layoutDensity") as string)?.trim() || undefined,
       showPageViews: formData.get("showPageViews") === "on",
@@ -299,6 +330,12 @@ export async function updateProfileAction(
         })(),
       }),
       showRobloxWidgets: widgetSelection.roblox.length > 0 ? widgetSelection.roblox.join(",") : null,
+      showCryptoWidgets: (() => {
+        const raw = (formData.get("showCryptoWidgets") as string)?.trim();
+        if (!raw) return null;
+        const ids = parseEnabledCryptoIds(raw);
+        return ids.length > 0 ? ids.join(",") : null;
+      })(),
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();
         const url = validateBackgroundUrl((formData.get("customFontUrl") as string)?.trim());

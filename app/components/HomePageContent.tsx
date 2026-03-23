@@ -24,6 +24,10 @@ export default function HomePageContent() {
         <Link href="/docs/api" className="text-[var(--accent)] hover:underline">
           API
         </Link>
+        <span className="mx-1 text-[var(--muted)]/60">·</span>
+        <Link href="/changelog" className="text-[var(--accent)] hover:underline">
+          Changelog
+        </Link>
       </p>
       <TerminalWindow
         title="user@dread:~ — welcome"
@@ -50,6 +54,14 @@ export default function HomePageContent() {
         <span>·</span>
         <Link href="/docs/api" className="hover:text-[var(--accent)] hover:underline">
           API
+        </Link>
+        <span>·</span>
+        <Link href="/changelog" className="hover:text-[var(--accent)] hover:underline">
+          Changelog
+        </Link>
+        <span>·</span>
+        <Link href="/status" className="hover:text-[var(--accent)] hover:underline">
+          Status
         </Link>
         <span>·</span>
         <Link href="/privacy" className="hover:text-[var(--accent)] hover:underline">
