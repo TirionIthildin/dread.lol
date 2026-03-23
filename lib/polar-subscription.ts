@@ -1,7 +1,12 @@
 /**
  * Polar subscription & order state. Polar is the source of truth.
- * We sync from webhooks; when local DB is empty, we fetch from Polar API (Customer State, Orders)
- * so billing shows correctly even when webhooks missed (e.g. local dev).
+ *
+ * **Sync contract**
+ * - **Webhooks** (`app/api/webhooks/polar/route.ts`) upsert rows keyed by `polarSubscriptionId` /
+ *   `polarOrderId`. Re-deliveries overwrite the same document, so handling is idempotent at the DB layer.
+ * - **Reads** (`getUserPolarState`): If Mongo has no active subscription row, we call Polar Customer State
+ *   and upsert; we also merge paid orders from the Polar Orders API when configured. That backfills missed
+ *   webhooks (e.g. local dev) but can briefly duplicate work with webhook writes—last write wins per id key.
  */
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import {

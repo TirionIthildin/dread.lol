@@ -61,8 +61,14 @@ export interface Profile {
   cardOpacity?: number;
   /** Backdrop blur: none, sm, md, lg. Controls profile card blur. */
   cardBlur?: "none" | "sm" | "md" | "lg";
-  /** Enable card effects (3D tilt, spotlight, glare, magnetic border). Default: false. */
-  cardEffectsEnabled?: boolean;
+  /** 3D tilt on hover (card has extra padding so rotation is not clipped). */
+  cardEffectTilt?: boolean;
+  /** Spotlight gradient that follows the cursor. */
+  cardEffectSpotlight?: boolean;
+  /** Glare / glossy highlight on hover. */
+  cardEffectGlare?: boolean;
+  /** Accent border highlight that follows the cursor. */
+  cardEffectMagneticBorder?: boolean;
   /** Pronouns (e.g. they/them). */
   pronouns?: string;
   /** Location or "Based in" (e.g. NYC, Berlin). */
@@ -186,5 +192,40 @@ export interface Profile {
   sectionVisibility?: Record<string, boolean>;
   /** Section IDs explicitly removed from profile (excluded from display). */
   removedSectionIds?: string[];
+}
+
+/** Resolve per-effect card flags from DB or template. Legacy `cardEffectsEnabled` applies to all four when no new flags are stored. */
+export function resolveCardEffects(row: {
+  cardEffectsEnabled?: boolean | null;
+  cardEffectTilt?: boolean | null;
+  cardEffectSpotlight?: boolean | null;
+  cardEffectGlare?: boolean | null;
+  cardEffectMagneticBorder?: boolean | null;
+}): {
+  cardEffectTilt: boolean;
+  cardEffectSpotlight: boolean;
+  cardEffectGlare: boolean;
+  cardEffectMagneticBorder: boolean;
+} {
+  const legacy = row.cardEffectsEnabled ?? false;
+  const anyNew =
+    row.cardEffectTilt != null ||
+    row.cardEffectSpotlight != null ||
+    row.cardEffectGlare != null ||
+    row.cardEffectMagneticBorder != null;
+  if (!anyNew) {
+    return {
+      cardEffectTilt: legacy,
+      cardEffectSpotlight: legacy,
+      cardEffectGlare: legacy,
+      cardEffectMagneticBorder: legacy,
+    };
+  }
+  return {
+    cardEffectTilt: Boolean(row.cardEffectTilt),
+    cardEffectSpotlight: Boolean(row.cardEffectSpotlight),
+    cardEffectGlare: Boolean(row.cardEffectGlare),
+    cardEffectMagneticBorder: Boolean(row.cardEffectMagneticBorder),
+  };
 }
 

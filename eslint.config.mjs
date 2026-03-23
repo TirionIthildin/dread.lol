@@ -8,13 +8,12 @@ const config = [
   {
     name: "dread/react-hooks-pragmatic",
     rules: {
-      // React Hooks plugin v7: valuable for greenfield code; many valid patterns in this app
-      // still trigger these. Re-enable incrementally when refactoring.
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/refs": "off",
-      "react-hooks/preserve-manual-memoization": "off",
-      "react-hooks/static-components": "off",
-      "react-hooks/error-boundaries": "off",
+      // Tighten incrementally: warn first (CI still passes); fix hotspots then move to "error".
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/error-boundaries": "warn",
     },
   },
 ];

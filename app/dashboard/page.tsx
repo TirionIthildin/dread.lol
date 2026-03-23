@@ -74,16 +74,24 @@ async function MemberProfileSection({
     const baseProfileForPreview = memberProfileToProfile(resolvedProfile, undefined, discordBadgeData, undefined, premiumAccess.hasAccess);
     if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
     return (
-      <DashboardMyProfile
-        profile={profile}
-        baseProfileForPreview={baseProfileForPreview}
-        versions={versions}
-        discordAvatarUrl={session.picture ?? undefined}
-        availableDiscordBadges={availableDiscordBadges}
-        widgetPreviewData={widgetPreviewData}
-        robloxLinked={robloxLinked}
-        hasPremiumAccess={premiumAccess.hasAccess}
-      />
+      <Suspense
+        fallback={
+          <div className="min-h-[50vh] rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 flex items-center justify-center text-sm text-[var(--muted)]">
+            Loading profile editor…
+          </div>
+        }
+      >
+        <DashboardMyProfile
+          profile={profile}
+          baseProfileForPreview={baseProfileForPreview}
+          versions={versions}
+          discordAvatarUrl={session.picture ?? undefined}
+          availableDiscordBadges={availableDiscordBadges}
+          widgetPreviewData={widgetPreviewData}
+          robloxLinked={robloxLinked}
+          hasPremiumAccess={premiumAccess.hasAccess}
+        />
+      </Suspense>
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -11,15 +11,14 @@
     "typecheck": "tsc --noEmit",
     "db:migrate-prod": "node scripts/migrate.mjs",
     "discord-presence-bot": "node --env-file=.env scripts/discord-presence-bot.mjs",
+    "ci": "npm run typecheck && npm run lint && npm run test",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --project=chromium",
     "prepare": "husky"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
     "@phosphor-icons/react": "^2.1.10",
     "@polar-sh/nextjs": "^0.9.5",
     "@polar-sh/sdk": "^0.46.5",

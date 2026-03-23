@@ -20,8 +20,10 @@ import {
 
 interface DashboardLinksProps {
   profile: ProfileRow;
-  /** When true, hide the page heading (for embedding in the profile editor). */
+  /** When true, hide the page heading (e.g. embedded layout). */
   embedded?: boolean;
+  /** Stable id for keyboard save / programmatic submit from profile editor. */
+  formId?: string;
 }
 
 function SaveButton() {
@@ -38,7 +40,7 @@ function SaveButton() {
   );
 }
 
-export default function DashboardLinks({ profile, embedded }: DashboardLinksProps) {
+export default function DashboardLinks({ profile, embedded, formId }: DashboardLinksProps) {
   const [linkEntries, setLinkEntries] = useState<LinkEntry[]>(() => parseLinkEntries(profile));
 
   const [state, formAction] = useActionState<ProfileFormState, FormData>(updateLinksAction, null);
@@ -68,7 +70,7 @@ export default function DashboardLinks({ profile, embedded }: DashboardLinksProp
         </div>
       )}
 
-      <form action={formAction} className="space-y-6">
+      <form id={formId} action={formAction} className="space-y-6">
         <input type="hidden" name="profileId" value={profile.id} />
         <input type="hidden" name="discord" value={payload.discord} />
         <input type="hidden" name="roblox" value={payload.roblox} />
