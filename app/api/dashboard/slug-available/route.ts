@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getMemberProfileBySlug, getMemberProfileById } from "@/lib/member-profiles";
-import { normalizeSlug } from "@/lib/slug";
+import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -15,6 +15,10 @@ export async function GET(request: Request) {
 
   if (!slug) {
     return NextResponse.json({ available: false, error: "Slug is required" });
+  }
+
+  if (isReservedProfileSlug(slug)) {
+    return NextResponse.json({ available: false, error: "This slug is reserved" });
   }
 
   let ownsCurrentProfile = false;

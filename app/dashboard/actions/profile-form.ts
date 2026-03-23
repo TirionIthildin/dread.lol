@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { updateMemberProfile, getOrCreateUser, getProfileSlugByUserId } from "@/lib/member-profiles";
-import { normalizeSlug } from "@/lib/slug";
+import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { isPremiumNameAnimation, isPremiumFieldAnimation } from "@/lib/premium-features";
@@ -128,6 +128,9 @@ export async function updateProfileAction(
   if (!profileId || typeof profileId !== "string") return { error: "Missing profile" };
   const rawSlug = (formData.get("slug") as string)?.trim();
   const slug = rawSlug ? normalizeSlug(rawSlug) : undefined;
+  if (slug !== undefined && isReservedProfileSlug(slug)) {
+    return { error: "That URL slug is reserved." };
+  }
   // Link-related fields only updated when present (i.e. from Links page). Main profile form omits them.
   const linksJson = formData.has("links") ? parseLinksValue((formData.get("links") as string) ?? undefined) : undefined;
 

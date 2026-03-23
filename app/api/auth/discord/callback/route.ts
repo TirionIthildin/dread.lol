@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
 
     const sessionValue = await createSession({
       sub: userInfo.id,
+      auth_provider: "discord",
       name: userInfo.global_name ?? userInfo.username,
       preferred_username: userInfo.username,
       profile: `https://discord.com/users/${userInfo.id}`,

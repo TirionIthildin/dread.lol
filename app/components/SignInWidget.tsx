@@ -3,6 +3,7 @@ import Image from "next/image";
 import { DiscordLogo, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { getSession } from "@/lib/auth/session";
 import { getProfileSlugByUserId } from "@/lib/member-profiles";
+import LocalAuthForms from "@/app/components/LocalAuthForms";
 
 export default async function SignInWidget() {
   const session = await getSession();
@@ -40,7 +41,7 @@ export default async function SignInWidget() {
           </form>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
             <p className="text-xs text-[var(--muted)]">
               Sign in to manage your profile
             </p>
@@ -51,6 +52,7 @@ export default async function SignInWidget() {
               <DiscordLogo size={20} weight="fill" className="shrink-0 text-[#5865F2]" aria-hidden />
               Sign in with Discord
           </Link>
+          <LocalAuthForms />
         </div>
       )}
     </div>

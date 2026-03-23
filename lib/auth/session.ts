@@ -23,6 +23,10 @@ export interface SessionUser {
   public_flags?: number;
   /** Discord premium_type (0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic). */
   premium_type?: number;
+  /** `local` for username/email/SRP/WebAuthn accounts; omit or `discord` for Discord OAuth. */
+  auth_provider?: "discord" | "local";
+  /** Normalized email for local accounts (optional). */
+  email?: string | null;
 }
 
 function getSecret(): string {

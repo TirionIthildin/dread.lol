@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProfileSlugFromHost } from "@/lib/request";
+import { rewriteSubdomainPath } from "@/lib/subdomain-rewrite";
 
 /** Skip rewriting for API, static assets, and internal Next.js paths. */
 const SKIP_PATHS = ["/api", "/_next", "/favicon", "/logo", "/robots", "/sitemap"];
@@ -15,8 +16,7 @@ export function middleware(request: NextRequest) {
   const slug = getProfileSlugFromHost(request.headers);
   if (!slug) return NextResponse.next();
 
-  // Subdomain profile: username.dread.lol/ -> /username, username.dread.lol/abc -> /username/abc
-  const newPath = pathname === "/" ? `/${slug}` : `/${slug}${pathname}`;
+  const newPath = rewriteSubdomainPath(slug, pathname);
   const url = request.nextUrl.clone();
   url.pathname = newPath;
   return NextResponse.rewrite(url);

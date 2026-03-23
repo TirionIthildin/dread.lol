@@ -41,7 +41,20 @@ const db = client.db(dbName);
 
 try {
   // _id index is created automatically by MongoDB for every collection
-  await db.collection("users").createIndex({ discordUserId: 1 }, { unique: true });
+  try {
+    await db.collection("users").dropIndex("discordUserId_1");
+  } catch {
+    /* missing */
+  }
+  await db.collection("users").createIndex({ discordUserId: 1 }, { unique: true, sparse: true });
+  await db.collection("users").createIndex(
+    { username: 1 },
+    { unique: true, partialFilterExpression: { authProvider: "local" } }
+  );
+  await db.collection("users").createIndex(
+    { email: 1 },
+    { unique: true, partialFilterExpression: { authProvider: "local", email: { $type: "string" } } }
+  );
   await db.collection("users").createIndex({ approved: 1, createdAt: -1 });
 
   await db.collection("profiles").createIndex({ slug: 1 }, { unique: true });
@@ -108,6 +121,14 @@ try {
 
   await db.collection("premium_voucher_redemptions").createIndex({ linkId: 1, redeemedBy: 1 }, { unique: true });
   await db.collection("premium_voucher_redemptions").createIndex({ creatorId: 1, redeemedAt: -1 });
+
+  await db.collection("webauthn_credentials").createIndex({ userId: 1 });
+  await db.collection("webauthn_credentials").createIndex({ credentialId: 1 }, { unique: true });
+
+  await db.collection("users").updateMany(
+    { authProvider: { $exists: false } },
+    { $set: { authProvider: "discord" } }
+  );
 
   console.log("MongoDB indexes created.");
 } catch (err) {

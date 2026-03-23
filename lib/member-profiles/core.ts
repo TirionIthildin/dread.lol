@@ -19,6 +19,7 @@ import {
   isPremiumBackgroundEffect,
 } from "@/lib/premium-features";
 import type { SessionUser } from "@/lib/auth/session";
+import { isDiscordSnowflake } from "@/lib/auth/local-ids";
 import { resolveDiscordAvatarUrl } from "@/lib/discord-avatar";
 import { escapeRegex } from "@/lib/regex";
 import { getBaseDomain } from "@/lib/site";
@@ -53,8 +54,11 @@ function toProfileRow(doc: { _id: ObjectId } & Record<string, unknown>): Profile
   return { ...rest, id: _id.toString() } as ProfileRow;
 }
 
-/** Get or create user by Discord id (session.sub). */
+/** Get or create user by Discord id (session.sub), or load local account. */
 export async function getOrCreateUser(session: SessionUser): Promise<UserWithApproval> {
+  if (session.auth_provider === "local") {
+    return getOrCreateLocalUser(session);
+  }
   const client = await getDb();
   const dbName = await getDbName();
   const db = client.db(dbName);
@@ -85,7 +89,9 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
     return {
       id: existing._id,
       approved: existing.approved,
-      isAdmin: existing.isAdmin || getAdminDiscordIds().includes(existing.discordUserId),
+      isAdmin:
+        existing.isAdmin ||
+        (!!existing.discordUserId && getAdminDiscordIds().includes(existing.discordUserId)),
       createdAt: existing.createdAt,
     };
   }
@@ -93,6 +99,7 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
   try {
     await users.insertOne({
       _id: id,
+      authProvider: "discord",
       discordUserId: session.sub,
       username: session.preferred_username ?? null,
       displayName: session.name ?? null,
@@ -114,14 +121,52 @@ export async function getOrCreateUser(session: SessionUser): Promise<UserWithApp
         return {
           id: existing._id,
           approved: existing.approved,
-          isAdmin: existing.isAdmin || getAdminDiscordIds().includes(existing.discordUserId),
+          isAdmin:
+            existing.isAdmin ||
+            (!!existing.discordUserId && getAdminDiscordIds().includes(existing.discordUserId)),
           createdAt: existing.createdAt,
         };
       }
     }
     throw err;
   }
-  return { id, approved: true, isAdmin: getAdminDiscordIds().includes(session.sub), createdAt: now };
+  return {
+    id,
+    approved: true,
+    isAdmin: getAdminDiscordIds().includes(session.sub),
+    createdAt: now,
+  };
+}
+
+async function getOrCreateLocalUser(session: SessionUser): Promise<UserWithApproval> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const users = client.db(dbName).collection<UserDoc>(COLLECTIONS.users);
+  const id = session.sub;
+  const existing = await users.findOne({ _id: id });
+  if (!existing) {
+    throw new Error("Local account not found");
+  }
+  const hasProfileChanges =
+    existing.displayName !== session.name || existing.username !== session.preferred_username;
+  if (hasProfileChanges) {
+    await users.updateOne(
+      { _id: id },
+      {
+        $set: {
+          displayName: session.name ?? null,
+          username: session.preferred_username ?? null,
+          updatedAt: new Date(),
+        },
+      }
+    );
+  }
+  return {
+    id: existing._id,
+    approved: existing.approved,
+    isAdmin: existing.isAdmin,
+    createdAt: existing.createdAt,
+  };
 }
 
 export async function getUserBadges(userId: string): Promise<{ verified: boolean; staff: boolean; verifiedCreator: boolean }> {
@@ -150,6 +195,9 @@ export interface DiscordBadgeData {
 }
 
 export async function getUserDiscordBadgeData(userId: string): Promise<DiscordBadgeData> {
+  if (!isDiscordSnowflake(userId)) {
+    return { flags: null, premiumType: null };
+  }
   const {
     getDiscordFlagsFromRedis,
     getDiscordPremiumFromRedis,

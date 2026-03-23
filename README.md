@@ -32,6 +32,7 @@ Member profiles and Discord login need MongoDB, Valkey (Redis), and env config.
    - `DATABASE_URL` — e.g. `mongodb://dread:dread@localhost:27017/dread?authSource=admin`
    - `VALKEY_URL` — e.g. `redis://localhost:6379`
    - Discord OAuth: create an app at [Discord Developer Portal](https://discord.com/developers/applications), then set `DISCORD_OAUTH_CLIENT_ID`, `DISCORD_OAUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URI` (e.g. `http://localhost:3000/api/auth/discord/callback`), and `AUTH_SECRET` (e.g. `openssl rand -base64 32`).
+   - **Local accounts** (optional): `RESEND_API_KEY` and `EMAIL_FROM` for verification email. Set `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` if passkeys should use explicit RP (defaults are derived from `SITE_URL`).
 
 3. **Indexes** — Run before first deploy (or let entrypoint do it):
    ```bash
@@ -48,9 +49,11 @@ Profiles work at `username.dread.lol` when using a Cloudflare Worker to forward 
 - `Host: dread.lol` (so your origin accepts the request)
 - `X-Original-Host: <original host>` (e.g. `alice.dread.lol`) — use a custom header so Coolify/Traefik doesn't overwrite it
 
-The app reads `X-Forwarded-Host` (or `Host`) and extracts the username: `alice.dread.lol` → `alice`.
+The app reads `X-Forwarded-Host` (or `Host`) and extracts the subdomain label: `alice.dread.lol` → `alice`, `dashboard.dread.lol` → `dashboard`.
 
-**Debug:** `https://username.dread.lol/api/debug/headers` shows incoming headers and extracted slug.
+**Dashboard:** `dashboard.dread.lol` serves the same app as `https://dread.lol/dashboard` (including nested routes like `/dashboard/gallery`). Middleware rewrites paths so `/dashboard/...` links work on the dashboard subdomain.
+
+**Debug:** `https://username.dread.lol/api/debug/headers` shows incoming headers, extracted slug, and rewrite metadata (admin only).
 
 **Analytics:** Profile analytics use Cloudflare headers when available:
 - `CF-Connecting-IP` for visitor IP (preferred over `X-Forwarded-For`)

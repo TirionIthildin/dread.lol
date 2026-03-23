@@ -62,3 +62,11 @@ export const marketplaceTemplateCreateSchema = z
     },
     { message: `Template data exceeds ${MAX_TEMPLATE_DATA_BYTES / 1024}KB limit` }
   );
+
+/** Local account registration: client-derived SRP salt + verifier (hex). */
+export const localRegisterSchema = z.object({
+  username: z.string().min(1).max(40),
+  email: z.string().email().max(320),
+  srpSalt: z.string().regex(/^[0-9a-fA-F]{64}$/, "Salt must be 64 hex chars"),
+  srpVerifier: z.string().min(2).max(2000),
+});

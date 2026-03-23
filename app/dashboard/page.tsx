@@ -11,6 +11,7 @@ import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/dashboard/DashboardMyProfile";
+import { LocalPasskeyEnroll } from "@/app/dashboard/LocalPasskeyEnroll";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -31,7 +32,8 @@ export default async function DashboardPage() {
         <PolarSuccessHandler />
       </Suspense>
       {session && canUseDashboard && (
-        <div className="animate-fade-in-up animate-delay-100">
+        <div className="animate-fade-in-up animate-delay-100 space-y-4">
+          {session.auth_provider === "local" ? <LocalPasskeyEnroll /> : null}
           <MemberProfileSection session={session} />
         </div>
       )}

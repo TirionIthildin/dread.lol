@@ -4,7 +4,7 @@ import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: `About — ${SITE_NAME}`,
-  description: `${SITE_NAME}: terminal-styled member profiles, Discord sign-in, marketplace templates, gallery, blog, and more.`,
+  description: `${SITE_NAME}: terminal-styled member profiles, Discord or local sign-in (SRP + passkeys), marketplace, gallery, blog, and more.`,
   robots: "index, follow",
 };
 
@@ -73,8 +73,8 @@ export default function AboutPage() {
               <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">
                 Premium
               </Link>{" "}
-              (Polar checkout). Pricing is shown in the dashboard after you sign in with Discord—plans and products
-              can change, so the dashboard always reflects what is live.
+              (Polar checkout). Pricing is shown in the dashboard after you sign in—plans and products can change, so
+              the dashboard always reflects what is live.
             </p>
           </section>
 
@@ -83,8 +83,9 @@ export default function AboutPage() {
               Privacy
             </h2>
             <p className="text-sm text-[var(--muted)]">
-              We use Discord for sign-in and store what you add to your profile. Profile view analytics use basic
-              technical data (for example IP and user agent) as described in our{" "}
+              You can sign in with Discord OAuth or a local account (email verification, SRP-6a password, optional
+              WebAuthn passkeys). We store what you add to your profile. Profile view analytics use basic technical
+              data (for example IP and user agent) as described in our{" "}
               <Link href="/privacy" className="text-[var(--accent)] hover:underline">
                 Privacy Policy
               </Link>
@@ -97,11 +98,10 @@ export default function AboutPage() {
               Identity and roadmap
             </h2>
             <p className="text-sm text-[var(--muted)] mb-3">
-              <strong className="text-[var(--foreground)] font-medium">Discord sign-in.</strong> Accounts are tied to
-              Discord OAuth. That keeps onboarding simple for our core audience and aligns the product with Discord
-              identity. Additional identity providers (email, Google, etc.) are{" "}
-              <strong className="text-[var(--foreground)] font-medium">not planned</strong> in the near term; if that
-              ever changes, we will announce it here and in site updates.
+              <strong className="text-[var(--foreground)] font-medium">Discord and local accounts.</strong> Sign in
+              with Discord OAuth, or create a local account with a unique username, verified email, and SRP-6a password
+              (the server stores a verifier only). You can add WebAuthn passkeys after sign-in. Social-only providers
+              beyond Discord are not a focus right now.
             </p>
             <p className="text-sm text-[var(--muted)] mb-3">
               <strong className="text-[var(--foreground)] font-medium">Custom domains and DNS.</strong> Hosting your

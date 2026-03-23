@@ -27,8 +27,8 @@ export default function ApiDocsPage() {
         <p className="text-sm text-[var(--muted)] mb-6">
           {SITE_NAME} is primarily a web application. These routes are documented so integrations (widgets, scripts,
           mirrors) can rely on <strong className="text-[var(--foreground)] font-medium">read-only</strong> JSON where
-          noted. Write endpoints require a browser session (HTTP-only cookie) from Discord sign-in unless stated
-          otherwise—there is no public API key for third-party automation today.
+          noted. Write endpoints require a browser session (HTTP-only cookie) from Discord or local sign-in unless
+          stated otherwise—there is no public API key for third-party automation today.
         </p>
 
         <div className="prose prose-invert prose-sm max-w-none text-[var(--foreground)] space-y-4">
