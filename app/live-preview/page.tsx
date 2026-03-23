@@ -48,10 +48,12 @@ export default function LivePreviewPage() {
 
   const refreshFromStorage = useCallback(() => {
     const next = parseStoredProfile();
-    if (next) {
-      setProfile(next);
-      setTestOverlayVisible(false);
-    }
+    if (!next) return;
+    setProfile((prev) => {
+      if (prev && JSON.stringify(prev) === JSON.stringify(next)) return prev;
+      return next;
+    });
+    setTestOverlayVisible(false);
   }, []);
 
   useEffect(() => {

@@ -529,6 +529,7 @@ export default function DashboardMyProfile({
 
   const formKey = `${profile.id}-${(profile as { updatedAt?: Date }).updatedAt?.getTime?.() ?? 0}`;
 
+  /** Live preview payload; `activeEditorSection` is intentionally omitted so section nav does not re-sync the iframe. */
   const previewProfile = useMemo(() => (baseProfileForPreview
     ? ({
         ...baseProfileForPreview,
@@ -713,19 +714,25 @@ export default function DashboardMyProfile({
         ) : null
       }
       editorScrollChildren={
-        <>
-          {activeEditorSection === "links" ? (
-            <div className="max-w-3xl space-y-3">
-              <ProfileEditorOnboarding profile={profile} slugDraft={slugValue} />
-              <SectionTip sectionId="links" profile={profile} activeSection="links" />
-              <DashboardLinks profile={profile} embedded formId="profile-links-form" hasPremiumAccess={hasPremiumAccess} />
-            </div>
-          ) : (
-          <form id="profile-editor-form" key={formKey} action={formAction} className="space-y-5 max-w-3xl">
+        <div className="max-w-3xl space-y-3">
+          <ProfileEditorOnboarding profile={profile} slugDraft={slugValue} />
+          <div
+            className={activeEditorSection === "links" ? "space-y-3" : "hidden"}
+            aria-hidden={activeEditorSection !== "links"}
+          >
+            <SectionTip sectionId="links" profile={profile} activeSection={activeEditorSection} />
+            <DashboardLinks profile={profile} embedded formId="profile-links-form" hasPremiumAccess={hasPremiumAccess} />
+          </div>
+          <form
+            id="profile-editor-form"
+            key={formKey}
+            action={formAction}
+            className={activeEditorSection === "links" ? "hidden space-y-5" : "space-y-5"}
+            aria-hidden={activeEditorSection === "links"}
+          >
             <input type="hidden" name="profileId" value={profile.id} />
             <input type="hidden" name="showCryptoWidgets" value={selectedCryptoIds.join(",")} />
             <input type="hidden" name="terminalCommands" value={JSON.stringify(terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()))} />
-            <ProfileEditorOnboarding profile={profile} slugDraft={slugValue} />
             <div
               ref={panelRef}
               id="profile-editor-panel"
@@ -891,8 +898,7 @@ export default function DashboardMyProfile({
             )}
             <SubmitButton onRevert={handleRevert} />
           </form>
-          )}
-        </>
+        </div>
       }
     />
   );

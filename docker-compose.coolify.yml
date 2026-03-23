@@ -4,7 +4,8 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: '${MONGO_USER:-dread}'
-      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_PASSWORD:-dread}'
+      # No default — set MONGO_PASSWORD in Coolify secrets (do not use a committed default in production).
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_PASSWORD:?MONGO_PASSWORD must be set in Coolify}'
       MONGO_INITDB_DATABASE: '${MONGO_DB:-dread}'
     volumes:
       - 'mongodb_data:/data/db'
@@ -46,7 +47,7 @@ services:
       - 'SITE_URL=https://dread.lol'
       - 'NEXT_PUBLIC_SITE_URL=https://dread.lol'
       - 'NEXT_PUBLIC_SITE_DOMAIN=${NEXT_PUBLIC_SITE_DOMAIN:-dread.lol}'
-      - 'DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:-dread}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin'
+      - 'DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:?MONGO_PASSWORD must be set in Coolify}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin'
       - 'VALKEY_URL=redis://valkey:6379'
       - 'FILE_STORAGE_PATH=/data/uploads'
       - 'DISCORD_OAUTH_CLIENT_ID=${DISCORD_OAUTH_CLIENT_ID:-}'

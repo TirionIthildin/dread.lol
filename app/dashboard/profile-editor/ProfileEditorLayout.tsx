@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode, RefObject } from "react";
+import type { AnimationEvent, ReactNode, RefObject } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PencilSimple, Eye, ArrowSquareOut } from "@phosphor-icons/react";
 import { EDITOR_SECTIONS } from "./editorNavConfig";
 import { TabButton } from "./TabButton";
@@ -30,6 +31,21 @@ export function ProfileEditorLayout({
   editorHeaderHint?: ReactNode;
   editorScrollChildren: ReactNode;
 }) {
+  /** Entry animation runs once on mount; removing the class after `animationend` avoids replay when child visibility toggles (e.g. editor/preview tabs). */
+  const [panelEntryAnimationDone, setPanelEntryAnimationDone] = useState(false);
+  const handlePanelRowAnimationEnd = useCallback((e: AnimationEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    const name = e.animationName;
+    if (name !== "dashboard-panel-in" && name !== "fadeIn") return;
+    setPanelEntryAnimationDone(true);
+  }, []);
+
+  useEffect(() => {
+    if (panelEntryAnimationDone) return;
+    const id = window.setTimeout(() => setPanelEntryAnimationDone(true), 500);
+    return () => window.clearTimeout(id);
+  }, [panelEntryAnimationDone]);
+
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col overflow-hidden xl:h-[calc(100vh-6rem)]">
       <nav
@@ -46,9 +62,14 @@ export function ProfileEditorLayout({
         </div>
       </nav>
 
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden xl:flex-row xl:gap-4">
+      <div
+        className={`flex-1 min-h-0 flex flex-col overflow-hidden xl:flex-row xl:gap-4 ${
+          !panelEntryAnimationDone ? "animate-dashboard-panel" : ""
+        }`}
+        onAnimationEnd={handlePanelRowAnimationEnd}
+      >
         <section
-          className={`animate-dashboard-panel flex flex-1 flex-col min-h-0 xl:flex-[1.2] rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
+          className={`flex flex-1 flex-col min-h-0 xl:flex-[1.2] rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
             tab === "preview" ? "hidden xl:flex" : ""
           } xl:min-w-0`}
           aria-label="Profile editor"
@@ -105,7 +126,7 @@ export function ProfileEditorLayout({
         </section>
 
         <section
-          className={`animate-dashboard-panel flex flex-col flex-1 min-h-0 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
+          className={`flex flex-col flex-1 min-h-0 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm ${
             tab === "editor" ? "hidden xl:flex" : ""
           }`}
           aria-label="Profile preview"
