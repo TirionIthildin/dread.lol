@@ -134,7 +134,7 @@ export default function AdminBillingPanel() {
       return;
     }
     fetchProductInfo(allIds, settings.sandbox).then(setProductInfo);
-  }, [settings?.productIds, settings?.customBadgeProductIds, settings?.galleryAddonProductIds, settings?.polarConfigured, settings?.sandbox, fetchProductInfo]);
+  }, [settings, fetchProductInfo]);
 
   function toggleSection(key: string) {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));

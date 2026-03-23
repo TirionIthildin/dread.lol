@@ -36,13 +36,11 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
 
   let items: Awaited<ReturnType<typeof listPublishedTemplates>>["items"] = [];
   let featured: Awaited<ReturnType<typeof listPublishedTemplates>>["featured"] = [];
-  let total = 0;
   let error = false;
   try {
     const result = await listPublishedTemplates({ limit: 30, q, sort });
     items = result.items;
     featured = result.featured ?? [];
-    total = result.total;
   } catch {
     error = true;
   }

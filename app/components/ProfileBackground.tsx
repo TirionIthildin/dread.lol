@@ -320,6 +320,7 @@ export default function ProfileBackground({
         data-page-theme={pageTheme}
       >
         <div className={`${overlayPos} inset-0 z-0 overflow-hidden`} aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element -- dynamic /api/files URLs; layout needs object-cover */}
           <img
             src={resolvedImageUrl}
             alt=""

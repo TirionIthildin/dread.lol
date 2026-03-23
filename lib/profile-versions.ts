@@ -43,14 +43,12 @@ export interface ProfileVersionRow {
 
 /** Extract profile fields for snapshot (excludes identity fields). */
 function profileToSnapshotData(profile: ProfileRow): ProfileSnapshotData {
-  const {
-    id: _id,
-    userId: _userId,
-    slug: _slug,
-    createdAt: _createdAt,
-    updatedAt: _updatedAt,
-    ...data
-  } = profile;
+  const { id, userId, slug, createdAt, updatedAt, ...data } = profile;
+  void id;
+  void userId;
+  void slug;
+  void createdAt;
+  void updatedAt;
   return data as ProfileSnapshotData;
 }
 

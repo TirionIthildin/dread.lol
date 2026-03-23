@@ -13,7 +13,6 @@ import {
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getAccentHex } from "@/lib/profile-themes";
 import { getDiscordBadgeInfo } from "@/lib/discord-badges";
-import { SITE_NAME } from "@/lib/site";
 
 const BG = "#08090a";
 const GRID_LINE = "rgba(26, 31, 38, 0.4)";

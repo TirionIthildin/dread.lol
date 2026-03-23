@@ -2,12 +2,12 @@
  * Redirect authenticated user to Polar Customer Portal.
  * Respects admin billing settings (enabled, sandbox).
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
 import { getCanonicalOrigin } from "@/lib/site";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const origin = getCanonicalOrigin();
   const billing = await getBillingSettings();
   if (!billing.enabled) {

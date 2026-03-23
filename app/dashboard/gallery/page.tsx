@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile, getGalleryForProfile } from "@/lib/member-profiles";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { getBillingSettings } from "@/lib/settings";
-import { getProductsWithTypes, formatPrice, type PolarProductPrice } from "@/lib/polar-products";
+import { getProductsWithTypes, formatPrice } from "@/lib/polar-products";
 import { hasGalleryAddon } from "@/lib/gallery-addon";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { slugFromUsername } from "@/lib/slug";

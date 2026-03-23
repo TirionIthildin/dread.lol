@@ -140,7 +140,6 @@ export type ProfileEditorFormFieldsProps = {
   setBackgroundAudioUrlValue: (v: string) => void;
   backgroundAudioUploading: boolean;
   backgroundAudioUploadError: string | null;
-  setBackgroundAudioUploadError: (v: string | null) => void;
   backgroundAudioFileRef: RefObject<HTMLInputElement | null>;
   backgroundAudioStartSecondsValue: string;
   setBackgroundAudioStartSecondsValue: (v: string) => void;
@@ -276,7 +275,6 @@ export function ProfileEditorFormFields(p: ProfileEditorFormFieldsProps) {
         setBackgroundAudioUrlValue={p.setBackgroundAudioUrlValue}
         backgroundAudioUploading={p.backgroundAudioUploading}
         backgroundAudioUploadError={p.backgroundAudioUploadError}
-        setBackgroundAudioUploadError={p.setBackgroundAudioUploadError}
         backgroundAudioFileRef={p.backgroundAudioFileRef}
         backgroundAudioStartSecondsValue={p.backgroundAudioStartSecondsValue}
         setBackgroundAudioStartSecondsValue={p.setBackgroundAudioStartSecondsValue}

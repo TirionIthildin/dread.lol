@@ -42,7 +42,6 @@ function getNormalizedBands(freqData: Uint8Array, count: number): number[] {
 export default function ProfileAudioPlayer({
   tracks,
   visualizerStyle,
-  visualizerAnimation: _anim,
 }: ProfileAudioPlayerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playing, setPlaying] = useState(false);

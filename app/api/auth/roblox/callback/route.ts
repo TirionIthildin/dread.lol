@@ -21,27 +21,27 @@ export async function GET(request: NextRequest) {
   if (error) {
     const desc = searchParams.get("error_description") ?? error;
     return NextResponse.redirect(
-      new URL(`/dashboard?error=roblox&message=${encodeURIComponent(desc)}`, baseUrl)
+      new URL(`${DASHBOARD_PATH}?error=roblox&message=${encodeURIComponent(desc)}`, baseUrl)
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=callback_missing", baseUrl)
+      new URL(`${DASHBOARD_PATH}?error=callback_missing`, baseUrl)
     );
   }
 
   const _consumed = await consumeOAuthState(state, "roblox");
   if (_consumed === null) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=invalid_state", baseUrl)
+      new URL(`${DASHBOARD_PATH}?error=invalid_state`, baseUrl)
     );
   }
 
   const session = await getSession();
   if (!session?.sub) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=login_required", baseUrl)
+      new URL(`${DASHBOARD_PATH}?error=login_required`, baseUrl)
     );
   }
 
@@ -70,12 +70,12 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.redirect(
-      new URL("/dashboard/my-profile?roblox=linked", baseUrl)
+      new URL(`${DASHBOARD_PATH}/my-profile?roblox=linked`, baseUrl)
     );
   } catch (err) {
     logger.error("RobloxAuth", "OAuth callback error:", err);
     return NextResponse.redirect(
-      new URL("/dashboard?error=roblox_token&message=Failed+to+link", baseUrl)
+      new URL(`${DASHBOARD_PATH}?error=roblox_token&message=Failed+to+link`, baseUrl)
     );
   }
 }
