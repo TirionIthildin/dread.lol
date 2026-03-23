@@ -2,12 +2,12 @@
 
 ## Overview
 
-Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and SeaweedFS. This document summarizes security posture and deployment guidance.
+Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and local file storage on a Docker volume (`FILE_STORAGE_PATH`). This document summarizes security posture and deployment guidance.
 
 ## Authentication & Authorization
 
 - **Discord OAuth 2.0** with CSRF protection (state stored in Valkey)
-- **Session cookies** (`dread_session`): HMAC-SHA256 signed, `httpOnly`, `secure` in production, `sameSite: "lax"`
+- **Session cookies** (`dread_session`): HMAC-SHA256 signed, `httpOnly`, `Secure` in production (override with `SECURE_COOKIE`), `sameSite: "lax"`, `Domain` set to the parent zone (e.g. `.dread.lol` from `NEXT_PUBLIC_SITE_DOMAIN` / `SITE_URL`) so the session is sent on the apex and all `*.dread.lol` hosts; logout clears with matching attributes
 - **Authorization**: `requireAdmin()` for admin routes; profile ownership checks for edit/delete
 - **Admin**: Hardcoded Discord user IDs; `user.approved` required for dashboard access
 
@@ -31,6 +31,8 @@ Next.js adds the following headers globally:
 | `VALKEY_URL` | Yes | May contain credentials |
 | `DISCORD_OAUTH_CLIENT_ID` | No | Public |
 | `NEXT_PUBLIC_*` | No | Exposed to client |
+| `SECURE_COOKIE` | No | Optional `true`/`false` to force session cookie `Secure` or disable it (default: secure in production) |
+| `NEXT_PUBLIC_SITE_DOMAIN` | No | Apex host without subdomain (e.g. `dread.lol`); sets cookie `Domain` for `*.dread.lol` |
 
 ## Trusted Proxy Headers
 
@@ -38,7 +40,11 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 
 ## File Access
 
-`/api/files/[fid]` serves files from SeaweedFS. fids (`volumeId,fileId`) are public once generated—do not store sensitive content in SeaweedFS if exposure is a concern.
+`/api/files/[id]` serves user-uploaded files from disk under `FILE_STORAGE_PATH`. During migration, `SEAWEED_MASTER_URL` may still be set so legacy blobs can be read until they are copied onto the volume. File ids (UUID or legacy Seaweed `volumeId,fileId`) are public once generated—do not store sensitive content if exposure is a concern.
+
+**Docker:** The app image runs as user `nextjs` (uid 1001). The uploads volume mount must be writable by that uid (e.g. `chown 1001:1001` on the host path or volume init).
+
+**Backups:** Include the uploads volume in backup and restore procedures; it is the source of truth for on-disk blobs.
 
 ## Recent Security Improvements
 

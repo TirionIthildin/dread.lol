@@ -30,39 +30,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  seaweed-master:
-    image: 'chrislusf/seaweedfs:latest'
-    restart: unless-stopped
-    command:
-      - master
-      - '-ip=seaweed-master'
-      - '-ip.bind=0.0.0.0'
-      - '-defaultReplication=000'
-      - '-mdir=/data'
-    volumes:
-      - 'seaweed_master_data:/data'
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'wget -q -O- http://localhost:9333/cluster/status || exit 1'
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  seaweed-volume:
-    image: 'chrislusf/seaweedfs:latest'
-    restart: unless-stopped
-    command:
-      - volume
-      - '-ip=seaweed-volume'
-      - '-master=seaweed-master:9333'
-      - '-ip.bind=0.0.0.0'
-      - '-port=8080'
-      - '-dir=/data'
-    volumes:
-      - 'seaweed_volume_data:/data'
-    depends_on:
-      seaweed-master:
-        condition: service_healthy
   dread:
     image: registry.ithildin.co/poker/dread.lol
     restart: unless-stopped
@@ -71,8 +38,6 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
-      seaweed-volume:
-        condition: service_started
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
@@ -83,7 +48,7 @@ services:
       - 'NEXT_PUBLIC_SITE_DOMAIN=${NEXT_PUBLIC_SITE_DOMAIN:-dread.lol}'
       - 'DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:-dread}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin'
       - 'VALKEY_URL=redis://valkey:6379'
-      - 'SEAWEED_MASTER_URL=http://seaweed-master:9333'
+      - 'FILE_STORAGE_PATH=/data/uploads'
       - 'DISCORD_OAUTH_CLIENT_ID=${DISCORD_OAUTH_CLIENT_ID:-}'
       - 'DISCORD_OAUTH_CLIENT_SECRET=${DISCORD_OAUTH_CLIENT_SECRET:-}'
       - 'AUTH_REDIRECT_URI=${AUTH_REDIRECT_URI:-}'
@@ -119,8 +84,9 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+    volumes:
+      - 'uploads_data:/data/uploads'
 volumes:
   mongodb_data: null
   valkey_data: null
-  seaweed_master_data: null
-  seaweed_volume_data: null
+  uploads_data: null

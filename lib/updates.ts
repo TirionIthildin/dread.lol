@@ -11,6 +11,24 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Local accounts: email, SRP-6a, passkeys",
+    description:
+      "Register with username + email (Resend verification) and SRP password; sign in with SRP or WebAuthn passkeys. Discord sign-in unchanged.",
+  },
+  {
+    date: "2026-03",
+    title: "Faster, simpler uploads",
+    description:
+      "Profile media is stored on durable disk (Docker volume) instead of SeaweedFS—same URLs, simpler ops.",
+  },
+  {
+    date: "2026-03",
+    title: "About page, API scope docs, and positioning",
+    description:
+      "New About page (features, Premium, privacy, identity roadmap), public HTTP API scope at /docs/api, and clearer links from the homepage.",
+  },
+  {
+    date: "2026-03",
     title: "Dynamic Discord avatars",
     description: "Profiles using the Discord avatar option now fetch it live, so your avatar stays up to date when you change it on Discord.",
   },

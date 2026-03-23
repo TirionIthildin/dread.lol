@@ -4,6 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { getProfileSlugFromHost } from "@/lib/request";
+import { getSubdomainRewriteKind, rewriteSubdomainPath } from "@/lib/subdomain-rewrite";
 import { requireAdmin } from "@/app/dashboard/actions";
 
 const SENSITIVE_HEADERS = new Set([
@@ -25,6 +26,9 @@ export async function GET(request: Request) {
   if (err) return NextResponse.json({ error: err }, { status: 401 });
 
   const slug = getProfileSlugFromHost(request.headers);
+  const url = new URL(request.url);
+  const rewriteKind = getSubdomainRewriteKind(slug);
+  const rewrittenPath = slug ? rewriteSubdomainPath(slug, url.pathname) : null;
 
   return NextResponse.json({
     host: request.headers.get("host"),
@@ -35,6 +39,8 @@ export async function GET(request: Request) {
     "cf-connecting-ip": request.headers.get("cf-connecting-ip"),
     "cf-ipcountry": request.headers.get("cf-ipcountry"),
     extractedSlug: slug,
+    rewriteKind,
+    rewrittenPath,
     allHeaders: redactHeaders(request.headers),
   });
 }

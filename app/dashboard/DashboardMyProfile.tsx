@@ -28,6 +28,7 @@ import {
   Crown,
 } from "@phosphor-icons/react";
 import { useActionState, useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { extractFileIdFromFilesUrl } from "@/lib/file-id";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import SearchableSelect from "@/app/components/SearchableSelect";
@@ -214,8 +215,8 @@ export default function DashboardMyProfile({
       else form.append("purpose", "background-image");
       const prevUrl = backgroundUrlValue.trim();
       if (prevUrl && prevUrl.includes("/api/files/")) {
-        const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
-        if (match) form.append("replaceFid", match[1]);
+        const id = extractFileIdFromFilesUrl(prevUrl);
+        if (id) form.append("replaceFid", id);
       }
       const res = await fetch("/api/upload", { method: "POST", body: form });
       const data = await res.json();
@@ -245,8 +246,8 @@ export default function DashboardMyProfile({
       form.append("purpose", "background-audio");
       const prevUrl = backgroundAudioUrlValue.trim();
       if (prevUrl && prevUrl.includes("/api/files/")) {
-        const match = prevUrl.match(/\/api\/files\/(\d+,\d+)/);
-        if (match) form.append("replaceFid", match[1]);
+        const id = extractFileIdFromFilesUrl(prevUrl);
+        if (id) form.append("replaceFid", id);
       }
       const res = await fetch("/api/upload", { method: "POST", body: form });
       const data = await res.json();

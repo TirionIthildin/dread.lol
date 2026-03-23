@@ -4,10 +4,12 @@
  */
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
-import { getCookieDomain } from "@/lib/site";
+import { getCookieDomain, shouldUseSecureCookies } from "@/lib/site";
 import { getValkey } from "@/lib/valkey";
 
-const SESSION_COOKIE = "dread_session";
+/** Exported for logout and any route that must clear the cookie with matching attributes. */
+export const SESSION_COOKIE_NAME = "dread_session" as const;
+const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const SESSION_PREFIX = "session:";
 const OAUTH_STATE_PREFIX = "oauth:state:";
@@ -23,6 +25,10 @@ export interface SessionUser {
   public_flags?: number;
   /** Discord premium_type (0=None, 1=Nitro Classic, 2=Nitro, 3=Nitro Basic). */
   premium_type?: number;
+  /** `local` for username/email/SRP/WebAuthn accounts; omit or `discord` for Discord OAuth. */
+  auth_provider?: "discord" | "local";
+  /** Normalized email for local accounts (optional). */
+  email?: string | null;
 }
 
 function getSecret(): string {
@@ -110,10 +116,26 @@ export function getSessionCookieConfig(signedValue: string) {
     name: SESSION_COOKIE,
     value: signedValue,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     sameSite: "lax" as const,
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
+    ...(domain && { domain }),
+  };
+}
+
+/**
+ * Clearing the session cookie must use the same Domain, Path, Secure, HttpOnly, and SameSite
+ * as when the cookie was set, or browsers may keep the old cookie (especially on wildcard hosts).
+ */
+export function getSessionCookieClearOptions() {
+  const domain = getCookieDomain();
+  return {
+    httpOnly: true,
+    secure: shouldUseSecureCookies(),
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 0,
     ...(domain && { domain }),
   };
 }

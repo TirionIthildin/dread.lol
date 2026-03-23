@@ -3,11 +3,21 @@
  * gallery_items, profile_short_links, badges, user_badges.
  * Run indexes: npm run db:migrate-prod (or node scripts/migrate.mjs)
  */
-import type { ObjectId } from "mongodb";
+import type { Binary, ObjectId } from "mongodb";
 
 export interface UserDoc {
-  _id: string; // Discord user ID
-  discordUserId: string;
+  /** Discord snowflake, or `local:<uuid>` for passwordless/local auth accounts. */
+  _id: string;
+  /** Set for Discord OAuth users; omitted for local auth users (sparse unique index). */
+  discordUserId?: string;
+  /** `discord` (default) or `local` for username/email/SRP/WebAuthn accounts. */
+  authProvider?: "discord" | "local";
+  /** Normalized email for local accounts; verification gate for enrollment. */
+  email?: string | null;
+  emailVerifiedAt?: Date | null;
+  /** SRP-6a salt (hex) and verifier (hex); optional if passkey-only. */
+  srpSalt?: string | null;
+  srpVerifier?: string | null;
   username?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
@@ -357,6 +367,17 @@ export interface PremiumVoucherRedemptionDoc {
   grantPending?: boolean;
   /** Set when grantPending transitions to false. */
   grantedAt?: Date;
+}
+
+/** WebAuthn credential for local auth users (passkeys). */
+export interface WebAuthnCredentialDoc {
+  _id: ObjectId;
+  userId: string;
+  credentialId: string;
+  publicKey: Binary | Buffer;
+  counter: number;
+  transports?: string[] | null;
+  createdAt: Date;
 }
 
 export type User = UserDoc;

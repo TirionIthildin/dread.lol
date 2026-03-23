@@ -14,7 +14,7 @@ import {
   replaceGalleryItems,
   replaceShortLinks,
 } from "@/lib/member-profiles";
-import { copyFile } from "@/lib/seaweed";
+import { copyFile } from "@/lib/file-storage";
 
 const MAX_VERSIONS_PER_USER = 5;
 

@@ -82,6 +82,9 @@ interface DiscordUserApiResponse {
 export async function fetchDiscordUserFromApi(
   discordUserId: string
 ): Promise<{ publicFlags: number; premiumType: number } | null> {
+  if (!/^\d{17,20}$/.test(discordUserId)) {
+    return null;
+  }
   const token = process.env.DISCORD_BOT_TOKEN?.trim();
   if (!token) {
     debug("API skip: DISCORD_BOT_TOKEN not set");

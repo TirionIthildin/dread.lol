@@ -7,13 +7,18 @@ const DISCORD_EPOCH_MS = 1_420_070_400_000; // Jan 1, 2015 00:00:00 UTC
 
 /**
  * Extract creation timestamp (ms) from a Discord snowflake.
- * Returns null if the ID is invalid.
+ * Returns null if the ID is invalid (non-numeric or local auth ids like `local:...`).
  */
 export function snowflakeToTimestamp(snowflake: string): number | null {
-  const id = BigInt(snowflake);
-  if (id < BigInt(0)) return null;
-  const ms = Number(id >> BigInt(22)) + DISCORD_EPOCH_MS;
-  return Number.isFinite(ms) ? ms : null;
+  if (!/^\d{17,20}$/.test(snowflake)) return null;
+  try {
+    const id = BigInt(snowflake);
+    if (id < BigInt(0)) return null;
+    const ms = Number(id >> BigInt(22)) + DISCORD_EPOCH_MS;
+    return Number.isFinite(ms) ? ms : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

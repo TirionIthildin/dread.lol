@@ -47,6 +47,7 @@ export const COLLECTIONS = {
   badgeRedemptionEvents: "badge_redemption_events",
   premiumVoucherLinks: "premium_voucher_links",
   premiumVoucherRedemptions: "premium_voucher_redemptions",
+  webauthnCredentials: "webauthn_credentials",
 } as const;
 
 export type Collections = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
