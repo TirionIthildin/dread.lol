@@ -14,6 +14,7 @@ export function ProfileEditorLayout({
   onSelectSection,
   profileSlug,
   previewIframeRef,
+  previewIframeTitle = "Live profile preview",
   editorHeaderHint,
   editorScrollChildren,
 }: {
@@ -23,6 +24,8 @@ export function ProfileEditorLayout({
   onSelectSection: (id: EditorSectionId) => void;
   profileSlug: string;
   previewIframeRef: RefObject<HTMLIFrameElement | null>;
+  /** Accessible name for the preview iframe (e.g. includes profile name). */
+  previewIframeTitle?: string;
   /** Shown next to the editor title (e.g. Links tab save hint). */
   editorHeaderHint?: ReactNode;
   editorScrollChildren: ReactNode;
@@ -121,7 +124,7 @@ export function ProfileEditorLayout({
             <iframe
               ref={previewIframeRef}
               src="/live-preview"
-              title="Live profile preview"
+              title={previewIframeTitle}
               className="absolute inset-0 w-full h-full rounded-b-xl border-0"
             />
           </div>

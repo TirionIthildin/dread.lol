@@ -11,6 +11,12 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "GitHub profile widgets",
+    description:
+      "Optional cards for last push, public repo count, and a contribution heatmap (GitHub API). Add your username in Settings → Widgets; set GITHUB_TOKEN on the server for the graph.",
+  },
+  {
+    date: "2026-03",
     title: "Crypto spot prices & wallet link",
     description:
       "Optional profile widget with USD prices for major coins (CoinGecko). New Crypto / wallet link type with icons for common exchanges.",

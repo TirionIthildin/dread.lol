@@ -31,7 +31,7 @@ services:
       timeout: 5s
       retries: 5
   dread:
-    image: registry.ithildin.co/poker/dread.lol
+    image: ghcr.io/tirionithildin/dread.lol:main
     restart: unless-stopped
     depends_on:
       mongodb:
@@ -55,6 +55,10 @@ services:
       - 'AUTH_SECRET=${AUTH_SECRET:-}'
       - 'DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}'
       - 'DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}'
+
+      # GitHub profile widgets — PAT for GraphQL contribution graph (optional; see GitHub Docs: Authentication + GraphQL API)
+      # https://docs.github.com/en/authentication
+      - 'GITHUB_TOKEN=${GITHUB_TOKEN:-}'
 
       - 'ROBLOX_OAUTH_CLIENT_ID=${ROBLOX_OAUTH_CLIENT_ID:-}'
       - 'ROBLOX_OAUTH_CLIENT_SECRET=${ROBLOX_OAUTH_CLIENT_SECRET:-}'

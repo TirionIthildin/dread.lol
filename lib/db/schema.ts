@@ -150,6 +150,10 @@ export interface ProfileDoc {
   showRobloxWidgets?: string | null;
   /** Comma-separated CoinGecko coin ids for spot price widget (max 6, allowlisted). */
   showCryptoWidgets?: string | null;
+  /** GitHub username for widget cards (public API). */
+  githubUsername?: string | null;
+  /** Comma-separated: lastPush, publicRepos, contributions (max 3; counts toward widget cap with Discord/Roblox). */
+  showGithubWidgets?: string | null;
   /** When true, widgets use profile accent color instead of brand colors. */
   widgetsMatchAccent?: boolean | null;
   showAudioPlayer?: boolean;

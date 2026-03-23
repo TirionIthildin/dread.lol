@@ -24,6 +24,7 @@ import RestrictedProfileMessage from "@/app/components/RestrictedProfileMessage"
 import { getDiscordWidgetData, type DiscordWidgetType } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, type RobloxWidgetType } from "@/lib/roblox-widgets";
 import { getCryptoWidgetData, parseEnabledCryptoIds } from "@/lib/crypto-widgets";
+import { getGithubWidgetData, parseEnabledGithubWidgets } from "@/lib/github-widgets";
 import { getDiscordPresence } from "@/lib/discord-presence";
 import { getDiscordLastSeen } from "@/lib/discord-lastseen";
 import { getSession } from "@/lib/auth/session";
@@ -123,7 +124,7 @@ export default async function ProfilePage({ params }: Props) {
     getDiscordLastSeen(memberRow.userId),
     showPageViews ? getProfileViewCount(memberRow.id) : Promise.resolve(0),
   ]);
-  const [similarProfiles, mutualGuilds, discordWidgetData, robloxWidgetData, cryptoWidgetData] = await Promise.all([
+  const [similarProfiles, mutualGuilds, discordWidgetData, robloxWidgetData, cryptoWidgetData, githubWidgetData] = await Promise.all([
     getSimilarProfiles(memberRow.id, memberRow.tags ?? [], 6),
     session && session.sub !== memberRow.userId
       ? getMutualGuilds(session.sub, memberRow.userId)
@@ -163,6 +164,12 @@ export default async function ProfilePage({ params }: Props) {
       if (!raw || parseEnabledCryptoIds(raw).length === 0) return Promise.resolve(null);
       return getCryptoWidgetData(raw).catch(() => null);
     })(),
+    (() => {
+      const ghUser = (memberRow as { githubUsername?: string | null }).githubUsername?.trim();
+      const raw = (memberRow as { showGithubWidgets?: string | null }).showGithubWidgets?.trim();
+      if (!ghUser || !raw || parseEnabledGithubWidgets(raw).length === 0) return Promise.resolve(null);
+      return getGithubWidgetData(ghUser, raw).catch(() => null);
+    })(),
   ]);
   await recordProfileView(memberRow.id, ip, userAgent, {
     referrer: referrer ?? undefined,
@@ -182,10 +189,13 @@ export default async function ProfilePage({ params }: Props) {
   if (discordWidgetData) profile.discordWidgets = discordWidgetData;
   if (robloxWidgetData) profile.robloxWidgets = robloxWidgetData;
   if (cryptoWidgetData) profile.cryptoWidgets = cryptoWidgetData;
+  if (githubWidgetData) profile.githubWidgets = githubWidgetData;
   profile.showDiscordWidgets = memberRow.showDiscordWidgets ?? undefined;
   profile.showRobloxWidgets = (memberRow as { showRobloxWidgets?: string | null }).showRobloxWidgets ?? undefined;
   const cryptoRaw = (memberRow as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim();
   if (cryptoRaw) profile.showCryptoWidgets = cryptoRaw;
+  const ghRaw = (memberRow as { showGithubWidgets?: string | null }).showGithubWidgets?.trim();
+  if (ghRaw) profile.showGithubWidgets = ghRaw;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;
   const showLastSeen = showDiscordPresence && (!discordPresence?.status || discordPresence?.status === "offline");
   if (showDiscordPresence && discordPresence) {
