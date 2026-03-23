@@ -49,7 +49,7 @@ export const marketplaceTemplateCreateSchema = z
     name: z.string().max(200).optional(),
     description: z.string().max(2000).optional(),
     previewUrl: z.string().max(2048).optional(),
-    data: z.record(z.unknown()).optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
   })
   .refine(
     (val) => {
