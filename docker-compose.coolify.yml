@@ -1,3 +1,6 @@
+# Production stack for Coolify (or docker compose -f docker-compose.coolify.yml).
+# Set MONGO_PASSWORD in the environment (required). Keep dread user root (0:0) so the image
+# entrypoint can chown FILE_STORAGE_PATH on the named volume before dropping to nextjs.
 services:
   mongodb:
     image: 'mongo:8'
@@ -33,6 +36,7 @@ services:
       retries: 5
   dread:
     image: ghcr.io/tirionithildin/dread.lol:main
+    user: "0:0"
     restart: unless-stopped
     depends_on:
       mongodb:
@@ -96,6 +100,6 @@ services:
     volumes:
       - 'uploads_data:/data/uploads'
 volumes:
-  mongodb_data: null
-  valkey_data: null
-  uploads_data: null
+  mongodb_data: {}
+  valkey_data: {}
+  uploads_data: {}
