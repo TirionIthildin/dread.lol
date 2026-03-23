@@ -1,7 +1,10 @@
 import { getSession } from "@/lib/auth/session";
+import SiteNoticeBanner from "@/app/components/SiteNoticeBanner";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { isVerifiedCreator } from "@/lib/creator-program";
 import DashboardSidebar from "@/app/dashboard/DashboardSidebar";
+import { getSiteNoticeSettings } from "@/lib/site-notice-settings";
+import { getSiteNoticeDisplay } from "@/lib/site-notice-settings-shared";
 
 export default async function DashboardLayout({
   children,
@@ -12,6 +15,8 @@ export default async function DashboardLayout({
   const user = session ? await getOrCreateUser(session) : null;
   const isAdmin = user?.isAdmin ?? false;
   const verifiedCreator = session ? await isVerifiedCreator(session.sub) : false;
+  const noticeSettings = await getSiteNoticeSettings();
+  const dashboardNotice = getSiteNoticeDisplay("dashboard", noticeSettings);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row grid-bg scanlines">
@@ -55,6 +60,11 @@ export default async function DashboardLayout({
         className="flex-1 min-w-0 flex flex-col content-container py-4 md:py-6 md:!max-w-[96rem]"
         tabIndex={-1}
       >
+        {dashboardNotice.show ? (
+          <div className="mb-4 shrink-0">
+            <SiteNoticeBanner message={dashboardNotice.message} variant={dashboardNotice.variant} />
+          </div>
+        ) : null}
         {children}
       </main>
     </div>

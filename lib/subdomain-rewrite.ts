@@ -1,6 +1,6 @@
 /**
  * Maps a wildcard subdomain label + browser pathname to the internal Next.js pathname.
- * Used by middleware; keep in sync with debug `/api/debug/headers`.
+ * Used by proxy (subdomain rewrite); keep in sync with debug `/api/debug/headers`.
  */
 
 export type SubdomainRewriteKind = "dashboard" | "profile";

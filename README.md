@@ -63,6 +63,10 @@ The app reads `X-Forwarded-Host` (or `Host`) and extracts the subdomain label: `
 - `CF-Connecting-IP` for visitor IP (preferred over `X-Forwarded-For`)
 - `CF-IPCountry` for country when "Add visitor location headers" Managed Transform is enabled
 
+## System monitoring (Discord)
+
+Admins can configure **Admin → Monitoring**: save a Discord incoming webhook URL and enable pushes. The app does not run an internal timer; set `CRON_SECRET` in the environment (e.g. `openssl rand -hex 32`) and schedule an HTTP request to `GET /api/cron/monitoring` with header `Authorization: Bearer <CRON_SECRET>` every few minutes (Coolify scheduled job, systemd timer, or cron + `curl`). See `.env.example` for `CRON_SECRET`.
+
 ## Scripts
 
 - `npm run dev` — start dev server

@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartBar, Users, Shield, GridFour, CreditCard, Star, Gift, Envelope } from "@phosphor-icons/react";
+import {
+  ChartBar,
+  Users,
+  Shield,
+  GridFour,
+  CreditCard,
+  Star,
+  Gift,
+  Envelope,
+  Pulse,
+  Megaphone,
+} from "@phosphor-icons/react";
 
 const navItems = [
   { href: "/dashboard/admin/overview", label: "Overview", icon: ChartBar },
@@ -12,6 +23,8 @@ const navItems = [
   { href: "/dashboard/admin/shop", label: "Shop", icon: CreditCard },
   { href: "/dashboard/admin/premium-vouchers", label: "Premium vouchers", icon: Gift },
   { href: "/dashboard/admin/resend", label: "Resend", icon: Envelope },
+  { href: "/dashboard/admin/monitoring", label: "Monitoring", icon: Pulse },
+  { href: "/dashboard/admin/site-notice", label: "Site notice", icon: Megaphone },
   { href: "/dashboard/admin/improvement", label: "Improvement", icon: Star },
 ] as const;
 
