@@ -348,6 +348,15 @@
   text-decoration-color: var(--accent);
 }
 
+/* Minimalist: skills as refined chips (no nested span) — before :has(span) rules for specificity */
+.profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:not(:has(span)) {
+  border-color: var(--border) !important;
+  background: var(--surface-hover) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0.4rem 0.875rem !important;
+  font-size: 0.875rem !important;
+}
+
 /* Minimalist: tags as Notion-style pills (spans that contain #) */
 .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) {
   border: none !important;
@@ -368,15 +377,6 @@
 [data-page-theme="minimalist-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span),
 [data-page-theme="professional-light"] .profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:has(span) {
   background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
-}
-
-/* Minimalist: skills as refined chips (no nested span) */
-.profile-minimalist .mt-3.flex.flex-wrap.gap-2 span:not(:has(span)) {
-  border-color: var(--border) !important;
-  background: var(--surface-hover) !important;
-  border-radius: var(--radius-sm) !important;
-  padding: 0.4rem 0.875rem !important;
-  font-size: 0.875rem !important;
 }
 
 /* Minimalist: Links section header */
@@ -968,7 +968,8 @@
   }
   .profile-card-glass {
     background: rgba(13, 15, 18, 0.75);
-    backdrop-blur: 12px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   }
