@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/require-session";
-import { uploadFile, deleteFile, isSeaweedConfigured } from "@/lib/seaweed";
+import {
+  uploadFile,
+  deleteFile,
+  isStorageConfigured,
+  ensureStorageReady,
+} from "@/lib/file-storage";
 import { rateLimitByUser } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
@@ -87,9 +92,16 @@ export async function POST(req: Request) {
   );
   if (!rateLimitResult.allowed) return rateLimitResult.response;
 
-  if (!isSeaweedConfigured()) {
+  if (!isStorageConfigured()) {
     return NextResponse.json(
       { error: "Upload not configured" },
+      { status: 503 }
+    );
+  }
+  const storageReady = await ensureStorageReady();
+  if (!storageReady) {
+    return NextResponse.json(
+      { error: "Upload storage unavailable" },
       { status: 503 }
     );
   }
@@ -145,9 +157,17 @@ export async function POST(req: Request) {
   const name = file instanceof File ? file.name : undefined;
   const replaceFid = (formData.get("replaceFid") as string)?.trim();
   try {
-    const result = await uploadFile(file, name ?? "image");
-    if (isBackground && replaceFid && /^\d+,\d+$/.test(replaceFid)) {
-      deleteFile(replaceFid).catch((err) => logger.error("Upload", "Delete old background failed:", err));
+    const result = await uploadFile(file, name ?? "image", type);
+    if (
+      isBackground &&
+      replaceFid &&
+      /^(\d+,[a-f0-9]+|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.test(
+        replaceFid
+      )
+    ) {
+      deleteFile(replaceFid).catch((err: unknown) =>
+        logger.error("Upload", "Delete old background failed:", err)
+      );
     }
     const json: { url: string; fid: string; size: number; contentType?: string } = {
       url: result.path,

@@ -599,7 +599,7 @@ export async function incrementTemplateApplyCount(id: string): Promise<void> {
 /** Copy-on-apply: replace /api/files/ URLs with new copies. External URLs pass through.
  * When copy fails for internal URLs, omits them (do not leak creator's files). */
 async function copyTemplateMediaUrls(data: TemplateData): Promise<TemplateData> {
-  const { copyFile } = await import("@/lib/seaweed");
+  const { copyFile } = await import("@/lib/file-storage");
 
   const copyIfInternal = async (url: string | null | undefined): Promise<string | null | undefined> => {
     if (!url?.trim()) return url;

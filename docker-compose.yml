@@ -4,6 +4,7 @@
 # In .env set:
 #   DATABASE_URL=mongodb://dread:dread@localhost:27017/dread?authSource=admin
 #   VALKEY_URL=redis://localhost:6379
+#   FILE_STORAGE_PATH=./data/uploads
 #   DISCORD_OAUTH_*, AUTH_*
 #   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET (optional: POLAR_SANDBOX). Product IDs via Admin → Billing.
 
@@ -40,36 +41,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # SeaweedFS – internal only; app uses SEAWEED_MASTER_URL (e.g. http://seaweed-master:9333)
-  seaweed-master:
-    image: chrislusf/seaweedfs:latest
-    container_name: dread-seaweed-master
-    restart: unless-stopped
-    command: ["master", "-ip=seaweed-master", "-ip.bind=0.0.0.0", "-defaultReplication=000", "-mdir=/data"]
-    volumes:
-      - seaweed_master_data:/data
-    ports:
-      - "9333:9333"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:9333/cluster/status || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  seaweed-volume:
-    image: chrislusf/seaweedfs:latest
-    container_name: dread-seaweed-volume
-    restart: unless-stopped
-    command: ["volume", "-ip=seaweed-volume", "-master=seaweed-master:9333", "-ip.bind=0.0.0.0", "-port=8080", "-dir=/data"]
-    volumes:
-      - seaweed_volume_data:/data
-    depends_on:
-      seaweed-master: { condition: service_healthy }
-    ports:
-      - "8080:8080"
-
 volumes:
   mongodb_data:
   valkey_data:
-  seaweed_master_data:
-  seaweed_volume_data:

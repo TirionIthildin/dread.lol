@@ -6,6 +6,12 @@ describe("validateRedirectUrl", () => {
 
   it("allows relative paths", () => {
     expect(validateRedirectUrl("/api/files/1,abc", origin)).toBe("/api/files/1,abc");
+    expect(
+      validateRedirectUrl(
+        "/api/files/550e8400-e29b-41d4-a456-426614174000",
+        origin
+      )
+    ).toBe("/api/files/550e8400-e29b-41d4-a456-426614174000");
     expect(validateRedirectUrl("/dashboard", origin)).toBe("/dashboard");
   });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFile, isSeaweedConfigured } from "@/lib/seaweed";
+import { getFile, isStorageConfigured, isValidFileId } from "@/lib/file-storage";
+import { isSeaweedConfigured } from "@/lib/seaweed";
 
 type Params = { params: Promise<{ fid: string[] }> };
 
@@ -11,20 +12,19 @@ const FONT_MIME_TYPES = new Set([
 ]);
 
 /**
- * GET /api/files/3,0123456789 – stream file from internal SeaweedFS.
- * SeaweedFS is not internet-facing; this route proxies the file to the client.
+ * GET /api/files/{id} – stream file from local volume (or SeaweedFS fallback during migration).
  * Supports ?type= for font files to ensure correct MIME type (e.g. ?type=font/woff2).
  *
- * ACCESS CONTROL: Files are public once uploaded. fids are volumeId,fileId and
- * are not secret; do not store sensitive content in SeaweedFS if exposure is a concern.
+ * ACCESS CONTROL: Files are public once uploaded. Ids are not secret; do not store
+ * sensitive content if exposure is a concern.
  */
 export async function GET(request: NextRequest, { params }: Params) {
-  if (!isSeaweedConfigured()) {
+  if (!isStorageConfigured() && !isSeaweedConfigured()) {
     return NextResponse.json({ error: "Not configured" }, { status: 503 });
   }
   const { fid: fidParts } = await params;
   const fid = Array.isArray(fidParts) ? fidParts.join(",") : fidParts;
-  if (!fid || !/^\d+,[a-f0-9]+$/i.test(fid)) {
+  if (!fid || !isValidFileId(fid)) {
     return NextResponse.json({ error: "Invalid file id" }, { status: 400 });
   }
   try {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (msg.includes("404")) {
       console.warn(`[api/files] ${fid} not found`);
     } else {
-      console.error("SeaweedFS get error:", e);
+      console.error("File get error:", e);
     }
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }

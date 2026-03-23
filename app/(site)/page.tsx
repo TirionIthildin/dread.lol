@@ -4,27 +4,31 @@ import HomePageContent from "@/app/components/HomePageContent";
 import LeaderboardWidget from "@/app/components/LeaderboardWidget";
 import SignInWidget from "@/app/components/SignInWidget";
 import TerminalWindow from "@/app/components/TerminalWindow";
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_OG_IMAGE } from "@/lib/site";
+import { SITE_URL, SITE_NAME, SITE_OG_IMAGE } from "@/lib/site";
+
+/** Richer than SITE_DESCRIPTION for search and social previews on the landing page only. */
+const HOME_DESCRIPTION =
+  "Terminal-styled member profiles for Discord: marketplace templates, gallery, blog, analytics, vouches, and Premium add-ons. Sign in with Discord.";
 
 /** Rendered at request time — LeaderboardWidget requires MongoDB. */
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: SITE_NAME,
-  description: SITE_DESCRIPTION,
+  description: HOME_DESCRIPTION,
   alternates: { canonical: SITE_URL },
   openGraph: {
     type: "website",
     url: SITE_URL,
     siteName: SITE_NAME,
     title: SITE_NAME,
-    description: SITE_DESCRIPTION,
-    images: [{ url: SITE_OG_IMAGE, width: 1200, height: 630, alt: SITE_DESCRIPTION }],
+    description: HOME_DESCRIPTION,
+    images: [{ url: SITE_OG_IMAGE, width: 1200, height: 630, alt: HOME_DESCRIPTION }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_NAME,
-    description: SITE_DESCRIPTION,
+    description: HOME_DESCRIPTION,
     images: [SITE_OG_IMAGE],
   },
 };

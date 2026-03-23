@@ -45,5 +45,8 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 
+# Local file uploads (FILE_STORAGE_PATH)
+data/uploads/
+
 # Misc
 *.pem
