@@ -146,10 +146,4 @@ export async function fetchDiscordUserFromApi(
   }
 }
 
-/** @deprecated Use fetchDiscordUserFromApi. Kept for backward compat. */
-export async function fetchDiscordFlagsFromApi(discordUserId: string): Promise<number | null> {
-  const data = await fetchDiscordUserFromApi(discordUserId);
-  return data?.publicFlags ?? null;
-}
-
 export { FLAGS_KEY_PREFIX, FLAGS_TTL_SECONDS };
