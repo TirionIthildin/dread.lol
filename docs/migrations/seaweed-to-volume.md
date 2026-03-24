@@ -1,12 +1,10 @@
-# Migrating uploads from SeaweedFS to `FILE_STORAGE_PATH`
+# Historical: migrating uploads from SeaweedFS to `FILE_STORAGE_PATH`
 
-Production may still have profile URLs like `/api/files/3,0123456789` pointing at SeaweedFS. The app serves from disk first, then falls back to Seaweed when `SEAWEED_MASTER_URL` is set.
+**Status:** The app no longer reads from SeaweedFS. Legacy blobs must exist on disk under `FILE_STORAGE_PATH` (same layout as below) or `/api/files/...` will 404.
 
-## Goal
+Previously, production could have profile URLs like `/api/files/3,0123456789` backed only by SeaweedFS. Operators copied those blobs onto the volume before removing Seaweed.
 
-Copy every legacy blob into the volume using the **same file id** so MongoDB URLs do not need editing.
-
-On-disk layout per id:
+## On-disk layout per id
 
 ```text
 {FILE_STORAGE_PATH}/{normalizedId}/blob
@@ -15,20 +13,12 @@ On-disk layout per id:
 
 `meta.json` contains `{ "contentType": "<mime>", "size": <number> }`.
 
-## Steps
+## Reference steps (completed migration)
 
-1. **Deploy** the new app with `FILE_STORAGE_PATH` set and the uploads volume mounted (see `docker-compose.coolify.yml`). Keep `SEAWEED_MASTER_URL` until migration finishes so missing files still load.
-
-2. **Inventory** unique `/api/files/...` paths from MongoDB (profiles, `gallery_items`, `profile_templates`, `profile_versions`, badges, etc.). A practical approach is a one-off script using `DATABASE_URL` that walks relevant collections and string fields, or export from Compass/aggregation.
-
-3. **For each id** (legacy `volumeId,hex` or already on disk):
-
-   - `GET` the file with the app’s `Authorization` cookie **or** call the internal Seaweed volume URL while Seaweed still runs.
-   - Write `blob` bytes and `meta.json` under `{FILE_STORAGE_PATH}/{normalizedId}/` (see `normalizeFileId` in `lib/file-id.ts`).
-
-4. **Verify** a sample of URLs (browser or `curl`) return `200` with correct `Content-Type` and no Seaweed fallback.
-
-5. **Remove Seaweed** from the stack and unset `SEAWEED_MASTER_URL` / `SEAWEED_VOLUME_PUBLIC_URL` when disk hits are complete.
+1. Deploy with `FILE_STORAGE_PATH` set and the uploads volume mounted (see `docker-compose.coolify.yml`).
+2. Inventory unique `/api/files/...` paths from MongoDB (profiles, `gallery_items`, `profile_templates`, `profile_versions`, badges, etc.).
+3. For each id, copy bytes into `blob` and write `meta.json` under `{FILE_STORAGE_PATH}/{normalizedId}/` (see `normalizeFileId` in `lib/file-id.ts`).
+4. Verify URLs return `200` with correct `Content-Type`.
 
 ## Notes
 

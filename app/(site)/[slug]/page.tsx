@@ -57,9 +57,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     profile.tagline ||
     profile.description ||
     `${profile.name} on ${SITE_NAME}`;
-  const canonicalUrl = `${SITE_URL}/${slug}`;
+  const canonicalSlug = memberRow.slug;
+  const canonicalUrl = `${SITE_URL}/${canonicalSlug}`;
   const noindex = Boolean(profile.noindex);
-  // OG image from /api/og/[slug] (themed embed or redirect to custom ogImageUrl)
+  // OG image from /api/og/[slug] (themed embed or redirect to custom ogImageUrl); use primary slug for embeds when visited via alias.
   return {
     title,
     description,
@@ -72,13 +73,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: SITE_NAME,
       title,
       description,
-      images: [{ url: `/api/og/${slug}`, width: 1200, height: 630, alt: title }],
+      images: [{ url: `/api/og/${canonicalSlug}`, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`/api/og/${slug}`],
+      images: [`/api/og/${canonicalSlug}`],
     },
   };
 }

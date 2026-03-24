@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFile, isStorageConfigured, isValidFileId } from "@/lib/file-storage";
-import { isSeaweedConfigured } from "@/lib/seaweed";
 
 type Params = { params: Promise<{ fid: string[] }> };
 
@@ -12,14 +11,14 @@ const FONT_MIME_TYPES = new Set([
 ]);
 
 /**
- * GET /api/files/{id} – stream file from local volume (or SeaweedFS fallback during migration).
+ * GET /api/files/{id} – stream file from local volume (FILE_STORAGE_PATH).
  * Supports ?type= for font files to ensure correct MIME type (e.g. ?type=font/woff2).
  *
  * ACCESS CONTROL: Files are public once uploaded. Ids are not secret; do not store
  * sensitive content if exposure is a concern.
  */
 export async function GET(request: NextRequest, { params }: Params) {
-  if (!isStorageConfigured() && !isSeaweedConfigured()) {
+  if (!isStorageConfigured()) {
     return NextResponse.json({ error: "Not configured" }, { status: 503 });
   }
   const { fid: fidParts } = await params;

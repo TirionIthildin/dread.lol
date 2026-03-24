@@ -1,6 +1,6 @@
 /**
  * User uploads on a local directory (Docker volume in production).
- * Public URLs stay /api/files/{id}. New ids are UUIDs; legacy Seaweed fids remain valid after migration.
+ * Public URLs stay /api/files/{id}. New ids are UUIDs; legacy Seaweed-style fids may still be valid ids if copied to disk.
  */
 
 import { createReadStream } from "fs";
@@ -12,7 +12,6 @@ import {
   isValidFileId,
   normalizeFileId,
 } from "@/lib/file-id";
-import { getFile as getFileFromSeaweed, isSeaweedConfigured } from "@/lib/seaweed";
 
 const STORAGE_ROOT = process.env.FILE_STORAGE_PATH?.trim() ?? "";
 
@@ -216,9 +215,7 @@ async function getFileFromDisk(
   });
 }
 
-/**
- * Stream file from disk, or fall back to SeaweedFS when configured and blob is missing on disk.
- */
+/** Stream file from disk under FILE_STORAGE_PATH. */
 export async function getFile(
   fileId: string,
   rangeHeader?: string | null
@@ -226,9 +223,6 @@ export async function getFile(
   if (isStorageConfigured()) {
     const fromDisk = await getFileFromDisk(fileId, rangeHeader);
     if (fromDisk) return fromDisk;
-  }
-  if (isSeaweedConfigured()) {
-    return getFileFromSeaweed(fileId, rangeHeader);
   }
   throw new Error("File not found");
 }

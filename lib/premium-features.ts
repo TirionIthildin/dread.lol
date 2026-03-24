@@ -28,3 +28,7 @@ export function isPremiumBackgroundEffect(value: string | null | undefined): boo
     PREMIUM_BACKGROUND_EFFECTS.includes(value as (typeof PREMIUM_BACKGROUND_EFFECTS)[number])
   );
 }
+
+/** Max alternate profile URL slugs (aliases) per account. */
+export const PROFILE_ALIAS_MAX_FREE = 1;
+export const PROFILE_ALIAS_MAX_PREMIUM = 5;

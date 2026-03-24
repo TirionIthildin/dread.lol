@@ -12,6 +12,7 @@ import {
   GearSix,
   ImagesSquare,
   LinkSimple,
+  Path,
   Medal,
   PenNib,
   Shield,
@@ -43,6 +44,7 @@ const contentNavItems = [
   { href: "/dashboard/gallery", label: "Gallery", icon: ImagesSquare },
   { href: "/dashboard/paste", label: "Paste", icon: ClipboardText },
   { href: "/dashboard/short", label: "Short links", icon: LinkSimple },
+  { href: "/dashboard/aliases", label: "Aliases", icon: Path },
 ] as const;
 
 const discoverNavItems = [

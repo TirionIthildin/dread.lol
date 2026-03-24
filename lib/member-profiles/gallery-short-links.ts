@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 import { normalizeSlug } from "@/lib/slug";
 import { getMemberProfileById } from "./core";
+import { resolveMemberProfileBySlug } from "./profile-aliases";
 export interface GalleryItem {
   id: string;
   imageUrl: string;
@@ -220,8 +221,15 @@ export async function getShortLinkRedirect(
   const db = client.db(dbName);
 
   const normalizedProfileSlug = normalizeSlug(profileSlug) || profileSlug;
-  const profile = await db.collection(COLLECTIONS.profiles).findOne({ slug: normalizedProfileSlug }, { projection: { _id: 1 } });
-  if (!profile) return null;
+  const resolved = await resolveMemberProfileBySlug(normalizedProfileSlug);
+  if (!resolved) return null;
+  let oid: ObjectId;
+  try {
+    oid = new ObjectId(resolved.profile.id);
+  } catch {
+    return null;
+  }
+  const profile = { _id: oid };
 
   const link = await db.collection(COLLECTIONS.profileShortLinks).findOne({
     profileId: profile._id,
