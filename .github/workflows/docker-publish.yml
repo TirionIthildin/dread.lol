@@ -42,7 +42,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      # Fail fast with a clear npm error if package.json and package-lock.json
+      # drift (Docker deps stage runs the same command in Alpine).
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Verify lockfile (npm ci)
+        run: npm ci --ignore-scripts
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
@@ -62,7 +73,7 @@ jobs:
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
