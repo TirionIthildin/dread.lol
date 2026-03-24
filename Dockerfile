@@ -2,16 +2,21 @@
 
 # Stage 1: Dependencies
 FROM public.ecr.aws/docker/library/node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat && \
-    npm install -g npm@latest
+# Use the image's bundled npm (10.x) for reproducible `npm ci`; upgrading npm
+# globally can change lockfile validation vs developers and other CI jobs.
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN if [ -f package-lock.json ]; then \
-      npm ci --ignore-scripts; \
-    else \
-      npm install --ignore-scripts; \
-    fi && \
+# Some builders (Docker Build Cloud, etc.) inject NODE_ENV=production. That can omit
+# devDependencies and break `next build` (Tailwind, TypeScript, eslint-config-next, …).
+ENV NODE_ENV=development
+# Registry flakiness in remote builders
+ENV npm_config_fetch_retries=5
+ENV npm_config_fetch_retry_mintimeout=20000
+
+# Require a committed lockfile — `npm ci` fails fast if package.json and lock drift.
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund && \
     npm cache clean --force
 
 # Stage 2: Builder
