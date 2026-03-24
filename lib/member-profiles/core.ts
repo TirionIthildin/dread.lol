@@ -269,12 +269,6 @@ export async function getUserDiscordBadgeData(userId: string): Promise<DiscordBa
   return { flags, premiumType };
 }
 
-/** @deprecated Use getUserDiscordBadgeData. Kept for backward compat. */
-export async function getUserDiscordFlags(userId: string): Promise<number | null> {
-  const { flags } = await getUserDiscordBadgeData(userId);
-  return flags;
-}
-
 export async function setUserBadges(
   userId: string,
   badgeFlags: { verified?: boolean; staff?: boolean; premiumGranted?: boolean; verifiedCreator?: boolean }
