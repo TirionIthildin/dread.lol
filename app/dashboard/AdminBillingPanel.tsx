@@ -61,7 +61,7 @@ export default function AdminBillingPanel() {
       if (!res.ok) return;
       const data = await res.json();
       const b = data.billing ?? {};
-      const prodIds = Array.isArray(b.productIds) ? b.productIds : (b.productId ? [b.productId] : []);
+      const prodIds = Array.isArray(b.productIds) ? b.productIds : [];
       const customBadgeIds = Array.isArray(b.customBadgeProductIds) ? b.customBadgeProductIds : [];
       setSettings({
         enabled: !!b.enabled,
