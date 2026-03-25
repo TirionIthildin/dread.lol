@@ -1645,9 +1645,14 @@ export function memberProfileToProfile(
     backgroundAudioStartSeconds: (row as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? undefined,
     backgroundEffect: stripPremium && isPremiumBackgroundEffect(bgEffect) ? undefined : (bgEffect ?? undefined),
     widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
-    ...((row as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim() && {
-      showCryptoWidgets: (row as { showCryptoWidgets: string }).showCryptoWidgets.trim(),
-    }),
+    ...((() => {
+      const chain = (row as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim();
+      const addr = (row as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim();
+      if (chain && addr) {
+        return { cryptoWalletChain: chain, cryptoWalletAddress: addr };
+      }
+      return {};
+    })()),
     ...((row as { showGithubWidgets?: string | null }).showGithubWidgets?.trim() && {
       showGithubWidgets: (row as { showGithubWidgets: string }).showGithubWidgets.trim(),
     }),

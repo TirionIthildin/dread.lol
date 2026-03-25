@@ -11,7 +11,6 @@ import type { ProfileVersionRow } from "@/lib/profile-versions";
 import type { CryptoWidgetData } from "@/lib/crypto-widgets";
 import type { GithubWidgetData } from "@/lib/github-widgets";
 import { normalizeGithubUsername, parseEnabledGithubWidgets } from "@/lib/github-widgets";
-import { parseEnabledCryptoIds } from "@/lib/crypto-widgets";
 import DashboardLinks from "@/app/dashboard/DashboardLinks";
 import { normalizeWidgetData } from "@/app/components/DiscordWidgetsDisplay";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
@@ -45,7 +44,7 @@ interface DashboardMyProfileProps {
   availableDiscordBadges?: string[];
   /** Pre-fetched widget data for live preview (dates may arrive as ISO strings). */
   widgetPreviewData?: DiscordWidgetData | null;
-  /** Pre-fetched crypto spot prices for dashboard preview. */
+  /** Pre-fetched crypto wallet balance for dashboard preview. */
   cryptoWidgetPreviewData?: CryptoWidgetData | null;
   /** Pre-fetched GitHub stats for dashboard preview. */
   githubWidgetPreviewData?: GithubWidgetData | null;
@@ -139,8 +138,11 @@ export default function DashboardMyProfile({
   const [widgetRobloxProfile, setWidgetRobloxProfile] = useState(() =>
     (profile as { showRobloxWidgets?: string }).showRobloxWidgets?.includes("profile") ?? false
   );
-  const [selectedCryptoIds, setSelectedCryptoIds] = useState<string[]>(() =>
-    parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets)
+  const [cryptoWalletChain, setCryptoWalletChain] = useState(() =>
+    (profile as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim() ?? ""
+  );
+  const [cryptoWalletAddress, setCryptoWalletAddress] = useState(() =>
+    (profile as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim() ?? ""
   );
   const [cryptoPreviewData, setCryptoPreviewData] = useState<CryptoWidgetData | null>(() => cryptoWidgetPreviewData ?? null);
   const [githubUsernameInput, setGithubUsernameInput] = useState(
@@ -154,6 +156,9 @@ export default function DashboardMyProfile({
   );
   const [widgetGithubContributions, setWidgetGithubContributions] = useState(
     () => (profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("contributions") ?? false
+  );
+  const [widgetGithubProfile, setWidgetGithubProfile] = useState(
+    () => (profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("profile") ?? false
   );
   const [githubPreviewData, setGithubPreviewData] = useState<GithubWidgetData | null>(() => githubWidgetPreviewData ?? null);
   const [widgetsMatchAccent, setWidgetsMatchAccent] = useState(() =>
@@ -173,6 +178,7 @@ export default function DashboardMyProfile({
       widgetGithubLastPush,
       widgetGithubPublicRepos,
       widgetGithubContributions,
+      widgetGithubProfile,
     ].filter(Boolean).length;
   const canEnableMore = widgetCount < MAX_WIDGETS;
 
@@ -217,23 +223,30 @@ export default function DashboardMyProfile({
       !out.lastPush &&
       out.publicRepos == null &&
       !out.contributions &&
-      !out.contributionsUnavailable
+      !out.contributionsUnavailable &&
+      !(widgetGithubProfile && githubPreviewData?.profileUrl)
     ) {
       return null;
     }
     return out;
-  }, [githubPreviewData, widgetGithubLastPush, widgetGithubPublicRepos, widgetGithubContributions]);
+  }, [githubPreviewData, widgetGithubLastPush, widgetGithubPublicRepos, widgetGithubContributions, widgetGithubProfile]);
 
   const selectedGithubWidgetsCsv = useMemo(
     () =>
-      [widgetGithubLastPush && "lastPush", widgetGithubPublicRepos && "publicRepos", widgetGithubContributions && "contributions"]
+      [
+        widgetGithubLastPush && "lastPush",
+        widgetGithubPublicRepos && "publicRepos",
+        widgetGithubContributions && "contributions",
+        widgetGithubProfile && "profile",
+      ]
         .filter(Boolean)
         .join(","),
-    [widgetGithubLastPush, widgetGithubPublicRepos, widgetGithubContributions]
+    [widgetGithubLastPush, widgetGithubPublicRepos, widgetGithubContributions, widgetGithubProfile]
   );
 
   useEffect(() => {
-    setSelectedCryptoIds(parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets));
+    setCryptoWalletChain((profile as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim() ?? "");
+    setCryptoWalletAddress((profile as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim() ?? "");
   }, [profile]);
 
   useEffect(() => {
@@ -241,25 +254,29 @@ export default function DashboardMyProfile({
     setWidgetGithubLastPush((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("lastPush") ?? false);
     setWidgetGithubPublicRepos((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("publicRepos") ?? false);
     setWidgetGithubContributions((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("contributions") ?? false);
+    setWidgetGithubProfile((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("profile") ?? false);
   }, [profile]);
 
   useEffect(() => {
-    const idsCsv = selectedCryptoIds.join(",");
-    if (!idsCsv) {
+    const chain = cryptoWalletChain.trim();
+    const addr = cryptoWalletAddress.trim();
+    if (!chain || !addr) {
       setCryptoPreviewData(null);
       return;
     }
-    const saved = parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets).join(",");
-    if (idsCsv === saved && cryptoWidgetPreviewData?.coins?.length) {
+    const savedChain = (profile as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim() ?? "";
+    const savedAddr = (profile as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim() ?? "";
+    if (chain === savedChain && addr === savedAddr && cryptoWidgetPreviewData?.address) {
       setCryptoPreviewData(cryptoWidgetPreviewData);
       return;
     }
     let cancelled = false;
-    fetch(`/api/crypto-widget-preview?ids=${encodeURIComponent(idsCsv)}`)
+    const q = new URLSearchParams({ chain, address: addr });
+    fetch(`/api/crypto-widget-preview?${q.toString()}`)
       .then((r) => r.json())
-      .then((j: CryptoWidgetData) => {
+      .then((j: CryptoWidgetData | null) => {
         if (cancelled) return;
-        if (j?.coins?.length) setCryptoPreviewData(j);
+        if (j && j.address) setCryptoPreviewData(j);
         else setCryptoPreviewData(null);
       })
       .catch(() => {
@@ -268,7 +285,7 @@ export default function DashboardMyProfile({
     return () => {
       cancelled = true;
     };
-  }, [profile, selectedCryptoIds, cryptoWidgetPreviewData]);
+  }, [profile, cryptoWalletChain, cryptoWalletAddress, cryptoWidgetPreviewData]);
 
   useEffect(() => {
     const login = normalizeGithubUsername(githubUsernameInput);
@@ -281,11 +298,12 @@ export default function DashboardMyProfile({
     if (
       login === savedLogin &&
       selectedGithubWidgetsCsv === savedCsv &&
-      githubWidgetPreviewData &&
+      githubWidgetPreviewData?.login &&
       (githubWidgetPreviewData.lastPush ||
         githubWidgetPreviewData.publicRepos != null ||
         githubWidgetPreviewData.contributions ||
-        githubWidgetPreviewData.contributionsUnavailable)
+        githubWidgetPreviewData.contributionsUnavailable ||
+        (widgetGithubProfile && githubWidgetPreviewData.profileUrl))
     ) {
       setGithubPreviewData(githubWidgetPreviewData);
       return;
@@ -306,7 +324,7 @@ export default function DashboardMyProfile({
     return () => {
       cancelled = true;
     };
-  }, [profile, githubUsernameInput, selectedGithubWidgetsCsv, githubWidgetPreviewData]);
+  }, [profile, githubUsernameInput, selectedGithubWidgetsCsv, githubWidgetPreviewData, widgetGithubProfile]);
 
   const handleBackgroundFileUpload = useCallback(async (file: File) => {
     const type = file.type?.toLowerCase().split(";")[0]?.trim();
@@ -638,7 +656,9 @@ export default function DashboardMyProfile({
     setWidgetGithubLastPush((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("lastPush") ?? false);
     setWidgetGithubPublicRepos((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("publicRepos") ?? false);
     setWidgetGithubContributions((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("contributions") ?? false);
-    setSelectedCryptoIds(parseEnabledCryptoIds((profile as { showCryptoWidgets?: string }).showCryptoWidgets));
+    setWidgetGithubProfile((profile as { showGithubWidgets?: string }).showGithubWidgets?.includes("profile") ?? false);
+    setCryptoWalletChain((profile as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim() ?? "");
+    setCryptoWalletAddress((profile as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim() ?? "");
     setWidgetsMatchAccent((profile as { widgetsMatchAccent?: boolean }).widgetsMatchAccent ?? false);
     setCardOpacityValue((profile as { cardOpacity?: number }).cardOpacity ?? 95);
     setCardBlurValue((profile as { cardBlur?: string }).cardBlur ?? "sm");
@@ -725,7 +745,6 @@ export default function DashboardMyProfile({
             aria-hidden={activeEditorSection === "links"}
           >
             <input type="hidden" name="profileId" value={profile.id} />
-            <input type="hidden" name="showCryptoWidgets" value={selectedCryptoIds.join(",")} />
             <input type="hidden" name="terminalCommands" value={JSON.stringify(terminalCommandEntries.filter((e) => e.command.trim() || e.output.trim()))} />
             <div
               ref={panelRef}
@@ -772,8 +791,12 @@ export default function DashboardMyProfile({
                 setWidgetGithubPublicRepos={setWidgetGithubPublicRepos}
                 widgetGithubContributions={widgetGithubContributions}
                 setWidgetGithubContributions={setWidgetGithubContributions}
-                selectedCryptoIds={selectedCryptoIds}
-                setSelectedCryptoIds={setSelectedCryptoIds}
+                widgetGithubProfile={widgetGithubProfile}
+                setWidgetGithubProfile={setWidgetGithubProfile}
+                cryptoWalletChain={cryptoWalletChain}
+                setCryptoWalletChain={setCryptoWalletChain}
+                cryptoWalletAddress={cryptoWalletAddress}
+                setCryptoWalletAddress={setCryptoWalletAddress}
                 discordInviteInput={discordInviteInput}
                 setDiscordInviteInput={setDiscordInviteInput}
                 githubPreviewFiltered={githubPreviewFiltered}

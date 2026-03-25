@@ -148,8 +148,12 @@ export interface ProfileDoc {
   discordInviteUrl?: string | null;
   /** Roblox widgets to show: comma-separated accountAge,profile (requires OAuth link). */
   showRobloxWidgets?: string | null;
-  /** Comma-separated CoinGecko coin ids for spot price widget (max 6, allowlisted). */
+  /** @deprecated Cleared on save; replaced by crypto wallet widget. */
   showCryptoWidgets?: string | null;
+  /** Native balance widget: `ethereum` | `bitcoin` | `solana`. */
+  cryptoWalletChain?: string | null;
+  /** Wallet address for `cryptoWalletChain` (max 128 chars). */
+  cryptoWalletAddress?: string | null;
   /** GitHub username for widget cards (public API). */
   githubUsername?: string | null;
   /** Comma-separated: lastPush, publicRepos, contributions (max 3; counts toward widget cap with Discord/Roblox). */

@@ -37,6 +37,17 @@ export function requireSafeUrl(url: string, fieldName = "URL"): string {
 }
 
 /**
+ * Requires an absolute http(s) URL or a same-origin path (e.g. `/api/files/…` from uploads).
+ */
+export function requireHttpOrSameOriginPath(url: string, fieldName = "URL"): string {
+  const trimmed = url.trim();
+  if (!trimmed) throw new Error(`${fieldName} is required`);
+  const ok = validateBackgroundUrl(trimmed);
+  if (!ok) throw new Error(`${fieldName} must use https or http or a valid path`);
+  return ok;
+}
+
+/**
  * Validates background URL: allows https/http or same-origin paths (e.g. /api/files/xxx).
  */
 export function validateBackgroundUrl(url: string | null | undefined): string | undefined {

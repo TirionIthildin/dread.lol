@@ -12,6 +12,7 @@ function parseGithubOrder(raw: string | undefined): string[] {
     lastpush: "lastPush",
     publicrepos: "publicRepos",
     contributions: "contributions",
+    profile: "profile",
   };
   return raw
     .split(",")
@@ -56,6 +57,9 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
 
   const iconColor = matchAccent ? "var(--accent)" : "#f0f6fc";
   const labelColorClass = matchAccent ? "text-[var(--accent)]/80" : "text-[#8b949e]";
+  const linkHoverClass = matchAccent
+    ? "hover:border-[var(--accent)]/50 hover:bg-[var(--accent)]/10"
+    : "hover:border-[var(--border)]/80 hover:bg-[var(--surface)]/80";
 
   const githubGreen = (level: 0 | 1 | 2 | 3 | 4) => {
     if (matchAccent) {
@@ -102,10 +106,49 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
     );
   }
 
+  if (data.profileUrl) {
+    widgetMap["profile"] = (
+      <Link
+        href={data.profileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${widgetBase} text-[var(--foreground)] ${linkHoverClass} group`}
+        aria-label="Open GitHub profile"
+      >
+        {data.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.avatarUrl}
+            alt=""
+            width={36}
+            height={36}
+            className="rounded-full shrink-0 object-cover"
+            referrerPolicy="no-referrer"
+            aria-hidden
+          />
+        ) : (
+          <span className="shrink-0" style={{ color: iconColor }}>
+            <GithubLogo size={18} weight="fill" className="block" aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className={`${labelClass} ${labelColorClass}`}>GitHub</p>
+          <p className="font-medium truncate">View profile</p>
+        </div>
+        <ArrowSquareOut
+          size={14}
+          weight="regular"
+          className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+          aria-hidden
+        />
+      </Link>
+    );
+  }
+
   if (data.contributions) {
     const { total, heatmap } = data.contributions;
     widgetMap["contributions"] = (
-      <div className={`${widgetBase} flex-col items-stretch gap-2 sm:max-w-[220px]`} title="Contributions on GitHub (last year)">
+      <div className={`${widgetBase} flex-col items-stretch gap-2 w-full`} title="Contributions on GitHub (last year)">
         <div className="flex items-center gap-2.5 w-full">
           <span className="shrink-0" style={{ color: iconColor }}>
             <GithubLogo size={18} weight="fill" className="block" aria-hidden />
@@ -151,27 +194,19 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
     );
   }
 
-  const ordered = resolvedOrder.map((id) => widgetMap[id]).filter(Boolean);
-  if (ordered.length === 0) return null;
+  const orderedIds = resolvedOrder.filter((id) => widgetMap[id] != null);
+  if (orderedIds.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <Link
-        href={data.profileUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--accent)] transition-colors group"
-      >
-        {data.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.avatarUrl} alt="" width={20} height={20} className="rounded-full object-cover shrink-0" />
-        ) : (
-          <GithubLogo size={16} weight="fill" className="shrink-0 text-[var(--muted)] group-hover:text-[var(--accent)]" aria-hidden />
-        )}
-        <span>@{data.login}</span>
-        <ArrowSquareOut size={12} weight="regular" className="opacity-60" aria-hidden />
-      </Link>
-      <div className="flex flex-wrap gap-2">{ordered}</div>
+    <div
+      className="grid gap-2"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}
+      role="group"
+      aria-label="GitHub info"
+    >
+      {orderedIds.map((id) => (
+        <div key={id}>{widgetMap[id]}</div>
+      ))}
     </div>
   );
 }

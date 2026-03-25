@@ -6,9 +6,9 @@
 
 import { unstable_cache } from "next/cache";
 
-export type GithubWidgetType = "lastPush" | "publicRepos" | "contributions";
+export type GithubWidgetType = "lastPush" | "publicRepos" | "contributions" | "profile";
 
-const ALLOWED: readonly GithubWidgetType[] = ["lastPush", "publicRepos", "contributions"];
+const ALLOWED: readonly GithubWidgetType[] = ["lastPush", "publicRepos", "contributions", "profile"];
 const ALLOWED_SET = new Set<string>(ALLOWED);
 
 export interface GithubWidgetData {
@@ -69,7 +69,9 @@ export function parseEnabledGithubWidgets(raw: string | null | undefined): Githu
           ? "publicRepos"
           : id === "contributions"
             ? "contributions"
-            : null;
+            : id === "profile"
+              ? "profile"
+              : null;
     if (!mapped || !ALLOWED_SET.has(mapped) || seen.has(mapped)) continue;
     seen.add(mapped);
     out.push(mapped);

@@ -1,5 +1,7 @@
+import type { CryptoWalletChain } from "@/lib/crypto-widgets";
+
 /**
- * Profile type used by profile pages.
+ * Profile type used on profile pages.
  * Use profile templates in the dashboard and member profiles (DB-backed) for content.
  */
 export interface Profile {
@@ -183,9 +185,13 @@ export interface Profile {
   showDiscordWidgets?: string;
   /** Comma-separated Roblox widget order (e.g. "accountAge,profile"). Determines display order. */
   showRobloxWidgets?: string;
-  /** Comma-separated CoinGecko coin ids (same order as dashboard); used when fetching prices. */
+  /** @deprecated Replaced by crypto wallet fields. */
   showCryptoWidgets?: string;
-  /** Comma-separated GitHub widget keys (lastPush, publicRepos, contributions). */
+  /** Chain for wallet balance widget. */
+  cryptoWalletChain?: string;
+  /** Address for wallet balance widget. */
+  cryptoWalletAddress?: string;
+  /** Comma-separated GitHub widget keys (lastPush, publicRepos, contributions, profile). */
   showGithubWidgets?: string;
   /** Fetched GitHub stats (merged on profile page, not stored in DB). */
   githubWidgets?: {
@@ -197,15 +203,15 @@ export interface Profile {
     contributions?: { total: number; heatmap: number[][] };
     contributionsUnavailable?: boolean;
   };
-  /** Fetched spot prices (merged on profile page, not stored in DB). */
+  /** Fetched wallet balance (merged on profile page, not stored in DB). */
   cryptoWidgets?: {
-    coins: Array<{
-      id: string;
-      name: string;
-      symbol: string;
-      priceUsd: number;
-      change24hPct: number | null;
-    }>;
+    chain: CryptoWalletChain;
+    networkLabel: string;
+    symbol: string;
+    address: string;
+    addressShort: string;
+    balanceNative: number;
+    balanceUsd: number | null;
   };
   /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
   discordWidgets?: {

@@ -6,7 +6,12 @@ import { updateMemberProfile, getOrCreateUser, getProfileSlugByUserId } from "@/
 import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 import { validateUrlOrEmpty, isSafeUrl, validateBackgroundUrl } from "@/lib/validate-url";
 import { getPremiumAccess } from "@/lib/premium-permissions";
-import { parseEnabledCryptoIds } from "@/lib/crypto-widgets";
+import {
+  CRYPTO_WALLET_CHAINS,
+  isValidCryptoWalletAddress,
+  MAX_CRYPTO_WALLET_ADDRESS_LEN,
+  type CryptoWalletChain,
+} from "@/lib/crypto-widgets";
 import { normalizeGithubUsername } from "@/lib/github-widgets";
 import { isPremiumNameAnimation, isPremiumFieldAnimation } from "@/lib/premium-features";
 import { filterLinksForPremiumAccess, parseCommissionStatus } from "@/lib/monetization-profile";
@@ -192,6 +197,7 @@ export async function updateProfileAction(
     if (formData.get("showGithubWidgetLastPush") === "on") order.push({ src: "github", val: "lastPush" });
     if (formData.get("showGithubWidgetPublicRepos") === "on") order.push({ src: "github", val: "publicRepos" });
     if (formData.get("showGithubWidgetContributions") === "on") order.push({ src: "github", val: "contributions" });
+    if (formData.get("showGithubWidgetProfile") === "on") order.push({ src: "github", val: "profile" });
     const taken = order.slice(0, 4);
     return {
       discord: taken.filter((x) => x.src === "discord").map((x) => x.val),
@@ -346,11 +352,21 @@ export async function updateProfileAction(
       showRobloxWidgets: widgetSelection.roblox.length > 0 ? widgetSelection.roblox.join(",") : null,
       githubUsername: githubUsernameNormalized ?? null,
       showGithubWidgets: widgetSelection.github.length > 0 ? widgetSelection.github.join(",") : null,
-      showCryptoWidgets: (() => {
-        const raw = (formData.get("showCryptoWidgets") as string)?.trim();
-        if (!raw) return null;
-        const ids = parseEnabledCryptoIds(raw);
-        return ids.length > 0 ? ids.join(",") : null;
+      showCryptoWidgets: null,
+      ...(() => {
+        const chainRaw = (formData.get("cryptoWalletChain") as string)?.trim().toLowerCase();
+        const addrRaw = (formData.get("cryptoWalletAddress") as string)?.trim().slice(0, MAX_CRYPTO_WALLET_ADDRESS_LEN);
+        if (!chainRaw || !addrRaw) {
+          return { cryptoWalletChain: null as string | null, cryptoWalletAddress: null as string | null };
+        }
+        if (!CRYPTO_WALLET_CHAINS.includes(chainRaw as CryptoWalletChain)) {
+          return { cryptoWalletChain: null, cryptoWalletAddress: null };
+        }
+        const chain = chainRaw as CryptoWalletChain;
+        if (!isValidCryptoWalletAddress(chain, addrRaw)) {
+          return { cryptoWalletChain: null, cryptoWalletAddress: null };
+        }
+        return { cryptoWalletChain: chain, cryptoWalletAddress: addrRaw };
       })(),
       customFont: (() => {
         const f = (formData.get("customFont") as string)?.trim();

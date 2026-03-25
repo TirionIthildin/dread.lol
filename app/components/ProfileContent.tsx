@@ -27,6 +27,7 @@ import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
 import GithubWidgetsDisplay from "@/app/components/GithubWidgetsDisplay";
+import { parseEnabledGithubWidgets } from "@/lib/github-widgets";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
@@ -303,10 +304,8 @@ function ProfileSection({
     case "github-widgets":
       return wrap(
         profile.githubWidgets &&
-        (profile.githubWidgets.lastPush ||
-          profile.githubWidgets.publicRepos != null ||
-          profile.githubWidgets.contributions ||
-          profile.githubWidgets.contributionsUnavailable) ? (
+        profile.showGithubWidgets?.trim() &&
+        parseEnabledGithubWidgets(profile.showGithubWidgets).length > 0 ? (
           <div className="mt-4">
             <GithubWidgetsDisplay
               data={profile.githubWidgets}
@@ -318,7 +317,7 @@ function ProfileSection({
       );
     case "crypto-widgets":
       return wrap(
-        profile.cryptoWidgets && profile.cryptoWidgets.coins.length > 0 ? (
+        profile.cryptoWidgets && profile.cryptoWidgets.address ? (
           <div className="mt-4">
             <CryptoWidgetsDisplay data={profile.cryptoWidgets} matchAccent={profile.widgetsMatchAccent} />
           </div>

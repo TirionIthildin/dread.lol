@@ -71,8 +71,12 @@ export type ProfileEditorFormFieldsProps = {
   setWidgetGithubPublicRepos: (v: boolean) => void;
   widgetGithubContributions: boolean;
   setWidgetGithubContributions: (v: boolean) => void;
-  selectedCryptoIds: string[];
-  setSelectedCryptoIds: Dispatch<SetStateAction<string[]>>;
+  widgetGithubProfile: boolean;
+  setWidgetGithubProfile: (v: boolean) => void;
+  cryptoWalletChain: string;
+  setCryptoWalletChain: (v: string) => void;
+  cryptoWalletAddress: string;
+  setCryptoWalletAddress: (v: string) => void;
   discordInviteInput: string;
   setDiscordInviteInput: (v: string) => void;
   githubPreviewFiltered: GithubWidgetData | null;
@@ -319,8 +323,12 @@ export function ProfileEditorFormFields(p: ProfileEditorFormFieldsProps) {
         setWidgetGithubPublicRepos={p.setWidgetGithubPublicRepos}
         widgetGithubContributions={p.widgetGithubContributions}
         setWidgetGithubContributions={p.setWidgetGithubContributions}
-        selectedCryptoIds={p.selectedCryptoIds}
-        setSelectedCryptoIds={p.setSelectedCryptoIds}
+        widgetGithubProfile={p.widgetGithubProfile}
+        setWidgetGithubProfile={p.setWidgetGithubProfile}
+        cryptoWalletChain={p.cryptoWalletChain}
+        setCryptoWalletChain={p.setCryptoWalletChain}
+        cryptoWalletAddress={p.cryptoWalletAddress}
+        setCryptoWalletAddress={p.setCryptoWalletAddress}
         discordInviteInput={p.discordInviteInput}
         setDiscordInviteInput={p.setDiscordInviteInput}
         githubPreviewFiltered={p.githubPreviewFiltered}

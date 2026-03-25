@@ -1,28 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { parseEnabledCryptoIds, MAX_CRYPTO_WIDGET_COINS, ALLOWED_CRYPTO_IDS } from "@/lib/crypto-widgets";
+import { isValidCryptoWalletAddress, parseCryptoWalletFromProfile } from "@/lib/crypto-widgets";
 
-describe("parseEnabledCryptoIds", () => {
-  it("returns empty for empty input", () => {
-    expect(parseEnabledCryptoIds(undefined)).toEqual([]);
-    expect(parseEnabledCryptoIds(null)).toEqual([]);
-    expect(parseEnabledCryptoIds("")).toEqual([]);
-    expect(parseEnabledCryptoIds("  ")).toEqual([]);
+const VALID_ETH = "0x0000000000000000000000000000000000000001";
+
+describe("isValidCryptoWalletAddress", () => {
+  it("accepts Ethereum addresses", () => {
+    expect(isValidCryptoWalletAddress("ethereum", VALID_ETH)).toBe(true);
   });
-
-  it("filters to allowlist and preserves order", () => {
-    expect(parseEnabledCryptoIds("bitcoin,ethereum")).toEqual(["bitcoin", "ethereum"]);
+  it("rejects Ethereum address with wrong length", () => {
+    expect(isValidCryptoWalletAddress("ethereum", `${VALID_ETH}aa`)).toBe(false);
   });
-
-  it("dedupes and lowercases", () => {
-    expect(parseEnabledCryptoIds("Bitcoin,bitcoin, ETHEREUM ")).toEqual(["bitcoin", "ethereum"]);
+  it("accepts Bitcoin bech32", () => {
+    expect(isValidCryptoWalletAddress("bitcoin", "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq")).toBe(true);
   });
-
-  it("drops unknown ids", () => {
-    expect(parseEnabledCryptoIds("bitcoin,not-a-real-coin,ethereum")).toEqual(["bitcoin", "ethereum"]);
+  it("accepts Bitcoin P2PKH", () => {
+    expect(isValidCryptoWalletAddress("bitcoin", "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")).toBe(true);
   });
+  it("accepts Solana addresses", () => {
+    expect(
+      isValidCryptoWalletAddress(
+        "solana",
+        "DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK"
+      )
+    ).toBe(true);
+  });
+});
 
-  it("caps at MAX_CRYPTO_WIDGET_COINS", () => {
-    const many = ALLOWED_CRYPTO_IDS.slice(0, MAX_CRYPTO_WIDGET_COINS + 3).join(",");
-    expect(parseEnabledCryptoIds(many).length).toBe(MAX_CRYPTO_WIDGET_COINS);
+describe("parseCryptoWalletFromProfile", () => {
+  it("returns null when chain or address missing", () => {
+    expect(parseCryptoWalletFromProfile(null, VALID_ETH)).toBe(null);
+    expect(parseCryptoWalletFromProfile("ethereum", null)).toBe(null);
+  });
+  it("returns null for invalid pair", () => {
+    expect(parseCryptoWalletFromProfile("ethereum", "not-an-address")).toBe(null);
+  });
+  it("returns parsed pair when valid", () => {
+    expect(parseCryptoWalletFromProfile("ethereum", VALID_ETH)).toEqual({ chain: "ethereum", address: VALID_ETH });
   });
 });

@@ -16,9 +16,8 @@ import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
 import GithubWidgetsDisplay from "@/app/components/GithubWidgetsDisplay";
 import type { CryptoWidgetData } from "@/lib/crypto-widgets";
 import type { GithubWidgetData } from "@/lib/github-widgets";
-import { ALLOWED_CRYPTO_IDS, CRYPTO_DISPLAY, MAX_CRYPTO_WIDGET_COINS } from "@/lib/crypto-widgets";
+import { CRYPTO_WALLET_CHAINS } from "@/lib/crypto-widgets";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
-import type { Dispatch, SetStateAction } from "react";
 import type { ProfileRow } from "@/lib/db/schema";
 import type { Profile } from "@/lib/profiles";
 import { MAX_WIDGETS } from "@/app/dashboard/profile-editor/constants";
@@ -53,8 +52,12 @@ export interface WidgetsSectionProps {
   setWidgetGithubPublicRepos: (v: boolean) => void;
   widgetGithubContributions: boolean;
   setWidgetGithubContributions: (v: boolean) => void;
-  selectedCryptoIds: string[];
-  setSelectedCryptoIds: Dispatch<SetStateAction<string[]>>;
+  widgetGithubProfile: boolean;
+  setWidgetGithubProfile: (v: boolean) => void;
+  cryptoWalletChain: string;
+  setCryptoWalletChain: (v: string) => void;
+  cryptoWalletAddress: string;
+  setCryptoWalletAddress: (v: string) => void;
   discordInviteInput: string;
   setDiscordInviteInput: (v: string) => void;
   githubPreviewFiltered: GithubWidgetData | null;
@@ -93,8 +96,12 @@ export function WidgetsSection(props: WidgetsSectionProps) {
     setWidgetGithubPublicRepos,
     widgetGithubContributions,
     setWidgetGithubContributions,
-    selectedCryptoIds,
-    setSelectedCryptoIds,
+    widgetGithubProfile,
+    setWidgetGithubProfile,
+    cryptoWalletChain,
+    setCryptoWalletChain,
+    cryptoWalletAddress,
+    setCryptoWalletAddress,
     discordInviteInput,
     setDiscordInviteInput,
     githubPreviewFiltered,
@@ -335,6 +342,16 @@ export function WidgetsSection(props: WidgetsSectionProps) {
                       desc="Year total + last 4 weeks heatmap (needs server token)"
                       accent="github"
                     />
+                    <WidgetCheckbox
+                      id="githubProfile"
+                      checked={widgetGithubProfile}
+                      setChecked={setWidgetGithubProfile}
+                      name="showGithubWidgetProfile"
+                      icon={<GithubLogo size={18} weight="fill" className="shrink-0 text-[#f0f6fc]" aria-hidden />}
+                      label="Profile link"
+                      desc="Link to your GitHub profile"
+                      accent="github"
+                    />
                   </div>
                   <p className="text-[11px] text-[var(--muted)] mt-2">
                     Public GitHub API (cached ~1h). Contribution graph uses GraphQL and requires{" "}
@@ -344,40 +361,42 @@ export function WidgetsSection(props: WidgetsSectionProps) {
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
                     <Coins size={16} weight="duotone" className="shrink-0" aria-hidden />
-                    Crypto prices
+                    Wallet balance
                   </p>
                   <p className="text-[11px] text-[var(--muted)] mb-2">
-                    USD spot data via CoinGecko (max {MAX_CRYPTO_WIDGET_COINS} coins). Separate from the {MAX_WIDGETS} Discord/Roblox/GitHub widgets above.
+                    Native balance for one address on Ethereum, Bitcoin, or Solana (public chain data; may be delayed). Separate from the {MAX_WIDGETS}{" "}
+                    Discord/Roblox/GitHub widgets above.
                   </p>
-                  <div className="max-h-48 overflow-y-auto rounded-lg border border-[var(--border)]/60 bg-[var(--bg)]/40 p-2 space-y-1.5">
-                    {ALLOWED_CRYPTO_IDS.map((id) => {
-                      const meta = CRYPTO_DISPLAY[id];
-                      const label = meta ? `${meta.name} (${meta.symbol})` : id;
-                      const checked = selectedCryptoIds.includes(id);
-                      return (
-                        <label
-                          key={id}
-                          className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-pointer text-sm ${
-                            checked ? "bg-amber-500/10 border border-amber-500/25" : "hover:bg-[var(--surface)]/80"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              setSelectedCryptoIds((prev) => {
-                                if (prev.includes(id)) return prev.filter((x) => x !== id);
-                                if (prev.length >= MAX_CRYPTO_WIDGET_COINS) return prev;
-                                return [...prev, id];
-                              });
-                            }}
-                            className="rounded border-[var(--border)]"
-                          />
-                          <span className="text-[var(--foreground)]">{label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-1">
+                    Network
+                    <select
+                      name="cryptoWalletChain"
+                      value={cryptoWalletChain}
+                      onChange={(e) => setCryptoWalletChain(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                    >
+                      <option value="">None</option>
+                      {CRYPTO_WALLET_CHAINS.map((c) => (
+                        <option key={c} value={c}>
+                          {c === "ethereum" ? "Ethereum" : c === "bitcoin" ? "Bitcoin" : "Solana"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-1 mt-2">
+                    Address
+                    <input
+                      type="text"
+                      name="cryptoWalletAddress"
+                      value={cryptoWalletAddress}
+                      onChange={(e) => setCryptoWalletAddress(e.target.value)}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="0x… / bc1… / Solana address"
+                      className="mt-1 block w-full rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2 text-sm font-mono text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                      maxLength={128}
+                    />
+                  </label>
                 </div>
               </>
             );
@@ -425,7 +444,7 @@ export function WidgetsSection(props: WidgetsSectionProps) {
           {(widgetPreviewFiltered ||
             ((widgetRobloxAccountAge || widgetRobloxProfile) && baseProfileForPreview?.robloxWidgets) ||
             githubPreviewFiltered ||
-            (cryptoPreviewData && cryptoPreviewData.coins.length > 0)) && (
+            (cryptoPreviewData && cryptoPreviewData.address)) && (
             <div className="pt-2 border-t border-[var(--border)]">
               <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] mb-2">Preview</p>
               <div className="rounded-lg border border-[var(--border)]/50 bg-[var(--bg)]/60 p-3 space-y-3">
@@ -450,7 +469,7 @@ export function WidgetsSection(props: WidgetsSectionProps) {
                     orderFromCsv={selectedGithubWidgetsCsv}
                   />
                 )}
-                {cryptoPreviewData && cryptoPreviewData.coins.length > 0 && (
+                {cryptoPreviewData && cryptoPreviewData.address && (
                   <CryptoWidgetsDisplay data={cryptoPreviewData} matchAccent={widgetsMatchAccent} />
                 )}
               </div>

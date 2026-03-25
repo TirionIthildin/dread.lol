@@ -70,7 +70,10 @@ async function MemberProfileSection({
         getProfileVersions(userId),
         hasRobloxLinked(userId),
         getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
-        getCryptoWidgetData((profile as { showCryptoWidgets?: string | null }).showCryptoWidgets).catch(() => null),
+        getCryptoWidgetData(
+          (profile as { cryptoWalletChain?: string | null }).cryptoWalletChain,
+          (profile as { cryptoWalletAddress?: string | null }).cryptoWalletAddress
+        ).catch(() => null),
         getGithubWidgetData(
           (profile as { githubUsername?: string | null }).githubUsername,
           (profile as { showGithubWidgets?: string | null }).showGithubWidgets

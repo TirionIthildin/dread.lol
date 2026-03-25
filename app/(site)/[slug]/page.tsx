@@ -23,7 +23,7 @@ import { getProfileRestrictionStatus } from "@/lib/profile-restriction";
 import RestrictedProfileMessage from "@/app/components/RestrictedProfileMessage";
 import { getDiscordWidgetData, type DiscordWidgetType } from "@/lib/discord-widgets";
 import { getRobloxWidgetData, type RobloxWidgetType } from "@/lib/roblox-widgets";
-import { getCryptoWidgetData, parseEnabledCryptoIds } from "@/lib/crypto-widgets";
+import { getCryptoWidgetData } from "@/lib/crypto-widgets";
 import { getGithubWidgetData, parseEnabledGithubWidgets } from "@/lib/github-widgets";
 import { getDiscordPresence } from "@/lib/discord-presence";
 import { getDiscordLastSeen } from "@/lib/discord-lastseen";
@@ -161,9 +161,10 @@ export default async function ProfilePage({ params }: Props) {
       return getRobloxWidgetData(memberRow.userId, enabled);
     })(),
     (() => {
-      const raw = (memberRow as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim();
-      if (!raw || parseEnabledCryptoIds(raw).length === 0) return Promise.resolve(null);
-      return getCryptoWidgetData(raw).catch(() => null);
+      const chain = (memberRow as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim();
+      const addr = (memberRow as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim();
+      if (!chain || !addr) return Promise.resolve(null);
+      return getCryptoWidgetData(chain, addr).catch(() => null);
     })(),
     (() => {
       const ghUser = (memberRow as { githubUsername?: string | null }).githubUsername?.trim();
@@ -193,8 +194,12 @@ export default async function ProfilePage({ params }: Props) {
   if (githubWidgetData) profile.githubWidgets = githubWidgetData;
   profile.showDiscordWidgets = memberRow.showDiscordWidgets ?? undefined;
   profile.showRobloxWidgets = (memberRow as { showRobloxWidgets?: string | null }).showRobloxWidgets ?? undefined;
-  const cryptoRaw = (memberRow as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim();
-  if (cryptoRaw) profile.showCryptoWidgets = cryptoRaw;
+  const cwChain = (memberRow as { cryptoWalletChain?: string | null }).cryptoWalletChain?.trim();
+  const cwAddr = (memberRow as { cryptoWalletAddress?: string | null }).cryptoWalletAddress?.trim();
+  if (cwChain && cwAddr) {
+    profile.cryptoWalletChain = cwChain;
+    profile.cryptoWalletAddress = cwAddr;
+  }
   const ghRaw = (memberRow as { showGithubWidgets?: string | null }).showGithubWidgets?.trim();
   if (ghRaw) profile.showGithubWidgets = ghRaw;
   const showDiscordPresence = memberRow.showDiscordPresence !== false;

@@ -10,7 +10,7 @@ import {
   deleteGalleryItem,
   setGalleryOrder,
 } from "@/lib/member-profiles";
-import { requireSafeUrl } from "@/lib/validate-url";
+import { requireHttpOrSameOriginPath } from "@/lib/validate-url";
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { hasGalleryAddon } from "@/lib/gallery-addon";
@@ -33,7 +33,7 @@ export async function addGalleryItemAction(
   }
   if (!data.imageUrl?.trim()) return { error: "Image URL required" };
   try {
-    const imageUrl = requireSafeUrl(data.imageUrl.trim(), "Image URL");
+    const imageUrl = requireHttpOrSameOriginPath(data.imageUrl.trim(), "Image URL");
     const item = await addGalleryItem(profileId, session.sub, {
       imageUrl,
       title: data.title?.trim() || null,
