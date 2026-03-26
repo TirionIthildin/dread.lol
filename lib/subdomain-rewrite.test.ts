@@ -19,6 +19,17 @@ describe("rewriteSubdomainPath", () => {
   it("prefixes other paths on dashboard host", () => {
     expect(rewriteSubdomainPath("dashboard", "/gallery")).toBe("/dashboard/gallery");
   });
+
+  it("keeps locale prefix for profile subdomain routes", () => {
+    expect(rewriteSubdomainPath("alice", "/es")).toBe("/es/alice");
+    expect(rewriteSubdomainPath("alice", "/es/blog")).toBe("/es/alice/blog");
+  });
+
+  it("keeps locale prefix for dashboard subdomain routes", () => {
+    expect(rewriteSubdomainPath("dashboard", "/es")).toBe("/es/dashboard");
+    expect(rewriteSubdomainPath("dashboard", "/es/gallery")).toBe("/es/dashboard/gallery");
+    expect(rewriteSubdomainPath("dashboard", "/es/dashboard")).toBe("/es/dashboard");
+  });
 });
 
 describe("getSubdomainRewriteKind", () => {
