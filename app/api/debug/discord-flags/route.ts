@@ -6,7 +6,7 @@
  * Use slug to also fetch profile's showDiscordBadges and decoded badges.
  */
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import {
   getDiscordFlagsFromRedis,
   getDiscordPremiumFromRedis,

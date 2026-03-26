@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { getLeaderboardTopVouches } from "@/lib/member-profiles";
 
 export default async function LeaderboardWidget() {

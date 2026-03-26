@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DiscordLogo, ArrowSquareOut, CalendarBlank } from "@phosphor-icons/react/dist/ssr";
+import { MessageCircle, ExternalLink, Calendar } from "lucide-react";
 import type { DiscordWidgetData } from "@/lib/discord-widgets";
 
 /** Normalize widget data from server (Dates may be ISO strings). */
@@ -51,8 +51,8 @@ interface DiscordWidgetsDisplayProps {
 
 export default function DiscordWidgetsDisplay({ data, matchAccent = false, orderFromCsv }: DiscordWidgetsDisplayProps) {
   const accent = matchAccent ? "var(--accent)" : "#5865F2";
-  const discordIconProps = { size: 18, weight: "fill" as const, className: "shrink-0", style: { color: accent } };
-  const joinedIconProps = { size: 18, weight: "regular" as const, className: "shrink-0 text-[var(--accent)]" };
+  const discordIconProps = { size: 18, className: "shrink-0 fill-current", style: { color: accent } as const };
+  const joinedIconProps = { size: 18, strokeWidth: 1.5 as const, className: "shrink-0 text-[var(--accent)]" };
   const labelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider";
   const joinedLabelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]";
   const resolvedOrder = orderFromCsv ? parseOrder(orderFromCsv) : [...DISCORD_WIDGET_ORDER];
@@ -74,7 +74,7 @@ export default function DiscordWidgetsDisplay({ data, matchAccent = false, order
       !isNaN(createdAt.getTime()) ? `Discord account since ${createdAt.toLocaleDateString()}` : "Discord account age";
     widgetMap["accountAge"] = (
       <div className={`${widgetBase} ${hoverClass}`} title={accountAgeTitle}>
-        <DiscordLogo {...discordIconProps} aria-hidden />
+        <MessageCircle {...discordIconProps} aria-hidden />
         <div>
           <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Account age</p>
           <p className="text-[var(--foreground)] font-medium">{data.accountAge.label}</p>
@@ -90,7 +90,7 @@ export default function DiscordWidgetsDisplay({ data, matchAccent = false, order
       !isNaN(createdAt.getTime()) ? `Joined Dread.lol on ${createdAt.toLocaleDateString()}` : "Joined Dread.lol";
     widgetMap["joined"] = (
       <div className={`${joinedWidgetBase}`} title={joinedTitle}>
-        <CalendarBlank {...joinedIconProps} aria-hidden />
+        <Calendar {...joinedIconProps} aria-hidden />
         <div>
           <p className={joinedLabelClass}>Joined</p>
           <p className="text-[var(--foreground)] font-medium">{data.joined.label}</p>
@@ -102,7 +102,7 @@ export default function DiscordWidgetsDisplay({ data, matchAccent = false, order
   if (data.serverCount != null) {
     widgetMap["serverCount"] = (
       <div className={`${widgetBase} ${hoverClass}`} title="Number of Discord servers this user is in">
-        <DiscordLogo {...discordIconProps} aria-hidden />
+        <MessageCircle {...discordIconProps} aria-hidden />
         <div>
           <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Servers</p>
           <p className="text-[var(--foreground)] font-medium">
@@ -120,13 +120,13 @@ export default function DiscordWidgetsDisplay({ data, matchAccent = false, order
     const isPlaceholder = data.serverInvite.url === "#";
     const content = (
       <>
-        <DiscordLogo {...discordIconProps} aria-hidden />
+        <MessageCircle {...discordIconProps} aria-hidden />
         <div className="min-w-0 flex-1">
           <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Join server</p>
           <p className="font-medium truncate">{label}</p>
         </div>
         {!isPlaceholder && (
-          <ArrowSquareOut size={14} weight="regular" className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
+          <ExternalLink size={14} strokeWidth={1.5} className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
         )}
       </>
     );
@@ -174,8 +174,8 @@ export function DiscordSingleWidget({
   matchAccent?: boolean;
 }) {
   const accent = matchAccent ? "var(--accent)" : "#5865F2";
-  const discordIconProps = { size: 18, weight: "fill" as const, className: "shrink-0", style: { color: accent } };
-  const joinedIconProps = { size: 18, weight: "regular" as const, className: "shrink-0 text-[var(--accent)]" };
+  const discordIconProps = { size: 18, className: "shrink-0 fill-current", style: { color: accent } as const };
+  const joinedIconProps = { size: 18, strokeWidth: 1.5 as const, className: "shrink-0 text-[var(--accent)]" };
   const labelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider";
   const joinedLabelClass = "discord-widget-label text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]";
   const widgetBase = matchAccent
@@ -191,7 +191,7 @@ export function DiscordSingleWidget({
     const title = !isNaN(createdAt.getTime()) ? `Discord account since ${createdAt.toLocaleDateString()}` : "Discord account age";
     return (
       <div className={`${widgetBase} ${hoverClass}`} title={title}>
-        <DiscordLogo {...discordIconProps} aria-hidden />
+        <MessageCircle {...discordIconProps} aria-hidden />
         <div>
           <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Account age</p>
           <p className="text-[var(--foreground)] font-medium">{data.accountAge.label}</p>
@@ -204,7 +204,7 @@ export function DiscordSingleWidget({
     const title = !isNaN(createdAt.getTime()) ? `Joined Dread.lol on ${createdAt.toLocaleDateString()}` : "Joined Dread.lol";
     return (
       <div className={joinedWidgetBase} title={title}>
-        <CalendarBlank {...joinedIconProps} aria-hidden />
+        <Calendar {...joinedIconProps} aria-hidden />
         <div>
           <p className={joinedLabelClass}>Joined</p>
           <p className="text-[var(--foreground)] font-medium">{data.joined.label}</p>
@@ -215,7 +215,7 @@ export function DiscordSingleWidget({
   if (id === "serverCount" && data.serverCount != null) {
     return (
       <div className={`${widgetBase} ${hoverClass}`} title="Number of Discord servers this user is in">
-        <DiscordLogo {...discordIconProps} aria-hidden />
+        <MessageCircle {...discordIconProps} aria-hidden />
         <div>
           <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Servers</p>
           <p className="text-[var(--foreground)] font-medium">
@@ -232,13 +232,13 @@ export function DiscordSingleWidget({
     const isPlaceholder = data.serverInvite.url === "#";
     const content = (
       <>
-        <DiscordLogo {...discordIconProps} aria-hidden />
+        <MessageCircle {...discordIconProps} aria-hidden />
         <div className="min-w-0 flex-1">
           <p className={labelClass} style={matchAccent ? { color: "var(--accent)" } : { color: "rgba(88, 101, 242, 0.8)" }}>Join server</p>
           <p className="font-medium truncate">{label}</p>
         </div>
         {!isPlaceholder && (
-          <ArrowSquareOut size={14} weight="regular" className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
+          <ExternalLink size={14} strokeWidth={1.5} className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
         )}
       </>
     );

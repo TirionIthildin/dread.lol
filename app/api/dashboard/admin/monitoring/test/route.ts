@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { getMonitoringSettings, getMonitoringWebhookUrlRaw } from "@/lib/monitoring-settings";
 import { collectSystemSnapshot, sendMonitoringWebhook } from "@/lib/system-monitoring";
 

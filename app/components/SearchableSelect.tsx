@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { Search } from "lucide-react";
 
 export type SearchableSelectOption = { value: string; label: string };
 
@@ -175,9 +175,8 @@ export default function SearchableSelect({
           {showSearch && (
             <div className="p-2 border-b border-[var(--border)]">
               <div className="relative">
-                <MagnifyingGlass
+                <Search
                   size={16}
-                  weight="regular"
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none"
                 />
                 <input

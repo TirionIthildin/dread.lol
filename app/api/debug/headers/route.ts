@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { getProfileSlugFromHost } from "@/lib/request";
 import { getSubdomainRewriteKind, rewriteSubdomainPath } from "@/lib/subdomain-rewrite";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 
 const SENSITIVE_HEADERS = new Set([
   "authorization", "cookie", "x-api-key", "x-auth-token",

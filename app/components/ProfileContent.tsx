@@ -1,10 +1,23 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Clock, Cake, Eye, Briefcase, Translate, Target, Check, Shield, Crown, SealCheck, PaintBrush } from "@phosphor-icons/react/dist/ssr";
+import {
+  MapPin,
+  Clock,
+  Cake,
+  Eye,
+  Briefcase,
+  Languages,
+  Target,
+  Check,
+  Shield,
+  Crown,
+  BadgeCheck,
+  Paintbrush,
+} from "lucide-react";
 import type { Profile } from "@/lib/profiles";
 import { getOrderedSectionIds, type ProfileSectionId } from "@/lib/profile-sections";
 
-const profileMetaIconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
+const profileMetaIconProps = { size: 14, strokeWidth: 1.5 as const, className: "shrink-0 text-current" };
 import { getDiscordBadgeInfo } from "@/lib/discord-badges";
 import { BadgeIconServer } from "@/lib/badge-icons";
 import { Fragment, Suspense } from "react";
@@ -27,6 +40,7 @@ import DiscordWidgetsDisplay from "@/app/components/DiscordWidgetsDisplay";
 import RobloxWidgetsDisplay from "@/app/components/RobloxWidgetsDisplay";
 import CryptoWidgetsDisplay from "@/app/components/CryptoWidgetsDisplay";
 import GithubWidgetsDisplay from "@/app/components/GithubWidgetsDisplay";
+import { parseEnabledGithubWidgets } from "@/lib/github-widgets";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
@@ -163,27 +177,53 @@ function ProfileSection({
         ) : null
       );
     case "hero": {
+      const avatarFrame = isMinimalist
+        ? "h-20 w-20 sm:h-24 sm:w-24 border-[var(--border)]/40 ring-2 ring-[var(--surface)]/80 rounded-2xl hover:ring-[var(--accent)]/20"
+        : "h-16 w-16 border-2 border-[var(--border)] ring-2 ring-[var(--surface)] shadow-lg hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40";
+      const avatarOuter = isMinimalist ? "h-20 w-20 sm:h-24 sm:w-24" : "h-16 w-16";
+      const avatarDim = isMinimalist ? 96 : 64;
+      const decorationUrl =
+        profile.discordAvatarDecoration && isDiscordCdnHttpsUrl(profile.discordAvatarDecoration)
+          ? profile.discordAvatarDecoration
+          : null;
       return wrap(
         <div className={`flex items-center ${isMinimalist ? "mt-6 gap-8" : "mt-3 gap-4"}`}>
           {profile.avatar &&
-            (isDiscordCdnHttpsUrl(profile.avatar) ? (
-              <Image
-                src={profile.avatar}
-                alt=""
-                width={isMinimalist ? 96 : 64}
-                height={isMinimalist ? 96 : 64}
-                className={`profile-avatar shrink-0 border object-cover transition-all duration-300 ${isMinimalist ? "h-20 w-20 sm:h-24 sm:w-24 border-[var(--border)]/40 ring-2 ring-[var(--surface)]/80 rounded-2xl hover:ring-[var(--accent)]/20" : "h-16 w-16 border-2 border-[var(--border)] ring-2 ring-[var(--surface)] shadow-lg hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40"} ${avatarClass}`}
-              />
-            ) : (
-              <Image
-                src={profile.avatar}
-                alt=""
-                width={isMinimalist ? 96 : 64}
-                height={isMinimalist ? 96 : 64}
-                className={`profile-avatar shrink-0 border object-cover transition-all duration-300 ${isMinimalist ? "h-20 w-20 sm:h-24 sm:w-24 border-[var(--border)]/40 ring-2 ring-[var(--surface)]/80 rounded-2xl hover:ring-[var(--accent)]/20" : "h-16 w-16 border-2 border-[var(--border)] ring-2 ring-[var(--surface)] shadow-lg hover:ring-[var(--accent)]/30 hover:border-[var(--accent)]/40"} ${avatarClass}`}
-                unoptimized
-              />
-            ))}
+            (() => {
+              const coreClass = `profile-avatar shrink-0 border object-cover transition-all duration-300 ${avatarFrame} ${avatarClass}`;
+              const avatarImg = isDiscordCdnHttpsUrl(profile.avatar) ? (
+                <Image
+                  src={profile.avatar}
+                  alt=""
+                  width={avatarDim}
+                  height={avatarDim}
+                  className={decorationUrl ? `relative z-[1] ${coreClass}` : coreClass}
+                />
+              ) : (
+                <Image
+                  src={profile.avatar}
+                  alt=""
+                  width={avatarDim}
+                  height={avatarDim}
+                  className={decorationUrl ? `relative z-[1] ${coreClass}` : coreClass}
+                  unoptimized
+                />
+              );
+              if (!decorationUrl) return avatarImg;
+              return (
+                <div className={`relative shrink-0 ${avatarOuter}`}>
+                  {avatarImg}
+                  <Image
+                    src={decorationUrl}
+                    alt=""
+                    fill
+                    sizes={isMinimalist ? "(max-width: 640px) 80px, 96px" : "64px"}
+                    className="pointer-events-none z-[2] object-contain p-0 scale-[1.08]"
+                    aria-hidden
+                  />
+                </div>
+              );
+            })()}
           <div className="profile-name-block min-w-0 flex-1">
             <h1 id="profile-name" className={`text-[var(--foreground)] tracking-tight flex items-center gap-2 flex-wrap ${isMinimalist ? "text-2xl sm:text-3xl font-medium tracking-[-0.03em]" : "text-xl font-semibold"}`}>
               {profile.nameGreeting?.trim() && (
@@ -198,10 +238,10 @@ function ProfileSection({
               })()}
               {(profile.verified || profile.verifiedCreator || profile.staff || profile.premium || (profile.customBadges?.length ?? 0) > 0 || (profile.discordBadges?.length ?? 0) > 0) && (
                 <span className="inline-flex items-center gap-1.5 ml-1.5 flex-wrap">
-                  {profile.premium && <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Dread Premium"><Crown size={14} weight="fill" className="shrink-0" aria-hidden />Premium</span>}
-                  {profile.verified && <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member"><Check size={14} weight="bold" className="shrink-0" aria-hidden />Verified</span>}
-                  {profile.verifiedCreator && <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/15 px-1.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400" title="Verified Creator on Dread"><SealCheck size={14} weight="fill" className="shrink-0" aria-hidden />Verified Creator</span>}
-                  {profile.staff && <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="Server staff"><Shield size={14} weight="fill" className="shrink-0" aria-hidden />Staff</span>}
+                  {profile.premium && <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Dread Premium"><Crown size={14} className="shrink-0 fill-current" aria-hidden />Premium</span>}
+                  {profile.verified && <span className="inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]" title="Recognized or notable member"><Check size={14} strokeWidth={2.5} className="shrink-0" aria-hidden />Verified</span>}
+                  {profile.verifiedCreator && <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/15 px-1.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400" title="Verified Creator on Dread"><BadgeCheck size={14} className="shrink-0 fill-current" aria-hidden />Verified Creator</span>}
+                  {profile.staff && <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="Server staff"><Shield size={14} className="shrink-0 fill-current" aria-hidden />Staff</span>}
                   {profile.customBadges?.map((b) => {
                     const isHex = b.color?.startsWith("#");
                     const preset = !isHex && b.color ? CUSTOM_BADGE_COLORS[b.color] : null;
@@ -225,7 +265,7 @@ function ProfileSection({
                 {profile.timezone?.trim() && (() => { try { const formatter = new Intl.DateTimeFormat(undefined, { timeZone: profile.timezone.trim(), timeStyle: "short", hour12: true }); return <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5" title={`Current time in ${profile.timezone}`} suppressHydrationWarning><Clock {...profileMetaIconProps} aria-hidden />{formatter.format(new Date())}</p>; } catch { return null; } })()}
                 {profile.timezoneRange?.trim() && <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5" title="Typical availability"><Clock {...profileMetaIconProps} aria-hidden />{profile.timezoneRange.trim()}</p>}
                 {profile.birthday?.trim() && (() => { const countdown = getBirthdayCountdown(profile.birthday); if (!countdown) return null; return <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5" suppressHydrationWarning><Cake {...profileMetaIconProps} aria-hidden />{countdown}</p>; })()}
-                {profile.languages?.trim() && <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5"><Translate {...profileMetaIconProps} aria-hidden />{profile.languages.trim()}</p>}
+                {profile.languages?.trim() && <p className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5"><Languages {...profileMetaIconProps} aria-hidden />{profile.languages.trim()}</p>}
                 {profile.availability?.trim() && <p className="text-xs text-[var(--accent)] inline-flex items-center gap-1.5"><Briefcase {...profileMetaIconProps} aria-hidden />{profile.availability.trim()}</p>}
               </div>
             )}
@@ -240,7 +280,7 @@ function ProfileSection({
                         : "bg-[var(--muted)]/15 text-[var(--muted)]"
                   }`}
                 >
-                  <PaintBrush {...profileMetaIconProps} aria-hidden />
+                  <Paintbrush {...profileMetaIconProps} aria-hidden />
                   {profile.commissionStatus === "open" && "Commissions open"}
                   {profile.commissionStatus === "closed" && "Commissions closed"}
                   {profile.commissionStatus === "waitlist" && "Waitlist"}
@@ -275,7 +315,16 @@ function ProfileSection({
     case "quote":
       return wrap(profile.quote ? <ProfileQuote quote={profile.quote} /> : null);
     case "links":
-      return wrap(<ProfileLinks websiteUrl={profile.websiteUrl} discord={profile.discord} roblox={profile.roblox} links={profile.links} />);
+      return wrap(
+        <ProfileLinks
+          websiteUrl={profile.websiteUrl}
+          discord={profile.discord}
+          roblox={profile.roblox}
+          links={profile.links}
+          copyableSocials={profile.copyableSocials}
+          socialLinksGlow={profile.socialLinksGlow}
+        />
+      );
     case "discord-widgets":
       return wrap(
         profile.discordWidgets && (profile.discordWidgets.accountAge || profile.discordWidgets.joined || profile.discordWidgets.serverCount != null || profile.discordWidgets.serverInvite) ? (
@@ -303,10 +352,8 @@ function ProfileSection({
     case "github-widgets":
       return wrap(
         profile.githubWidgets &&
-        (profile.githubWidgets.lastPush ||
-          profile.githubWidgets.publicRepos != null ||
-          profile.githubWidgets.contributions ||
-          profile.githubWidgets.contributionsUnavailable) ? (
+        profile.showGithubWidgets?.trim() &&
+        parseEnabledGithubWidgets(profile.showGithubWidgets).length > 0 ? (
           <div className="mt-4">
             <GithubWidgetsDisplay
               data={profile.githubWidgets}
@@ -318,9 +365,9 @@ function ProfileSection({
       );
     case "crypto-widgets":
       return wrap(
-        profile.cryptoWidgets && profile.cryptoWidgets.coins.length > 0 ? (
+        profile.cryptoWidgets && profile.cryptoWidgets.wallets.length > 0 ? (
           <div className="mt-4">
-            <CryptoWidgetsDisplay data={profile.cryptoWidgets} matchAccent={profile.widgetsMatchAccent} />
+            <CryptoWidgetsDisplay wallets={profile.cryptoWidgets.wallets} matchAccent={profile.widgetsMatchAccent} />
           </div>
         ) : null
       );

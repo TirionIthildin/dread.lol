@@ -17,6 +17,31 @@ export function isSafeUrl(url: string | null | undefined): boolean {
   }
 }
 
+/** Single-address mailto: path (no embedded scripts, no newline tricks). */
+function isSafeMailtoHref(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed.toLowerCase().startsWith("mailto:")) return false;
+  try {
+    const u = new URL(trimmed);
+    if (u.protocol.toLowerCase() !== "mailto:") return false;
+    const addrPart = decodeURIComponent(u.pathname);
+    if (/[\r\n<>]/.test(addrPart) || /[\r\n<>]/.test(u.search)) return false;
+    if (!addrPart || addrPart.length > 320) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addrPart);
+  } catch {
+    return false;
+  }
+}
+
+/** Safe for profile link buttons: http(s) URLs or single-address mailto: links. */
+export function isSafeLinkHref(href: string | null | undefined): boolean {
+  if (!href || typeof href !== "string") return false;
+  const trimmed = href.trim();
+  if (!trimmed) return false;
+  if (isSafeMailtoHref(trimmed)) return true;
+  return isSafeUrl(trimmed);
+}
+
 /**
  * Returns the trimmed URL if valid, or undefined. Use for optional URL fields.
  */
@@ -34,6 +59,17 @@ export function requireSafeUrl(url: string, fieldName = "URL"): string {
   if (!trimmed) throw new Error(`${fieldName} is required`);
   if (!isSafeUrl(trimmed)) throw new Error(`${fieldName} must use https or http`);
   return trimmed;
+}
+
+/**
+ * Requires an absolute http(s) URL or a same-origin path (e.g. `/api/files/…` from uploads).
+ */
+export function requireHttpOrSameOriginPath(url: string, fieldName = "URL"): string {
+  const trimmed = url.trim();
+  if (!trimmed) throw new Error(`${fieldName} is required`);
+  const ok = validateBackgroundUrl(trimmed);
+  if (!ok) throw new Error(`${fieldName} must use https or http or a valid path`);
+  return ok;
 }
 
 /**

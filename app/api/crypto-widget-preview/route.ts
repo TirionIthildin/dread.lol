@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCryptoWidgetData } from "@/lib/crypto-widgets";
 
 /**
- * GET ?ids=bitcoin,ethereum — server-side CoinGecko prices for dashboard preview.
+ * GET ?ethereum=&bitcoin=&solana= — server-side native balances for dashboard preview.
  */
 export async function GET(req: NextRequest) {
-  const raw = req.nextUrl.searchParams.get("ids");
-  const data = await getCryptoWidgetData(raw ?? undefined);
-  if (!data) return NextResponse.json({ coins: [] });
+  const sp = req.nextUrl.searchParams;
+  const data = await getCryptoWidgetData({
+    cryptoWalletEthereum: sp.get("ethereum"),
+    cryptoWalletBitcoin: sp.get("bitcoin"),
+    cryptoWalletSolana: sp.get("solana"),
+  });
+  if (!data || data.length === 0) return NextResponse.json(null);
   return NextResponse.json(data);
 }

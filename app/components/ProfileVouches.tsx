@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Eye } from "@phosphor-icons/react/dist/ssr";
+import { Eye } from "lucide-react";
 import type { VouchedByUser } from "@/lib/member-profiles";
 import { isDiscordCdnHttpsUrl } from "@/lib/url-validation";
 
-const iconProps = { size: 14, weight: "regular" as const, className: "shrink-0 text-current" };
+const iconProps = { size: 14, strokeWidth: 1.5 as const, className: "shrink-0 text-current" };
 
 interface ProfileVouchesProps {
   slug: string;

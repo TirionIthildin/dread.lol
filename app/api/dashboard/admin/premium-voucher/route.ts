@@ -3,7 +3,7 @@
  * POST Body: { creatorId: string, maxRedemptions?: number | null, expiresAt?: string, label?: string }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { createPremiumVoucherLink } from "@/lib/premium-voucher";
 
 export async function POST(request: NextRequest) {

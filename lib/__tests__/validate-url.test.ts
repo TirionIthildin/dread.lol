@@ -1,5 +1,43 @@
 import { describe, it, expect } from "vitest";
-import { validateRedirectUrl } from "@/lib/validate-url";
+import { isSafeLinkHref, requireHttpOrSameOriginPath, validateRedirectUrl } from "@/lib/validate-url";
+
+describe("requireHttpOrSameOriginPath", () => {
+  it("allows https URLs", () => {
+    expect(requireHttpOrSameOriginPath("https://cdn.example.com/a.png")).toBe(
+      "https://cdn.example.com/a.png"
+    );
+  });
+
+  it("allows same-site upload paths from /api/files", () => {
+    expect(
+      requireHttpOrSameOriginPath("/api/files/550e8400-e29b-41d4-a456-426614174000")
+    ).toBe("/api/files/550e8400-e29b-41d4-a456-426614174000");
+  });
+
+  it("rejects protocol-relative URLs", () => {
+    expect(() => requireHttpOrSameOriginPath("//evil.com/x")).toThrow(/valid path/);
+  });
+
+  it("rejects javascript URLs", () => {
+    expect(() => requireHttpOrSameOriginPath("javascript:alert(1)")).toThrow(/valid path/);
+  });
+});
+
+describe("isSafeLinkHref", () => {
+  it("allows http(s) URLs", () => {
+    expect(isSafeLinkHref("https://example.com")).toBe(true);
+    expect(isSafeLinkHref("http://example.com/path")).toBe(true);
+  });
+
+  it("allows safe mailto with single address", () => {
+    expect(isSafeLinkHref("mailto:user@example.com")).toBe(true);
+  });
+
+  it("rejects javascript and invalid schemes", () => {
+    expect(isSafeLinkHref("javascript:alert(1)")).toBe(false);
+    expect(isSafeLinkHref("data:text/plain,hi")).toBe(false);
+  });
+});
 
 describe("validateRedirectUrl", () => {
   const origin = "https://dread.lol";

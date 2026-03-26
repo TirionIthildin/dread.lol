@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { MagnifyingGlass, SortAscending } from "@phosphor-icons/react";
+import { Search, SortAsc } from "lucide-react";
 import { useCallback, useTransition } from "react";
 
-const iconProps = { size: 16, weight: "regular" as const, className: "shrink-0" };
+const iconProps = { size: 16, strokeWidth: 1.5 as const, className: "shrink-0" };
 
 export default function MarketplaceToolbar() {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function MarketplaceToolbar() {
         className="flex items-center gap-2 flex-1 min-w-[140px]"
       >
         <div className="relative flex-1">
-          <MagnifyingGlass
+          <Search
             {...iconProps}
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
           />
@@ -66,7 +66,7 @@ export default function MarketplaceToolbar() {
         </button>
       </form>
       <div className="flex items-center gap-2">
-        <SortAscending {...iconProps} className="text-[var(--muted)]" />
+        <SortAsc {...iconProps} className="text-[var(--muted)]" />
         <select
           value={sort}
           onChange={(e) => setParams({ sort: e.target.value })}

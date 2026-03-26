@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { getUsersForAdminListSearch } from "@/lib/member-profiles";
 
 export async function GET(request: Request) {

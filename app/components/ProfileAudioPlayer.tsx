@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, SkipForward, SkipBack } from "@phosphor-icons/react";
+import { Play, Pause, SkipForward, SkipBack } from "lucide-react";
 import { SITE_URL } from "@/lib/site";
 
 function resolveMediaUrl(url: string): string {
@@ -274,7 +274,7 @@ export default function ProfileAudioPlayer({
           className="rounded p-1.5 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] disabled:opacity-40 transition-colors"
           aria-label="Previous track"
         >
-          <SkipBack size={20} weight="fill" />
+          <SkipBack size={20} className="fill-current" />
         </button>
         <button
           type="button"
@@ -282,7 +282,7 @@ export default function ProfileAudioPlayer({
           className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[var(--accent)] hover:bg-[var(--accent)]/30 transition-colors"
           aria-label={playing ? "Pause" : "Play"}
         >
-          {playing ? <Pause size={20} weight="fill" /> : <Play size={20} weight="fill" className="ml-0.5" />}
+          {playing ? <Pause size={20} className="fill-current" /> : <Play size={20} className="ml-0.5 fill-current" />}
         </button>
         <button
           type="button"
@@ -291,7 +291,7 @@ export default function ProfileAudioPlayer({
           className="rounded p-1.5 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] disabled:opacity-40 transition-colors"
           aria-label="Next track"
         >
-          <SkipForward size={20} weight="fill" />
+          <SkipForward size={20} className="fill-current" />
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-[var(--foreground)] truncate">

@@ -21,9 +21,10 @@ import {
 import { filterLinksForPremiumAccess, parseCommissionStatus } from "@/lib/monetization-profile";
 import type { SessionUser } from "@/lib/auth/session";
 import { isDiscordSnowflake } from "@/lib/auth/local-ids";
-import { resolveDiscordAvatarUrl } from "@/lib/discord-avatar";
+import { resolveDiscordUserMedia } from "@/lib/discord-avatar";
 import { escapeRegex } from "@/lib/regex";
 import { getBaseDomain } from "@/lib/site";
+import { parseCryptoWalletFromProfile } from "@/lib/crypto-widgets";
 import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
 import {
   isAliasSlugTaken,
@@ -656,15 +657,26 @@ export async function getMemberProfileById(profileId: string): Promise<ProfileRo
   return doc ? toProfileRow(doc) : null;
 }
 
-/** Resolve avatarUrl when it is "discord" (use Discord avatar dynamically). Returns row with resolved URL. */
+/**
+ * Resolve avatarUrl when it is "discord" (use Discord avatar dynamically). Returns row with resolved URL.
+ * When `showDiscordAvatarDecoration` is not false, may set `discordAvatarDecorationUrl` (runtime-only, not stored in MongoDB).
+ */
 export async function resolveProfileAvatar(
   row: ProfileRow,
   avatarSize = 256
 ): Promise<ProfileRow> {
   if (row.avatarUrl !== "discord") return row;
-  const resolved = await resolveDiscordAvatarUrl(row.userId, avatarSize);
-  if (!resolved) return row;
-  return { ...row, avatarUrl: resolved };
+  const media = await resolveDiscordUserMedia(row.userId, avatarSize);
+  if (!media?.avatarUrl) return row;
+  const withAvatar = { ...row, avatarUrl: media.avatarUrl };
+  if (row.showDiscordAvatarDecoration === false) return withAvatar;
+  if (media.decorationUrl) {
+    return {
+      ...withAvatar,
+      discordAvatarDecorationUrl: media.decorationUrl,
+    } as ProfileRow;
+  }
+  return withAvatar;
 }
 
 export async function getProfileSlugByUserId(userId: string): Promise<string | null> {
@@ -1503,15 +1515,27 @@ export async function updateMemberProfile(
   return toProfileRow(result);
 }
 
-function parseLinks(raw: string | null): { label: string; href: string }[] | undefined {
+function parseLinks(raw: string | null): { label: string; href: string; iconName?: string }[] | undefined {
   if (!raw?.trim()) return undefined;
   try {
     const arr = JSON.parse(raw) as unknown;
     if (!Array.isArray(arr)) return undefined;
-    return arr.filter(
-      (x): x is { label: string; href: string } =>
-        x && typeof x === "object" && typeof (x as { label?: string }).label === "string" && typeof (x as { href?: string }).href === "string"
-    );
+    return arr
+      .filter(
+        (x): x is { label: string; href: string; iconName?: string } =>
+          x &&
+          typeof x === "object" &&
+          typeof (x as { label?: string }).label === "string" &&
+          typeof (x as { href?: string }).href === "string"
+      )
+      .map((x) => {
+        const iconRaw = (x as { iconName?: string }).iconName;
+        return {
+          label: x.label,
+          href: x.href,
+          ...(typeof iconRaw === "string" && iconRaw.trim() ? { iconName: iconRaw.trim() } : {}),
+        };
+      });
   } catch {
     return undefined;
   }
@@ -1582,6 +1606,11 @@ export function memberProfileToProfile(
     tagline: row.tagline ?? undefined,
     description: row.description,
     avatar: row.avatarUrl ?? undefined,
+    ...((): { discordAvatarDecoration?: string } => {
+      const u = (row as { discordAvatarDecorationUrl?: string | null }).discordAvatarDecorationUrl?.trim();
+      if (!u) return {};
+      return { discordAvatarDecoration: u };
+    })(),
     quote: row.quote ?? undefined,
     tags: row.tags ?? undefined,
     discord: row.discord ?? undefined,
@@ -1597,6 +1626,7 @@ export function memberProfileToProfile(
     easterEggTaglineWord: row.easterEggTaglineWord ?? undefined,
     easterEggLink,
     links,
+    socialLinksGlow: row.socialLinksGlow !== false,
     ogImageUrl: row.ogImageUrl ?? undefined,
     updatedAt: undefined,
     accentColor: stripPremium ? undefined : (row.accentColor ?? undefined),
@@ -1625,6 +1655,7 @@ export function memberProfileToProfile(
     timezoneRange: row.timezoneRange ?? undefined,
     birthday: row.birthday ?? undefined,
     websiteUrl: row.websiteUrl ?? undefined,
+    copyableSocials: (row as { copyableSocials?: boolean | null }).copyableSocials ?? false,
     skills: row.skills ?? undefined,
     languages: row.languages ?? undefined,
     availability: row.availability ?? undefined,
@@ -1664,9 +1695,30 @@ export function memberProfileToProfile(
     backgroundAudioStartSeconds: (row as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? undefined,
     backgroundEffect: stripPremium && isPremiumBackgroundEffect(bgEffect) ? undefined : (bgEffect ?? undefined),
     widgetsMatchAccent: (row as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? false,
-    ...((row as { showCryptoWidgets?: string | null }).showCryptoWidgets?.trim() && {
-      showCryptoWidgets: (row as { showCryptoWidgets: string }).showCryptoWidgets.trim(),
-    }),
+    ...((() => {
+      const r = row as {
+        cryptoWalletEthereum?: string | null;
+        cryptoWalletBitcoin?: string | null;
+        cryptoWalletSolana?: string | null;
+        cryptoWalletChain?: string | null;
+        cryptoWalletAddress?: string | null;
+      };
+      const eth = r.cryptoWalletEthereum?.trim();
+      const btc = r.cryptoWalletBitcoin?.trim();
+      const sol = r.cryptoWalletSolana?.trim();
+      if (eth || btc || sol) {
+        return {
+          ...(eth ? { cryptoWalletEthereum: eth } : {}),
+          ...(btc ? { cryptoWalletBitcoin: btc } : {}),
+          ...(sol ? { cryptoWalletSolana: sol } : {}),
+        };
+      }
+      const legacy = parseCryptoWalletFromProfile(r.cryptoWalletChain, r.cryptoWalletAddress);
+      if (!legacy) return {};
+      if (legacy.chain === "ethereum") return { cryptoWalletEthereum: legacy.address };
+      if (legacy.chain === "bitcoin") return { cryptoWalletBitcoin: legacy.address };
+      return { cryptoWalletSolana: legacy.address };
+    })()),
     ...((row as { showGithubWidgets?: string | null }).showGithubWidgets?.trim() && {
       showGithubWidgets: (row as { showGithubWidgets: string }).showGithubWidgets.trim(),
     }),

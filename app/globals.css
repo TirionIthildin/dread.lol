@@ -335,7 +335,7 @@
 
 /* ========== MINIMALIST CARD & CONTENT REFINEMENTS ========== */
 .profile-minimalist-card {
-  max-width: 28rem;
+  max-width: 100%;
 }
 
 .profile-minimalist a {

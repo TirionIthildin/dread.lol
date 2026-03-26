@@ -11,6 +11,36 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Lucide icons across the site",
+    description:
+      "Badges, dashboards, and custom link icons now use the Lucide icon set (with automatic mapping for older saved names).",
+  },
+  {
+    date: "2026-03",
+    title: "Spanish site UI",
+    description:
+      "Public pages (home, about, terms, privacy) support English and Spanish via next-intl; switch locale from the homepage footer or use /es/ URLs.",
+  },
+  {
+    date: "2026-03",
+    title: "More link types and link styling",
+    description:
+      "New button presets for OnlyFans, NameMC, and email; optional Lucide icon on Custom links; toggle hover glow on your link row.",
+  },
+  {
+    date: "2026-03",
+    title: "Copyable socials",
+    description:
+      "Optional profile setting: link buttons open http(s) and mailto links in the browser; everything else (handles, plain text) copies to the clipboard so visitors can paste elsewhere.",
+  },
+  {
+    date: "2026-03",
+    title: "Crypto wallet balance widget",
+    description:
+      "Optional profile widget shows native on-chain balance for Ethereum, Bitcoin, and/or Solana—add an address per network you want (with an approximate USD estimate per card).",
+  },
+  {
+    date: "2026-03",
     title: "Profile aliases",
     description:
       "Add alternate URLs that show your main profile (1 slot on free accounts, 5 with Premium). Separate from short links, which redirect to external sites.",
@@ -32,12 +62,6 @@ export const FEATURE_UPDATES: FeatureUpdate[] = [
     title: "GitHub profile widgets",
     description:
       "Optional cards for last push, public repo count, and a contribution heatmap (GitHub API). Add your username in Settings → Widgets; set GITHUB_TOKEN on the server for the graph.",
-  },
-  {
-    date: "2026-03",
-    title: "Crypto spot prices & wallet link",
-    description:
-      "Optional profile widget with USD prices for major coins (CoinGecko). New Crypto / wallet link type with icons for common exchanges.",
   },
   {
     date: "2026-03",

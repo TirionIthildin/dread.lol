@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { DiscordLogo, SignOut } from "@phosphor-icons/react/dist/ssr";
+import { LogOut, MessageCircle } from "lucide-react";
 import { getSession } from "@/lib/auth/session";
 import { getProfileSlugByUserId } from "@/lib/member-profiles";
 import LocalAuthForms from "@/app/components/LocalAuthForms";
@@ -35,7 +35,7 @@ export default async function SignInWidget() {
                 type="submit"
                 className="w-full inline-flex items-center justify-center gap-2 rounded border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--muted)] hover:border-[var(--warning)]/50 hover:text-[var(--warning)] hover:bg-[var(--warning)]/5 transition-colors"
               >
-                <SignOut size={18} weight="regular" className="shrink-0" aria-hidden />
+                <LogOut size={18} strokeWidth={1.5} className="shrink-0" aria-hidden />
                 Sign out
               </button>
           </form>
@@ -49,7 +49,7 @@ export default async function SignInWidget() {
               href="/api/auth/discord"
               className="inline-flex items-center justify-center gap-2 w-full rounded-lg border border-[#5865F2]/50 bg-[#5865F2]/10 px-4 py-2.5 text-sm font-medium text-[var(--foreground)] hover:bg-[#5865F2]/20 transition-colors"
             >
-              <DiscordLogo size={20} weight="fill" className="shrink-0 text-[#5865F2]" aria-hidden />
+              <MessageCircle size={20} className="shrink-0 fill-[#5865F2] text-[#5865F2]" aria-hidden />
               Sign in with Discord
           </Link>
           <LocalAuthForms />

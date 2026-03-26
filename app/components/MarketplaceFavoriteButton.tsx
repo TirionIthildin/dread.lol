@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart } from "@phosphor-icons/react";
+import { Heart } from "lucide-react";
 
 interface Props {
   templateId: string;
@@ -65,8 +65,12 @@ export default function MarketplaceFavoriteButton({
     >
       <Heart
         size={16}
-        weight={favorited ? "fill" : "regular"}
-        className={favorited ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--accent)]"}
+        strokeWidth={1.5}
+        className={
+          favorited
+            ? "fill-[var(--accent)] text-[var(--accent)]"
+            : "text-[var(--muted)] hover:text-[var(--accent)]"
+        }
       />
       {showCount && count > 0 && <span className="text-[var(--muted)]">{count}</span>}
     </button>
