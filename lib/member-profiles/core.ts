@@ -24,8 +24,13 @@ import { isDiscordSnowflake } from "@/lib/auth/local-ids";
 import { resolveDiscordUserMedia } from "@/lib/discord-avatar";
 import { escapeRegex } from "@/lib/regex";
 import { getBaseDomain } from "@/lib/site";
-import { resolveMemberProfileBySlug } from "./profile-aliases";
 import { parseCryptoWalletFromProfile } from "@/lib/crypto-widgets";
+import { isReservedProfileSlug, normalizeSlug } from "@/lib/slug";
+import {
+  isAliasSlugTaken,
+  isPrimarySlugTaken,
+  resolveMemberProfileBySlug,
+} from "./profile-aliases";
 
 export interface MemberProfileWithViews {
   profile: ProfileRow;
@@ -263,12 +268,6 @@ export async function getUserDiscordBadgeData(userId: string): Promise<DiscordBa
   premiumType = premiumType ?? null;
   if (DEBUG_DISCORD_FLAGS) console.log("[DiscordFlags] Final", { userId, flags, premium: premiumType });
   return { flags, premiumType };
-}
-
-/** @deprecated Use getUserDiscordBadgeData. Kept for backward compat. */
-export async function getUserDiscordFlags(userId: string): Promise<number | null> {
-  const { flags } = await getUserDiscordBadgeData(userId);
-  return flags;
 }
 
 export async function setUserBadges(
@@ -1487,6 +1486,26 @@ export async function updateMemberProfile(
     throw new Error("Profile not found or access denied");
   }
   const update: Record<string, unknown> = { ...data, updatedAt: new Date() };
+  if (Object.prototype.hasOwnProperty.call(data, "slug") && data.slug !== undefined) {
+    const rawSlug = data.slug;
+    if (typeof rawSlug !== "string") {
+      throw new Error("Slug is required (letters, numbers, hyphen, underscore)");
+    }
+    const normalized = normalizeSlug(rawSlug);
+    if (!normalized) {
+      throw new Error("Slug is required (letters, numbers, hyphen, underscore)");
+    }
+    if (isReservedProfileSlug(normalized)) {
+      throw new Error("That URL slug is reserved.");
+    }
+    if (await isPrimarySlugTaken(normalized, profileId)) {
+      throw new Error("That slug is already taken.");
+    }
+    if (await isAliasSlugTaken(normalized)) {
+      throw new Error("That slug is already taken.");
+    }
+    update.slug = normalized;
+  }
   const result = await client.db(dbName).collection(COLLECTIONS.profiles).findOneAndUpdate(
     { _id: oid, userId },
     { $set: update },
