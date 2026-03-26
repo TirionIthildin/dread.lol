@@ -1,21 +1,22 @@
 "use client";
 
-import type { IconProps } from "@phosphor-icons/react";
-import * as PhosphorIcons from "@phosphor-icons/react";
+import type { LucideProps } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+import { resolveStoredIconNameToLucide } from "@/lib/resolve-stored-lucide-icon";
 
-const iconProps: IconProps = { size: 14, weight: "fill" };
+const iconProps: LucideProps = { size: 14, strokeWidth: 2.5, className: "shrink-0 fill-current" };
 
-/** Client component: renders any Phosphor icon. */
+/** Client component: renders any Lucide icon (accepts legacy Phosphor names). */
 function BadgeIconClient({
   iconName,
 }: {
   iconName: string | null | undefined;
 }) {
-  if (!iconName) return null;
-  const resolved = iconName === "Award" ? "Medal" : iconName;
-  const Icon = (PhosphorIcons as unknown as Record<string, React.ComponentType<IconProps>>)[resolved];
+  const resolved = resolveStoredIconNameToLucide(iconName);
+  if (!resolved) return null;
+  const Icon = (LucideIcons as unknown as Record<string, React.ComponentType<LucideProps>>)[resolved];
   if (!Icon) return null;
-  return <Icon {...iconProps} className="shrink-0" />;
+  return <Icon {...iconProps} />;
 }
 
 export default BadgeIconClient;

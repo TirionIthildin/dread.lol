@@ -57,7 +57,7 @@ export const SECTION_DEFINITIONS: SectionDefinition[] = [
   { id: "discord-widgets", label: "Discord widgets", category: "connect", description: "Account age, server count, invite", optional: true },
   { id: "roblox-widgets", label: "Roblox widgets", category: "connect", description: "Account age, profile link", optional: true },
   { id: "github-widgets", label: "GitHub widgets", category: "connect", description: "Last push, repos, contributions", optional: true },
-  { id: "crypto-widgets", label: "Wallet balance", category: "connect", description: "Native balance for a wallet address (ETH, BTC, or SOL)", optional: true },
+  { id: "crypto-widgets", label: "Wallet balance", category: "connect", description: "Native balance for Ethereum, Bitcoin, and/or Solana addresses (optional each)", optional: true },
   { id: "gallery-blog", label: "Gallery & blog", category: "media", description: "Image gallery and blog links" },
   { id: "audio", label: "Audio player", category: "media", description: "Music or voice showcase", optional: true },
   { id: "similar", label: "Similar profiles", category: "social", description: "Suggested similar profiles", optional: true },

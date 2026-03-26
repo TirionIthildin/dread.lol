@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Flag } from "@phosphor-icons/react";
+import { Flag } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -42,7 +42,7 @@ export default function MarketplaceReportButton({ templateId, className = "" }: 
         onClick={() => setOpen(!open)}
         className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
       >
-        <Flag size={14} weight="regular" />
+        <Flag size={14} />
         Report
       </button>
       {open && (

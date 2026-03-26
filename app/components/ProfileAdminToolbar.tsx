@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { GearSix } from "@phosphor-icons/react";
-import AdminUserModal, { type AdminUser } from "@/app/dashboard/AdminUserModal";
+import { Settings } from "lucide-react";
+import AdminUserModal, { type AdminUser } from "@/app/[locale]/dashboard/AdminUserModal";
 
 type Props = {
   isAdmin: boolean;
@@ -53,7 +53,7 @@ export default function ProfileAdminToolbar({ isAdmin, profileOwnerUserId }: Pro
         className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)]/95 shadow-lg hover:bg-[var(--surface-hover)] hover:border-[var(--accent)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
         aria-label="Open user moderation"
       >
-        <GearSix size={20} weight="regular" className="text-[var(--muted)]" />
+        <Settings size={20} strokeWidth={1.5} className="text-[var(--muted)]" />
       </button>
 
       {modalOpen &&

@@ -38,7 +38,9 @@ export interface Profile {
   /** Short tags/pills (e.g. "Vibe Coder", "LOTR"). */
   tags?: string[];
   /** Extra links (GitHub, Twitter, website, etc.). */
-  links?: { label: string; href: string }[];
+  links?: { label: string; href: string; iconName?: string }[];
+  /** When false, link button row omits hover glow on chips. */
+  socialLinksGlow?: boolean;
   /** Optional quote or fun fact. */
   quote?: string;
   /** Custom OG/social image URL (member profiles only). */
@@ -83,6 +85,8 @@ export interface Profile {
   birthday?: string;
   /** Primary portfolio/website URL, surfaced separately from generic links. */
   websiteUrl?: string;
+  /** When true, non-http(s) link values show as copy buttons; URLs still open in a new tab. */
+  copyableSocials?: boolean;
   /** Structured skills/roles (e.g. Frontend, Design, 3D). */
   skills?: string[];
   /** Languages spoken (e.g. "EN, ES, FR"). */
@@ -155,6 +159,8 @@ export interface Profile {
   }[];
   /** Discord badge keys to show (when user opted in via showDiscordBadges). */
   discordBadges?: string[];
+  /** Resolved Discord avatar decoration image URL (CDN); only when using Discord avatar and opted in. */
+  discordAvatarDecoration?: string;
   /** Gallery: images with optional title and description. */
   gallery?: { id: string; imageUrl: string; title?: string; description?: string; sortOrder: number }[];
   /** Live Discord status + Rich Presence (from presence bot). */
@@ -187,10 +193,13 @@ export interface Profile {
   showRobloxWidgets?: string;
   /** @deprecated Replaced by crypto wallet fields. */
   showCryptoWidgets?: string;
-  /** Chain for wallet balance widget. */
+  /** @deprecated Prefer per-network fields. */
   cryptoWalletChain?: string;
-  /** Address for wallet balance widget. */
+  /** @deprecated Prefer per-network fields. */
   cryptoWalletAddress?: string;
+  cryptoWalletEthereum?: string;
+  cryptoWalletBitcoin?: string;
+  cryptoWalletSolana?: string;
   /** Comma-separated GitHub widget keys (lastPush, publicRepos, contributions, profile). */
   showGithubWidgets?: string;
   /** Fetched GitHub stats (merged on profile page, not stored in DB). */
@@ -203,15 +212,17 @@ export interface Profile {
     contributions?: { total: number; heatmap: number[][] };
     contributionsUnavailable?: boolean;
   };
-  /** Fetched wallet balance (merged on profile page, not stored in DB). */
+  /** Fetched wallet balances (merged on profile page, not stored in DB). */
   cryptoWidgets?: {
-    chain: CryptoWalletChain;
-    networkLabel: string;
-    symbol: string;
-    address: string;
-    addressShort: string;
-    balanceNative: number;
-    balanceUsd: number | null;
+    wallets: Array<{
+      chain: CryptoWalletChain;
+      networkLabel: string;
+      symbol: string;
+      address: string;
+      addressShort: string;
+      balanceNative: number;
+      balanceUsd: number | null;
+    }>;
   };
   /** Discord widgets to show: accountAge, joined, serverCount, serverInvite. */
   discordWidgets?: {

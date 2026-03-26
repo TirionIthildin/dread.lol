@@ -1,4 +1,4 @@
-import { ShieldWarning } from "@phosphor-icons/react/dist/ssr";
+import { ShieldAlert } from "lucide-react";
 
 export default function RestrictedProfileMessage() {
   return (
@@ -7,7 +7,7 @@ export default function RestrictedProfileMessage() {
       role="status"
     >
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--warning)]/10">
-        <ShieldWarning size={32} weight="duotone" className="text-[var(--warning)]" />
+        <ShieldAlert size={32} strokeWidth={1.25} className="text-[var(--warning)]" />
       </div>
       <h2 className="mt-4 text-lg font-semibold text-[var(--foreground)]">
         This profile has been restricted

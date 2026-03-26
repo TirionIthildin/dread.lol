@@ -1,5 +1,6 @@
 /**
- * Crypto wallet widget: native balance on Ethereum, Bitcoin, or Solana (public RPC / APIs).
+ * Crypto wallet widget: native balance on Ethereum, Bitcoin, and/or Solana (public RPC / APIs).
+ * Users may set an optional address per network; each gets its own balance card.
  */
 
 export const CRYPTO_WALLET_CHAINS = ["ethereum", "bitcoin", "solana"] as const;
@@ -32,7 +33,6 @@ export function isValidCryptoWalletAddress(chain: CryptoWalletChain, address: st
     case "ethereum":
       return /^0x[0-9a-fA-F]{40}$/.test(a);
     case "bitcoin": {
-      // P2PKH, P2SH, bech32 (incl. taproot)
       if (a.length < 26 || a.length > 90) return false;
       if (/^(bc1|tb1|bc1p)[a-z0-9]{8,}$/i.test(a)) return true;
       return /^[13][a-km-zA-HJ-NP-Z1-9]{24,33}$/.test(a);
@@ -45,7 +45,7 @@ export function isValidCryptoWalletAddress(chain: CryptoWalletChain, address: st
 }
 
 /**
- * Normalize chain + address from profile fields. Returns null if incomplete or invalid.
+ * Normalize chain + address from legacy profile fields. Returns null if incomplete or invalid.
  */
 export function parseCryptoWalletFromProfile(
   chainRaw: string | null | undefined,
@@ -56,6 +56,53 @@ export function parseCryptoWalletFromProfile(
   if (!chain || !address) return null;
   if (!isValidCryptoWalletAddress(chain, address)) return null;
   return { chain, address };
+}
+
+/** Profile slice for reading wallet addresses (DB row or form). */
+export interface CryptoWalletProfileInput {
+  cryptoWalletEthereum?: string | null;
+  cryptoWalletBitcoin?: string | null;
+  cryptoWalletSolana?: string | null;
+  /** @deprecated Single network + address; used if per-network fields are empty. */
+  cryptoWalletChain?: string | null;
+  cryptoWalletAddress?: string | null;
+}
+
+/**
+ * Resolves which chain addresses to show: per-network fields first, then legacy chain+address.
+ */
+/**
+ * Values for the three dashboard inputs (legacy single chain+address maps into one row).
+ */
+export function getWalletInputsFromProfileRow(input: CryptoWalletProfileInput): {
+  ethereum: string;
+  bitcoin: string;
+  solana: string;
+} {
+  const eth = input.cryptoWalletEthereum?.trim() ?? "";
+  const btc = input.cryptoWalletBitcoin?.trim() ?? "";
+  const sol = input.cryptoWalletSolana?.trim() ?? "";
+  if (eth || btc || sol) return { ethereum: eth, bitcoin: btc, solana: sol };
+  const legacy = parseCryptoWalletFromProfile(input.cryptoWalletChain, input.cryptoWalletAddress);
+  if (!legacy) return { ethereum: "", bitcoin: "", solana: "" };
+  if (legacy.chain === "ethereum") return { ethereum: legacy.address, bitcoin: "", solana: "" };
+  if (legacy.chain === "bitcoin") return { ethereum: "", bitcoin: legacy.address, solana: "" };
+  return { ethereum: "", bitcoin: "", solana: legacy.address };
+}
+
+export function collectWalletAddressesFromProfile(input: CryptoWalletProfileInput): Partial<Record<CryptoWalletChain, string>> {
+  const out: Partial<Record<CryptoWalletChain, string>> = {};
+  const eth = input.cryptoWalletEthereum?.trim();
+  const btc = input.cryptoWalletBitcoin?.trim();
+  const sol = input.cryptoWalletSolana?.trim();
+  if (eth && isValidCryptoWalletAddress("ethereum", eth)) out.ethereum = eth;
+  if (btc && isValidCryptoWalletAddress("bitcoin", btc)) out.bitcoin = btc;
+  if (sol && isValidCryptoWalletAddress("solana", sol)) out.solana = sol;
+  if (Object.keys(out).length === 0) {
+    const legacy = parseCryptoWalletFromProfile(input.cryptoWalletChain, input.cryptoWalletAddress);
+    if (legacy) out[legacy.chain] = legacy.address;
+  }
+  return out;
 }
 
 function shortAddress(chain: CryptoWalletChain, address: string): string {
@@ -108,7 +155,6 @@ async function fetchSolanaBalanceLamports(address: string): Promise<bigint | nul
   return BigInt(Math.floor(v));
 }
 
-/** Confirmed balance in satoshis via mempool.space (public). */
 async function fetchBitcoinBalanceSatoshis(address: string): Promise<bigint | null> {
   const url = `https://mempool.space/api/address/${encodeURIComponent(address)}`;
   let res: Response;
@@ -138,7 +184,7 @@ async function fetchBitcoinBalanceSatoshis(address: string): Promise<bigint | nu
 async function fetchUsdPrices(coingeckoIds: string[]): Promise<Record<string, number>> {
   if (coingeckoIds.length === 0) return {};
   const url = new URL("https://api.coingecko.com/api/v3/simple/price");
-  url.searchParams.set("ids", coingeckoIds.join(","));
+  url.searchParams.set("ids", [...new Set(coingeckoIds)].join(","));
   url.searchParams.set("vs_currencies", "usd");
   let res: Response;
   try {
@@ -171,9 +217,7 @@ export interface CryptoWidgetData {
   symbol: string;
   address: string;
   addressShort: string;
-  /** Human-readable native amount (ETH, BTC, SOL). */
   balanceNative: number;
-  /** Estimated USD value at fetch time, if price available. */
   balanceUsd: number | null;
 }
 
@@ -184,50 +228,61 @@ function formatNativeAmount(chain: CryptoWalletChain, amount: number): number {
   return Object.is(rounded, -0) ? 0 : rounded;
 }
 
-/**
- * Fetch native balance + optional USD estimate for a validated chain/address pair.
- */
-export async function getCryptoWidgetData(
-  chainRaw: string | null | undefined,
-  addressRaw: string | null | undefined
-): Promise<CryptoWidgetData | null> {
-  const parsed = parseCryptoWalletFromProfile(chainRaw, addressRaw);
-  if (!parsed) return null;
-  const { chain, address } = parsed;
-  const meta = CHAIN_META[chain];
-
-  let balanceNative = 0;
+async function fetchNativeBalance(chain: CryptoWalletChain, address: string): Promise<number | null> {
   if (chain === "ethereum") {
     const wei = await fetchEthereumBalanceWei(address);
     if (wei === null) return null;
-    balanceNative = Number(wei) / 1e18;
-  } else if (chain === "solana") {
+    return formatNativeAmount(chain, Number(wei) / 1e18);
+  }
+  if (chain === "solana") {
     const lamports = await fetchSolanaBalanceLamports(address);
     if (lamports === null) return null;
-    balanceNative = Number(lamports) / 1e9;
-  } else {
-    const sat = await fetchBitcoinBalanceSatoshis(address);
-    if (sat === null) return null;
-    balanceNative = Number(sat) / 1e8;
+    return formatNativeAmount(chain, Number(lamports) / 1e9);
   }
+  const sat = await fetchBitcoinBalanceSatoshis(address);
+  if (sat === null) return null;
+  return formatNativeAmount(chain, Number(sat) / 1e8);
+}
 
-  balanceNative = formatNativeAmount(chain, balanceNative);
+const DISPLAY_ORDER: readonly CryptoWalletChain[] = ["ethereum", "bitcoin", "solana"];
 
-  let balanceUsd: number | null = null;
-  const prices = await fetchUsdPrices([meta.coingeckoId]);
-  const p = prices[meta.coingeckoId];
-  if (p != null && Number.isFinite(p)) {
-    const usd = balanceNative * p;
-    balanceUsd = Number.isFinite(usd) ? usd : null;
-  }
+/**
+ * Fetch native balances + optional USD estimates for all configured valid addresses.
+ */
+export async function getCryptoWidgetData(input: CryptoWalletProfileInput): Promise<CryptoWidgetData[] | null> {
+  const map = collectWalletAddressesFromProfile(input);
+  const chains = DISPLAY_ORDER.filter((c) => map[c]);
+  if (chains.length === 0) return null;
 
-  return {
-    chain,
-    networkLabel: meta.networkLabel,
-    symbol: meta.symbol,
-    address,
-    addressShort: shortAddress(chain, address),
-    balanceNative,
-    balanceUsd,
-  };
+  const nativeRows = await Promise.all(
+    chains.map(async (chain) => {
+      const address = map[chain]!;
+      const balanceNative = await fetchNativeBalance(chain, address);
+      return balanceNative != null ? { chain, address, balanceNative } : null;
+    })
+  );
+  const ok = nativeRows.filter((x): x is { chain: CryptoWalletChain; address: string; balanceNative: number } => x != null);
+  if (ok.length === 0) return null;
+
+  const coingeckoIds = ok.map((x) => CHAIN_META[x.chain].coingeckoId);
+  const prices = await fetchUsdPrices(coingeckoIds);
+
+  return ok.map((x) => {
+    const meta = CHAIN_META[x.chain];
+    const p = prices[meta.coingeckoId];
+    let balanceUsd: number | null = null;
+    if (p != null && Number.isFinite(p)) {
+      const usd = x.balanceNative * p;
+      balanceUsd = Number.isFinite(usd) ? usd : null;
+    }
+    return {
+      chain: x.chain,
+      networkLabel: meta.networkLabel,
+      symbol: meta.symbol,
+      address: x.address,
+      addressShort: shortAddress(x.chain, x.address),
+      balanceNative: x.balanceNative,
+      balanceUsd,
+    };
+  });
 }

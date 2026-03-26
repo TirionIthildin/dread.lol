@@ -2,7 +2,7 @@
  * Admin-only service analytics. Returns counts and metrics for the admin overview.
  */
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { getDb, getDbName, COLLECTIONS } from "@/lib/db";
 
 export async function GET() {

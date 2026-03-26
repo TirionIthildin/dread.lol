@@ -142,3 +142,13 @@ export function getAvatarUrl(user: DiscordUser, size = 128): string {
   const index = Number.parseInt(user.discriminator, 10) % 5;
   return `https://cdn.discordapp.com/embed/avatars/${Number.isNaN(index) ? 0 : index}.png`;
 }
+
+/**
+ * Discord CDN URL for an avatar decoration preset hash (from user.avatar_decoration_data.asset).
+ * @see https://discord.com/developers/docs/reference#image-formatting
+ */
+export function getAvatarDecorationUrl(asset: string): string | null {
+  const a = asset.trim();
+  if (!a) return null;
+  return `https://cdn.discordapp.com/avatar-decoration-presets/${a}.png`;
+}

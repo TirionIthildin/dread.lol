@@ -1,4 +1,4 @@
-import { Coins } from "@phosphor-icons/react/dist/ssr";
+import { Coins } from "lucide-react";
 import type { CryptoWidgetData } from "@/lib/crypto-widgets";
 
 function formatUsd(n: number): string {
@@ -19,13 +19,13 @@ function formatNative(chain: CryptoWidgetData["chain"], amount: number): string 
 }
 
 interface CryptoWidgetsDisplayProps {
-  data: CryptoWidgetData;
+  wallets: CryptoWidgetData[];
   /** When true, use accent color for borders/icons. */
   matchAccent?: boolean;
 }
 
-export default function CryptoWidgetsDisplay({ data, matchAccent = false }: CryptoWidgetsDisplayProps) {
-  const { networkLabel, symbol, addressShort, balanceNative, balanceUsd } = data;
+export default function CryptoWidgetsDisplay({ wallets, matchAccent = false }: CryptoWidgetsDisplayProps) {
+  if (!wallets.length) return null;
 
   const widgetBase = matchAccent
     ? "crypto-widget-card flex flex-col gap-0.5 rounded-lg border border-[var(--accent)]/25 bg-[var(--surface)]/50 dark:bg-[var(--bg)]/60 px-3 py-2.5 text-sm transition-colors hover:border-[var(--accent)]/40 min-w-[12rem] flex-1 sm:flex-initial sm:min-w-[14rem]"
@@ -34,27 +34,29 @@ export default function CryptoWidgetsDisplay({ data, matchAccent = false }: Cryp
   const accentIcon = matchAccent ? "var(--accent)" : "#f59e0b";
 
   return (
-    <div className="flex flex-wrap gap-2" role="region" aria-label="Wallet balance">
-      <div className={widgetBase}>
-        <div className="flex items-start gap-2">
-          <Coins size={18} weight="duotone" className="shrink-0 mt-0.5" style={{ color: accentIcon }} aria-hidden />
-          <div className="min-w-0">
-            <p className={`${labelClass} ${matchAccent ? "text-[var(--accent)]/80" : "text-amber-600/90 dark:text-amber-400/90"}`}>
-              {networkLabel}{" "}
-              <span className="text-[var(--muted)] font-normal normal-case tracking-normal">({symbol})</span>
-            </p>
-            <p className="text-xs text-[var(--muted)] font-mono truncate" title={data.address}>
-              {addressShort}
-            </p>
-            <p className="text-[var(--foreground)] font-semibold tabular-nums mt-1">
-              {formatNative(data.chain, balanceNative)} {symbol}
-            </p>
-            {balanceUsd != null && Number.isFinite(balanceUsd) && (
-              <p className="text-xs text-[var(--muted)] tabular-nums">≈ {formatUsd(balanceUsd)}</p>
-            )}
+    <div className="flex flex-wrap gap-2" role="region" aria-label="Wallet balances">
+      {wallets.map((data) => (
+        <div key={data.chain} className={widgetBase}>
+          <div className="flex items-start gap-2">
+            <Coins size={18} strokeWidth={1.5} className="shrink-0 mt-0.5" style={{ color: accentIcon }} aria-hidden />
+            <div className="min-w-0">
+              <p className={`${labelClass} ${matchAccent ? "text-[var(--accent)]/80" : "text-amber-600/90 dark:text-amber-400/90"}`}>
+                {data.networkLabel}{" "}
+                <span className="text-[var(--muted)] font-normal normal-case tracking-normal">({data.symbol})</span>
+              </p>
+              <p className="text-xs text-[var(--muted)] font-mono truncate" title={data.address}>
+                {data.addressShort}
+              </p>
+              <p className="text-[var(--foreground)] font-semibold tabular-nums mt-1">
+                {formatNative(data.chain, data.balanceNative)} {data.symbol}
+              </p>
+              {data.balanceUsd != null && Number.isFinite(data.balanceUsd) && (
+                <p className="text-xs text-[var(--muted)] tabular-nums">≈ {formatUsd(data.balanceUsd)}</p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }

@@ -107,51 +107,77 @@ export async function GET(
           gap: 64,
         }}
       >
-        {/* Left: circular avatar */}
+        {/* Left: circular avatar (optional Discord avatar decoration overlay) */}
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            position: "relative",
             width: 220,
             height: 220,
-            borderRadius: "50%",
-            border: `4px solid ${accent}`,
-            overflow: "hidden",
             flexShrink: 0,
-            boxShadow: `0 0 40px ${accent}40`,
           }}
         >
-          {profile.avatar ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              border: `4px solid ${accent}`,
+              overflow: "hidden",
+              boxShadow: `0 0 40px ${accent}40`,
+            }}
+          >
+            {profile.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatar}
+                alt=""
+                width={220}
+                height={220}
+                style={{
+                  objectFit: "cover",
+                  width: 220,
+                  height: 220,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 220,
+                  height: 220,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(26, 31, 38, 0.6)",
+                  color: accent,
+                  fontSize: 72,
+                  fontWeight: 600,
+                }}
+              >
+                {profile.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          {profile.discordAvatarDecoration ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={profile.avatar}
+              src={profile.discordAvatarDecoration}
               alt=""
               width={220}
               height={220}
               style={{
-                objectFit: "cover",
+                position: "absolute",
+                left: 0,
+                top: 0,
+                objectFit: "contain",
                 width: 220,
                 height: 220,
+                pointerEvents: "none",
               }}
             />
-          ) : (
-            <div
-              style={{
-                width: 220,
-                height: 220,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(26, 31, 38, 0.6)",
-                color: accent,
-                fontSize: 72,
-                fontWeight: 600,
-              }}
-            >
-              {profile.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Right: name + badges + description + tags + meta */}

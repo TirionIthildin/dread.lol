@@ -11,9 +11,33 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Lucide icons across the site",
+    description:
+      "Badges, dashboards, and custom link icons now use the Lucide icon set (with automatic mapping for older saved names).",
+  },
+  {
+    date: "2026-03",
+    title: "Spanish site UI",
+    description:
+      "Public pages (home, about, terms, privacy) support English and Spanish via next-intl; switch locale from the homepage footer or use /es/ URLs.",
+  },
+  {
+    date: "2026-03",
+    title: "More link types and link styling",
+    description:
+      "New button presets for OnlyFans, NameMC, and email; optional Lucide icon on Custom links; toggle hover glow on your link row.",
+  },
+  {
+    date: "2026-03",
+    title: "Copyable socials",
+    description:
+      "Optional profile setting: link buttons open http(s) and mailto links in the browser; everything else (handles, plain text) copies to the clipboard so visitors can paste elsewhere.",
+  },
+  {
+    date: "2026-03",
     title: "Crypto wallet balance widget",
     description:
-      "Optional profile widget shows native on-chain balance for an Ethereum, Bitcoin, or Solana address you provide (with an approximate USD estimate).",
+      "Optional profile widget shows native on-chain balance for Ethereum, Bitcoin, and/or Solana—add an address per network you want (with an approximate USD estimate per card).",
   },
   {
     date: "2026-03",

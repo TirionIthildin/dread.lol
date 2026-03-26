@@ -26,6 +26,13 @@ describe("filterLinksForPremiumAccess", () => {
     expect(resolveLinkTypeFromSavedLink("Tip", "https://throne.com/x")).toBe("throne");
     expect(resolveLinkTypeFromSavedLink("Wishlist", "https://www.amazon.com/hz/wishlist/ls/xxx")).toBe("amazonWishlist");
   });
+
+  it("resolves OnlyFans, NameMC, and email", () => {
+    expect(resolveLinkTypeFromSavedLink("Fans", "https://onlyfans.com/u123")).toBe("onlyfans");
+    expect(resolveLinkTypeFromSavedLink("MC", "https://namemc.com/profile/Notch.1")).toBe("namemc");
+    expect(resolveLinkTypeFromSavedLink("Mail", "mailto:a@b.co")).toBe("email");
+    expect(resolveLinkTypeFromSavedLink("Mail", "a@b.co")).toBe("email");
+  });
 });
 
 describe("parseCommissionStatus", () => {

@@ -72,6 +72,8 @@ export interface ProfileDoc {
   easterEggLinkUrl?: string | null;
   easterEggLinkPopupUrl?: string | null;
   links?: string | null;
+  /** When false, profile link chips omit hover glow. Default true (legacy). */
+  socialLinksGlow?: boolean | null;
   ogImageUrl?: string | null;
   showUpdatedAt?: boolean;
   accentColor?: string | null;
@@ -103,6 +105,8 @@ export interface ProfileDoc {
   avatarShape?: string | null;
   /** Primary portfolio/website URL, surfaced separately from generic links. */
   websiteUrl?: string | null;
+  /** When true, link values that are not safe http(s) or mailto hrefs render as copy-to-clipboard instead of opening. */
+  copyableSocials?: boolean | null;
   /** Structured skills/roles, e.g. ["Frontend", "Design", "3D"]. */
   skills?: string[] | null;
   /** Languages spoken, e.g. "EN, ES, FR". */
@@ -140,6 +144,8 @@ export interface ProfileDoc {
   /** Comma-separated Discord badge keys to hide on profile (e.g. Nitro,NitroClassic). */
   hiddenDiscordBadges?: string | null;
   showDiscordPresence?: boolean;
+  /** When true (default), show Discord avatar decoration overlay when using dynamic Discord avatar. */
+  showDiscordAvatarDecoration?: boolean;
   /** Discord presence display style: pills, minimal, stacked, inline. */
   discordPresenceStyle?: string | null;
   /** Discord widgets to show: comma-separated accountAge,serverCount,serverInvite. */
@@ -150,10 +156,16 @@ export interface ProfileDoc {
   showRobloxWidgets?: string | null;
   /** @deprecated Cleared on save; replaced by crypto wallet widget. */
   showCryptoWidgets?: string | null;
-  /** Native balance widget: `ethereum` | `bitcoin` | `solana`. */
+  /** @deprecated Prefer per-network fields; used if those are empty. */
   cryptoWalletChain?: string | null;
-  /** Wallet address for `cryptoWalletChain` (max 128 chars). */
+  /** @deprecated Prefer per-network fields. */
   cryptoWalletAddress?: string | null;
+  /** Optional Ethereum mainnet address for balance card (max 128 chars). */
+  cryptoWalletEthereum?: string | null;
+  /** Optional Bitcoin address for balance card. */
+  cryptoWalletBitcoin?: string | null;
+  /** Optional Solana address for balance card. */
+  cryptoWalletSolana?: string | null;
   /** GitHub username for widget cards (public API). */
   githubUsername?: string | null;
   /** Comma-separated: lastPush, publicRepos, contributions (max 3; counts toward widget cap with Discord/Roblox). */

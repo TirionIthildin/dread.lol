@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowSquareOut } from "@phosphor-icons/react/dist/ssr";
+import { ExternalLink } from "lucide-react";
 import type { RobloxWidgetData } from "@/lib/roblox-widgets";
 
 const labelClass = "text-[10px] font-medium uppercase tracking-wider";
@@ -108,9 +108,9 @@ export default function RobloxWidgetsDisplay({ data, matchAccent = false, orderF
           <p className={`${labelClass} ${labelColorClass}`}>Roblox</p>
           <p className="font-medium truncate">{label}</p>
         </div>
-        <ArrowSquareOut
+        <ExternalLink
           size={14}
-          weight="regular"
+          strokeWidth={1.5}
           className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
           aria-hidden
         />
@@ -188,7 +188,7 @@ export function RobloxSingleWidget({
           <p className={`${labelClass} ${labelColorClass}`}>Roblox</p>
           <p className="font-medium truncate">{label}</p>
         </div>
-        <ArrowSquareOut size={14} weight="regular" className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
+        <ExternalLink size={14} strokeWidth={1.5} className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" aria-hidden />
       </Link>
     );
   }

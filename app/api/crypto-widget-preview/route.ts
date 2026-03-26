@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCryptoWidgetData } from "@/lib/crypto-widgets";
 
 /**
- * GET ?chain=ethereum&address=0x… — server-side native balance for dashboard preview.
+ * GET ?ethereum=&bitcoin=&solana= — server-side native balances for dashboard preview.
  */
 export async function GET(req: NextRequest) {
-  const chain = req.nextUrl.searchParams.get("chain");
-  const address = req.nextUrl.searchParams.get("address");
-  const data = await getCryptoWidgetData(chain, address);
-  if (!data) return NextResponse.json(null);
+  const sp = req.nextUrl.searchParams;
+  const data = await getCryptoWidgetData({
+    cryptoWalletEthereum: sp.get("ethereum"),
+    cryptoWalletBitcoin: sp.get("bitcoin"),
+    cryptoWalletSolana: sp.get("solana"),
+  });
+  if (!data || data.length === 0) return NextResponse.json(null);
   return NextResponse.json(data);
 }

@@ -1,34 +1,34 @@
 /**
- * Phosphor icons for custom badges. Admins pick by name in the Badges panel.
- * Uses the full Phosphor icon set for search.
+ * Lucide icons for custom badges. Admins pick by name in the Badges panel.
  */
-import type { IconProps } from "@phosphor-icons/react";
-import * as PhosphorIconsSSR from "@phosphor-icons/react/ssr";
-import { BADGE_ICON_OPTIONS } from "./phosphor-icon-names";
+import type { LucideProps } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+import { BADGE_ICON_OPTIONS } from "@/lib/lucide-icon-names";
+import { resolveStoredIconNameToLucide } from "@/lib/resolve-stored-lucide-icon";
 
-const iconProps: IconProps = { size: 14, weight: "fill" };
+const iconProps: LucideProps = { size: 14, strokeWidth: 2.5, className: "shrink-0 fill-current" };
 
 export { BADGE_ICON_OPTIONS };
 
-const icons = PhosphorIconsSSR as unknown as Record<string, React.ComponentType<IconProps>>;
+const icons = LucideIcons as unknown as Record<string, React.ComponentType<LucideProps>>;
 
-/** Sync render for any Phosphor icon. Use BadgeIconServer in RSC for proper SSR. */
+/** Sync render for any Lucide icon (accepts legacy Phosphor names). Use BadgeIconServer in RSC for proper SSR. */
 export function getBadgeIcon(iconName: string | null | undefined) {
-  if (!iconName) return null;
-  const resolved = iconName === "Award" ? "Medal" : iconName;
+  const resolved = resolveStoredIconNameToLucide(iconName);
+  if (!resolved) return null;
   const Icon = icons[resolved];
-  return Icon ? <Icon {...iconProps} className="shrink-0" /> : null;
+  return Icon ? <Icon {...iconProps} /> : null;
 }
 
-/** Server component: renders any Phosphor icon. */
+/** Server component: renders any Lucide icon. */
 export function BadgeIconServer({
   iconName,
 }: {
   iconName: string | null | undefined;
 }) {
-  if (!iconName) return null;
-  const resolved = iconName === "Award" ? "Medal" : iconName;
+  const resolved = resolveStoredIconNameToLucide(iconName);
+  if (!resolved) return null;
   const Icon = icons[resolved];
   if (!Icon) return null;
-  return <Icon {...iconProps} className="shrink-0" />;
+  return <Icon {...iconProps} />;
 }

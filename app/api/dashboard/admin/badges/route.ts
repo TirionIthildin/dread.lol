@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { getAllCustomBadges, getUserCustomBadgeIds } from "@/lib/member-profiles";
 
 export async function GET(request: Request) {

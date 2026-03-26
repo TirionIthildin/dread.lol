@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Flag } from "@phosphor-icons/react";
+import { Flag } from "lucide-react";
 
 interface ProfileReportButtonProps {
   slug: string;
@@ -63,7 +63,7 @@ export default function ProfileReportButton({ slug, canSubmit = true }: ProfileR
         title={canSubmit ? "Report this profile" : "Sign in to report"}
         aria-label="Report this profile"
       >
-        <Flag size={12} weight="regular" aria-hidden />
+        <Flag size={12} aria-hidden />
       </button>
     );
   }

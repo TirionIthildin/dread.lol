@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { X } from "@phosphor-icons/react";
+import { X } from "lucide-react";
 import { isDiscordCdnHttpsUrl, safeImageLinkHref } from "@/lib/url-validation";
 
 type GalleryItem = {
@@ -82,7 +82,7 @@ export default function ProfileGalleryModal({ slug, onClose }: Props) {
             className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             aria-label="Close"
           >
-            <X size={20} weight="bold" />
+            <X size={20} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { sendAdminTestEmail } from "@/lib/email/resend";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 

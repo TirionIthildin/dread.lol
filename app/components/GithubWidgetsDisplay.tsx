@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowSquareOut, GithubLogo } from "@phosphor-icons/react/dist/ssr";
+import { ExternalLink, Github } from "lucide-react";
 import type { GithubWidgetData, GithubWidgetType } from "@/lib/github-widgets";
 
 const labelClass = "text-[10px] font-medium uppercase tracking-wider";
@@ -82,7 +82,7 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
     widgetMap["lastPush"] = (
       <div className={widgetBase} title={title}>
         <span className="shrink-0" style={{ color: iconColor }}>
-          <GithubLogo size={18} weight="fill" className="block" aria-hidden />
+          <Github size={18} className="block fill-current" aria-hidden />
         </span>
         <div className="min-w-0">
           <p className={`${labelClass} ${labelColorClass}`}>Last push</p>
@@ -96,7 +96,7 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
     widgetMap["publicRepos"] = (
       <div className={widgetBase} title="Public repositories">
         <span className="shrink-0" style={{ color: iconColor }}>
-          <GithubLogo size={18} weight="fill" className="block" aria-hidden />
+          <Github size={18} className="block fill-current" aria-hidden />
         </span>
         <div>
           <p className={`${labelClass} ${labelColorClass}`}>Public repos</p>
@@ -128,16 +128,16 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
           />
         ) : (
           <span className="shrink-0" style={{ color: iconColor }}>
-            <GithubLogo size={18} weight="fill" className="block" aria-hidden />
+            <Github size={18} className="block fill-current" aria-hidden />
           </span>
         )}
         <div className="min-w-0 flex-1">
           <p className={`${labelClass} ${labelColorClass}`}>GitHub</p>
           <p className="font-medium truncate">View profile</p>
         </div>
-        <ArrowSquareOut
+        <ExternalLink
           size={14}
-          weight="regular"
+          strokeWidth={1.5}
           className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
           aria-hidden
         />
@@ -151,7 +151,7 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
       <div className={`${widgetBase} flex-col items-stretch gap-2 w-full`} title="Contributions on GitHub (last year)">
         <div className="flex items-center gap-2.5 w-full">
           <span className="shrink-0" style={{ color: iconColor }}>
-            <GithubLogo size={18} weight="fill" className="block" aria-hidden />
+            <Github size={18} className="block fill-current" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
             <p className={`${labelClass} ${labelColorClass}`}>Contributions</p>
@@ -184,7 +184,7 @@ export default function GithubWidgetsDisplay({ data, matchAccent = false, orderF
         title="Contribution totals need a server-side GitHub token (GITHUB_TOKEN)"
       >
         <span className="shrink-0" style={{ color: iconColor }}>
-          <GithubLogo size={18} weight="fill" className="block" aria-hidden />
+          <Github size={18} className="block fill-current" aria-hidden />
         </span>
         <div>
           <p className={`${labelClass} ${labelColorClass}`}>Contributions</p>

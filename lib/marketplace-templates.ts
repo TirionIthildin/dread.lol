@@ -70,6 +70,7 @@ export interface TemplateData {
   backgroundAudioStartSeconds?: number | null;
   backgroundEffect?: string | null;
   widgetsMatchAccent?: boolean | null;
+  copyableSocials?: boolean | null;
   unlockOverlayText?: string | null;
   ogImageUrl?: string | null;
   /** Gallery items: imageUrl, title?, description? */
@@ -102,7 +103,7 @@ export const TEMPLATE_DATA_KEYS = [
   "availability", "currentFocus", "commissionStatus", "commissionPriceRange", "avatarShape", "layoutDensity", "customFont", "customFontUrl",
   "cursorStyle", "cursorImageUrl", "animationPreset", "nameAnimation", "taglineAnimation", "descriptionAnimation",
   "backgroundType", "backgroundUrl", "backgroundAudioUrl", "backgroundAudioStartSeconds",
-  "backgroundEffect", "widgetsMatchAccent", "unlockOverlayText", "ogImageUrl", "gallery", "audioTracks",
+  "backgroundEffect", "widgetsMatchAccent", "copyableSocials", "unlockOverlayText", "ogImageUrl", "gallery", "audioTracks",
   "showAudioPlayer", "pageTheme", "sectionOrder", "sectionVisibility", "removedSectionIds",
   "audioVisualizerStyle", "audioVisualizerAnimation",
 ] as const;
@@ -276,6 +277,7 @@ export function profileToTemplateData(profile: ProfileRow): TemplateData {
     backgroundAudioStartSeconds: (profile as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? null,
     backgroundEffect: (profile as { backgroundEffect?: string | null }).backgroundEffect ?? null,
     widgetsMatchAccent: (profile as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? null,
+    copyableSocials: (profile as { copyableSocials?: boolean | null }).copyableSocials ?? null,
     unlockOverlayText: (profile as { unlockOverlayText?: string | null }).unlockOverlayText ?? null,
     ogImageUrl: profile.ogImageUrl ?? null,
     showAudioPlayer: profile.showAudioPlayer ?? false,
@@ -718,6 +720,7 @@ function templateDataToProfileUpdate(data: TemplateData): Record<string, unknown
   if (data.backgroundAudioStartSeconds !== undefined) update.backgroundAudioStartSeconds = data.backgroundAudioStartSeconds;
   if (data.backgroundEffect !== undefined) update.backgroundEffect = data.backgroundEffect;
   if (data.widgetsMatchAccent !== undefined) update.widgetsMatchAccent = data.widgetsMatchAccent;
+  if (data.copyableSocials !== undefined) update.copyableSocials = data.copyableSocials;
   if (data.unlockOverlayText !== undefined) update.unlockOverlayText = data.unlockOverlayText;
   if (data.ogImageUrl !== undefined) update.ogImageUrl = data.ogImageUrl;
   if (data.showAudioPlayer !== undefined) update.showAudioPlayer = data.showAudioPlayer;
@@ -847,6 +850,7 @@ export function templateToProfile(template: TemplateRow): import("@/lib/profiles
     backgroundAudioStartSeconds: (d as { backgroundAudioStartSeconds?: number | null }).backgroundAudioStartSeconds ?? undefined,
     backgroundEffect: (d as { backgroundEffect?: string | null }).backgroundEffect ?? undefined,
     widgetsMatchAccent: (d as { widgetsMatchAccent?: boolean | null }).widgetsMatchAccent ?? undefined,
+    copyableSocials: (d as { copyableSocials?: boolean | null }).copyableSocials ?? undefined,
     unlockOverlayText: d.unlockOverlayText ?? undefined,
     ogImageUrl: d.ogImageUrl ?? undefined,
     showAudioPlayer: d.showAudioPlayer ?? false,

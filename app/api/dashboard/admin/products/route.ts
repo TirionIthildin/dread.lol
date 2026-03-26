@@ -3,7 +3,7 @@
  * Used by Shop admin UI to show product names and validate IDs.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/app/dashboard/actions";
+import { requireAdmin } from "@/app/[locale]/dashboard/actions";
 import { getProductsWithTypes, formatPrice, type PolarProductInfo } from "@/lib/polar-products";
 
 export async function GET(request: NextRequest) {
