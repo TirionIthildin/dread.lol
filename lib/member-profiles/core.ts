@@ -505,6 +505,8 @@ export type AdminUserRow = {
   restricted?: boolean;
   customBadgeVouchers?: number;
   createdAt: Date;
+  /** Public profile path segment when a profile exists */
+  slug?: string | null;
 };
 
 export async function getAdminUserById(userId: string): Promise<AdminUserRow | null> {
@@ -517,22 +519,23 @@ export async function getAdminUserById(userId: string): Promise<AdminUserRow | n
       { _id: userId },
       { projection: { _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, verifiedCreator: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 } }
     );
-  return doc
-    ? {
-        id: doc._id,
-        username: doc.username ?? null,
-        displayName: doc.displayName ?? null,
-        avatarUrl: doc.avatarUrl ?? null,
-        approved: doc.approved ?? false,
-        verified: doc.verified ?? false,
-        staff: doc.staff ?? false,
-        premiumGranted: doc.premiumGranted ?? false,
-        verifiedCreator: doc.verifiedCreator ?? false,
-        restricted: doc.restricted ?? false,
-        customBadgeVouchers: (doc as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
-        createdAt: doc.createdAt,
-      }
-    : null;
+  if (!doc) return null;
+  const slug = await getProfileSlugByUserId(userId);
+  return {
+    id: doc._id,
+    username: doc.username ?? null,
+    displayName: doc.displayName ?? null,
+    avatarUrl: doc.avatarUrl ?? null,
+    approved: doc.approved ?? false,
+    verified: doc.verified ?? false,
+    staff: doc.staff ?? false,
+    premiumGranted: doc.premiumGranted ?? false,
+    verifiedCreator: doc.verifiedCreator ?? false,
+    restricted: doc.restricted ?? false,
+    customBadgeVouchers: (doc as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
+    createdAt: doc.createdAt,
+    slug,
+  };
 }
 
 export async function getUsersForAdminList(): Promise<AdminUserRow[]> {
@@ -582,6 +585,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     .project({ _id: 1, username: 1, displayName: 1, avatarUrl: 1, approved: 1, verified: 1, staff: 1, premiumGranted: 1, verifiedCreator: 1, restricted: 1, customBadgeVouchers: 1, createdAt: 1 })
     .sort({ createdAt: -1 })
     .toArray();
+  const slugMap = await getProfileSlugsByUserIds(docs.map((d) => d._id as string));
   return docs.map((d) => ({
     id: d._id,
     username: d.username ?? null,
@@ -595,6 +599,7 @@ export async function getUsersForAdminListSearch(search?: string): Promise<Admin
     restricted: d.restricted ?? false,
     customBadgeVouchers: (d as UserDoc & { customBadgeVouchers?: number }).customBadgeVouchers ?? 0,
     createdAt: d.createdAt,
+    slug: slugMap.get(d._id as string) ?? null,
   }));
 }
 
@@ -654,6 +659,13 @@ export async function getMemberProfileById(profileId: string): Promise<ProfileRo
     return null;
   }
   const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne({ _id: oid });
+  return doc ? toProfileRow(doc) : null;
+}
+
+export async function getMemberProfileByUserId(userId: string): Promise<ProfileRow | null> {
+  const client = await getDb();
+  const dbName = await getDbName();
+  const doc = await client.db(dbName).collection(COLLECTIONS.profiles).findOne({ userId });
   return doc ? toProfileRow(doc) : null;
 }
 

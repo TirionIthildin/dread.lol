@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   output: "standalone",
+  async redirects() {
+    return [
+      { source: "/dashboard/admin", destination: "/dashboard/staff", permanent: true },
+      { source: "/dashboard/admin/:path*", destination: "/dashboard/staff/:path*", permanent: true },
+      { source: "/es/dashboard/admin", destination: "/es/dashboard/staff", permanent: true },
+      { source: "/es/dashboard/admin/:path*", destination: "/es/dashboard/staff/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

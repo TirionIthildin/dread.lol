@@ -170,17 +170,17 @@ export default function DashboardSidebar({ isAdmin, verifiedCreator, session }: 
             <div className="hidden md:flex items-center gap-2 px-3 py-2">
               <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--warning)]/40 to-[var(--border)]" />
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--warning)]/70">
-                Admin
+                Staff
               </span>
               <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--warning)]/40 to-[var(--border)]" />
             </div>
             <NavLink
               item={{
-                href: "/dashboard/admin",
-                label: "Admin",
+                href: "/dashboard/staff",
+                label: "Staff",
                 icon: Settings,
               }}
-              active={pathname.startsWith("/dashboard/admin")}
+              active={pathname.startsWith("/dashboard/staff")}
               delay={20 + (mainNavCount + contentNavItems.length + discoverNavItems.length) * 25}
             />
           </div>

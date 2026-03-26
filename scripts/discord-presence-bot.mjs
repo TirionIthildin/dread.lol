@@ -8,9 +8,10 @@
  * - Bot must be in a server (guild) that your users join; set DISCORD_GUILD_ID to only sync that guild (optional).
  *
  * Env: DISCORD_BOT_TOKEN, VALKEY_URL (default redis://localhost:6379), DISCORD_GUILD_ID (optional).
+ *       DISCORD_BOT_ACTIVITY — optional status line (default: "dread.lol").
  * Run: npm run discord-presence-bot
  */
-import { Client, GatewayIntentBits } from "discord.js";
+import { ActivityType, Client, GatewayIntentBits } from "discord.js";
 import Redis from "ioredis";
 
 const PRESENCE_KEY_PREFIX = "discord:presence:";
@@ -22,6 +23,9 @@ const LASTSEEN_KEY_PREFIX = "discord:lastseen:";
 const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 h
 const LASTSEEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const PRESENCE_SWEEP_INTERVAL_MS = 5 * 60 * 1000; // presenceUpdate only fires on *changes*; sweep refreshes Redis presence + lastSeen for users still online
+const HEARTBEAT_KEY = "discord:bot:heartbeat";
+const HEARTBEAT_TTL_SECONDS = 120;
+const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const DISCORD_API_ORIGIN = "https://discord.com";
 
 /** @param {string} discordUserId */
@@ -67,6 +71,16 @@ function mapActivity(a) {
     details: a.details ?? null,
     applicationId: a.applicationId ?? null,
   };
+}
+
+function writeHeartbeat() {
+  const payload = JSON.stringify({
+    at: Date.now(),
+    pid: process.pid,
+  });
+  redis.setex(HEARTBEAT_KEY, HEARTBEAT_TTL_SECONDS, payload).catch((err) => {
+    console.error("[Redis] heartbeat", err?.message ?? err);
+  });
 }
 
 function serializePresence(presence) {
@@ -175,14 +189,26 @@ function sweepPresenceForOnlineUsers() {
   }
 }
 
-client.on("clientReady", () => {
+client.on("clientReady", async () => {
   console.log(`[Discord] Logged in as ${client.user?.tag ?? "?"}`);
+  // Explicit online + activity so the bot doesn’t sit “invisible” in the member list (gateway alone may not show green).
+  const activityName = process.env.DISCORD_BOT_ACTIVITY?.trim() || "dread.lol";
+  try {
+    await client.user?.setPresence({
+      status: "online",
+      activities: [{ name: activityName, type: ActivityType.Watching }],
+    });
+  } catch (err) {
+    console.error("[Discord] setPresence failed:", err?.message ?? err);
+  }
   if (guildId) {
     const guild = client.guilds.cache.get(guildId);
     console.log(`[Discord] Watching guild: ${guild?.name ?? guildId}`);
   } else {
     console.log("[Discord] Watching all guilds (set DISCORD_GUILD_ID to limit)");
   }
+  writeHeartbeat();
+  setInterval(writeHeartbeat, HEARTBEAT_INTERVAL_MS);
   // Initial sweep after a short delay (let presence cache populate)
   setTimeout(sweepPresenceForOnlineUsers, 30_000);
   setInterval(sweepPresenceForOnlineUsers, PRESENCE_SWEEP_INTERVAL_MS);

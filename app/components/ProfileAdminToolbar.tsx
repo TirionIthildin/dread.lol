@@ -4,18 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Settings } from "lucide-react";
-import AdminUserModal, { type AdminUser } from "@/app/[locale]/dashboard/AdminUserModal";
+import StaffUserModal, { type StaffUser } from "@/app/[locale]/dashboard/StaffUserModal";
 
 type Props = {
   isAdmin: boolean;
   profileOwnerUserId: string;
 };
 
-function normalizeUser(u: AdminUser & { createdAt?: Date; customBadgeVouchers?: number }): AdminUser {
+function normalizeUser(u: StaffUser & { createdAt?: Date; customBadgeVouchers?: number }): StaffUser {
   return {
     ...u,
     verifiedCreator: u.verifiedCreator ?? false,
     customBadgeVouchers: u.customBadgeVouchers ?? 0,
+    slug: u.slug ?? null,
     createdAt: typeof u.createdAt === "string" ? u.createdAt : (u.createdAt as Date)?.toISOString?.() ?? "",
   };
 }
@@ -23,7 +24,7 @@ function normalizeUser(u: AdminUser & { createdAt?: Date; customBadgeVouchers?: 
 export default function ProfileAdminToolbar({ isAdmin, profileOwnerUserId }: Props) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [user, setUser] = useState<AdminUser | null>(null);
+  const [user, setUser] = useState<StaffUser | null>(null);
   const [loading, setLoading] = useState(false);
 
   if (!isAdmin) return null;
@@ -33,7 +34,7 @@ export default function ProfileAdminToolbar({ isAdmin, profileOwnerUserId }: Pro
     setLoading(true);
     setUser(null);
     try {
-      const res = await fetch(`/api/dashboard/admin/users/${encodeURIComponent(profileOwnerUserId)}`);
+      const res = await fetch(`/api/dashboard/staff/users/${encodeURIComponent(profileOwnerUserId)}`);
       const data = await res.json();
       if (res.ok && data.user) {
         setUser(normalizeUser(data.user));
@@ -60,7 +61,7 @@ export default function ProfileAdminToolbar({ isAdmin, profileOwnerUserId }: Pro
         typeof document !== "undefined" &&
         createPortal(
           user ? (
-            <AdminUserModal
+            <StaffUserModal
               user={user}
               onClose={() => {
                 setModalOpen(false);
