@@ -52,7 +52,9 @@ export interface LinkEntry {
 /** True if the string looks like a bare email (no scheme). */
 export function looksLikeBareEmail(s: string): boolean {
   const t = s.trim();
-  if (!t || t.includes(" ") || t.includes("://")) return false;
+  if (!t || t.includes(" ") || t.includes("\n")) return false;
+  // Reject values that parse as URLs with a scheme (http:, mailto:, etc.).
+  if (/^\w[\w+.-]*:/.test(t)) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
 }
 
@@ -90,6 +92,15 @@ function isAmazonRetailHostname(hostname: string): boolean {
   ];
   const h = hostname.toLowerCase();
   return suffixes.some((s) => h === s || h.endsWith(`.${s}`));
+}
+
+/** Wishlist-related paths on retail Amazon hosts (segment-based, not substring tricks). */
+function pathnameIndicatesAmazonWishlist(pathname: string): boolean {
+  const segments = pathname.toLowerCase().split("/").filter(Boolean);
+  if (segments.includes("wishlist")) return true;
+  const hz = segments.indexOf("hz");
+  if (hz >= 0 && segments[hz + 1] === "wishlist") return true;
+  return segments.includes("registry") && segments.includes("wishlist");
 }
 
 /**
@@ -149,8 +160,7 @@ export function resolveLinkTypeFromSavedLink(label: string | undefined, href: st
   if (hostname === "ko-fi.com" || hostname.endsWith(".ko-fi.com") || l.includes("ko-fi") || l.includes("kofi")) return "kofi";
   if (hostname === "throne.com" || hostname.endsWith(".throne.com") || l.includes("throne")) return "throne";
   if (
-    (isAmazonRetailHostname(hostname) &&
-      (pathname.includes("/wishlist") || pathname.includes("/hz/wishlist") || pathname.includes("/gp/registry/wishlist"))) ||
+    (isAmazonRetailHostname(hostname) && pathnameIndicatesAmazonWishlist(pathname)) ||
     l.includes("amazon wishlist")
   ) {
     return "amazonWishlist";

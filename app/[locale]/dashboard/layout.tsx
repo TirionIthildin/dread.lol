@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/session";
 import SiteNoticeBanner from "@/app/components/SiteNoticeBanner";
 import { getOrCreateUser } from "@/lib/member-profiles";
@@ -5,6 +6,11 @@ import { isVerifiedCreator } from "@/lib/creator-program";
 import DashboardSidebar from "@/app/[locale]/dashboard/DashboardSidebar";
 import { getSiteNoticeSettings } from "@/lib/site-notice-settings";
 import { getSiteNoticeDisplay } from "@/lib/site-notice-settings-shared";
+
+/** Default for all /dashboard routes — authenticated member UI should not be indexed. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({
   children,

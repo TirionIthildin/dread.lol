@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { isDiscordCdnHttpsUrl, safeImageLinkHref } from "@/lib/url-validation";
-import { getDiscordApiUserUrl } from "@/lib/discord-flags";
+import { getDiscordApiUserUrl, getDiscordApiUserUrlObject } from "@/lib/discord-flags";
 
 describe("isDiscordCdnHttpsUrl", () => {
   it("accepts Discord CDN https URLs only", () => {
@@ -15,6 +15,10 @@ describe("safeImageLinkHref", () => {
   it("allows paths and http(s)", () => {
     expect(safeImageLinkHref("/api/files/abc")).toBe("/api/files/abc");
     expect(safeImageLinkHref("https://example.com/a.png")).toBe("https://example.com/a.png");
+  });
+
+  it("blocks protocol-relative URLs mistaken for paths", () => {
+    expect(safeImageLinkHref("//evil.example/phish")).toBe("#");
   });
 
   it("blocks non-http schemes", () => {
@@ -33,5 +37,12 @@ describe("getDiscordApiUserUrl", () => {
   it("rejects invalid snowflakes", () => {
     expect(getDiscordApiUserUrl("123")).toBeNull();
     expect(getDiscordApiUserUrl("https://evil.com")).toBeNull();
+  });
+
+  it("returns a URL object with fixed origin", () => {
+    const u = getDiscordApiUserUrlObject("123456789012345678");
+    expect(u).not.toBeNull();
+    expect(u?.origin).toBe("https://discord.com");
+    expect(u?.pathname).toBe("/api/v10/users/123456789012345678");
   });
 });

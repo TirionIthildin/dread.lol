@@ -5,6 +5,9 @@ import { FeatureUpdateList } from "@/app/components/FeatureUpdateList";
 import { FEATURE_UPDATES } from "@/lib/updates";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
+/** Built from static `FEATURE_UPDATES`; no per-request data. */
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: `Changelog — ${SITE_NAME}`,
   description: `Product updates and new features on ${SITE_NAME}.`,

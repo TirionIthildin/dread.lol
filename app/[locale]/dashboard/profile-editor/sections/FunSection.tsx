@@ -21,6 +21,7 @@ import {
   Play,
 } from "lucide-react";
 import SearchableSelect from "@/app/components/SearchableSelect";
+import { MarketplacePreviewImage } from "@/app/components/MarketplacePreviewImage";
 import type { ProfileRow } from "@/lib/db/schema";
 import { ACCENT_COLOR_OPTIONS, ACCENT_COLORS, isValidHexColor } from "@/lib/profile-themes";
 import {
@@ -707,8 +708,12 @@ export function FunSection(props: FunSectionProps) {
                   <div className="relative rounded-lg overflow-hidden border border-[var(--border)]/50 bg-[var(--bg)]/80 group">
                     {backgroundTypeValue === "image" ? (
                       <div className="aspect-video relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={backgroundUrlValue} alt="" className="w-full h-full object-cover" />
+                        <MarketplacePreviewImage
+                          src={backgroundUrlValue}
+                          alt=""
+                          fill
+                          className="object-cover"
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
                           <span className="text-xs font-medium text-white/90">{backgroundTypeValue === "image" ? "Image" : "Video"} loaded</span>
                           <div className="flex gap-1">

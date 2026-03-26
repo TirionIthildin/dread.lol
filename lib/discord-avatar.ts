@@ -3,12 +3,12 @@
  * When profile.avatarUrl is "discord", we fetch from Discord API and cache in Valkey.
  */
 import { getAvatarDecorationUrl, getAvatarUrl, type DiscordUser } from "@/lib/auth/discord";
+import { getDiscordApiUserUrlObject } from "@/lib/discord-flags";
 import { getValkey } from "@/lib/valkey";
 
 const USER_MEDIA_CACHE_PREFIX = "discord:user-media:v2:";
 const LEGACY_AVATAR_KEY_PREFIX = "discord:avatar:";
 const AVATAR_TTL_SECONDS = 60 * 60; // 1 hour
-const DISCORD_API = "https://discord.com/api/v10";
 
 interface DiscordUserApiResponse {
   id: string;
@@ -40,9 +40,10 @@ async function fetchDiscordUserForMedia(discordUserId: string): Promise<{
 } | null> {
   const token = process.env.DISCORD_BOT_TOKEN?.trim();
   if (!token) return null;
-  const url = `${DISCORD_API}/users/${discordUserId}`;
+  const userUrl = getDiscordApiUserUrlObject(discordUserId);
+  if (!userUrl) return null;
   try {
-    const res = await fetch(url, {
+    const res = await fetch(userUrl, {
       headers: { Authorization: `Bot ${token}` },
     });
     const body = await res.text();

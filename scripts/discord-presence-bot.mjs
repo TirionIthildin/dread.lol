@@ -8,20 +8,33 @@
  * - Bot must be in a server (guild) that your users join; set DISCORD_GUILD_ID to only sync that guild (optional).
  *
  * Env: DISCORD_BOT_TOKEN, VALKEY_URL (default redis://localhost:6379), DISCORD_GUILD_ID (optional).
+ *       DISCORD_BOT_ACTIVITY — optional status line (default: "dread.lol").
  * Run: npm run discord-presence-bot
  */
-import { Client, GatewayIntentBits } from "discord.js";
+import { ActivityType, Client, GatewayIntentBits } from "discord.js";
 import Redis from "ioredis";
 
 const PRESENCE_KEY_PREFIX = "discord:presence:";
-const PRESENCE_TTL_SECONDS = 300; // 5 min
+/** Longer than sweep interval so keys don't expire between sweeps if Discord sends no presenceUpdate (stable online state). */
+const PRESENCE_TTL_SECONDS = 600; // 10 min
 const FLAGS_KEY_PREFIX = "discord:flags:";
 const PREMIUM_KEY_PREFIX = "discord:premium:";
 const LASTSEEN_KEY_PREFIX = "discord:lastseen:";
 const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 h
 const LASTSEEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
-const LASTSEEN_SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 min – presenceUpdate only fires on *changes*, so we periodically refresh lastSeen for users currently online
-const DISCORD_API = "https://discord.com/api/v10";
+const PRESENCE_SWEEP_INTERVAL_MS = 5 * 60 * 1000; // presenceUpdate only fires on *changes*; sweep refreshes Redis presence + lastSeen for users still online
+const HEARTBEAT_KEY = "discord:bot:heartbeat";
+const HEARTBEAT_TTL_SECONDS = 120;
+const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+const DISCORD_API_ORIGIN = "https://discord.com";
+
+/** @param {string} discordUserId */
+function getDiscordApiUserUrlObject(discordUserId) {
+  if (!/^\d{17,20}$/.test(discordUserId)) return null;
+  const u = new URL(`/api/v10/users/${discordUserId}`, DISCORD_API_ORIGIN);
+  if (u.origin !== DISCORD_API_ORIGIN) return null;
+  return u;
+}
 
 const token = process.env.DISCORD_BOT_TOKEN?.trim();
 const guildId = process.env.DISCORD_GUILD_ID?.trim() || null;
@@ -60,6 +73,16 @@ function mapActivity(a) {
   };
 }
 
+function writeHeartbeat() {
+  const payload = JSON.stringify({
+    at: Date.now(),
+    pid: process.pid,
+  });
+  redis.setex(HEARTBEAT_KEY, HEARTBEAT_TTL_SECONDS, payload).catch((err) => {
+    console.error("[Redis] heartbeat", err?.message ?? err);
+  });
+}
+
 function serializePresence(presence) {
   const status = presence.status ?? "offline";
   const activities = (presence.activities ?? []).map(mapActivity);
@@ -84,7 +107,9 @@ async function fetchAndStoreUserFlags(userId) {
   const existing = await redis.get(flagsKey).catch(() => null);
   if (existing !== null) return;
   try {
-    const res = await fetch(`${DISCORD_API}/users/${userId}`, {
+    const userUrl = getDiscordApiUserUrlObject(userId);
+    if (!userUrl) return;
+    const res = await fetch(userUrl, {
       headers: { Authorization: `Bot ${token}` },
     });
     if (!res.ok) {
@@ -128,11 +153,11 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
 });
 
 /**
- * Refresh lastSeen for all users currently online/idle/dnd.
- * presenceUpdate only fires when status *changes*, so users who stay online for long periods
- * never trigger an update. This sweep keeps lastSeen accurate.
+ * Refresh discord:presence and lastSeen for users currently online/idle/dnd.
+ * presenceUpdate only fires when something *changes*; without this, the presence key TTL expires
+ * while the user stays online and the site shows offline + a confusing last-seen line.
  */
-function sweepLastSeenForOnlineUsers() {
+function sweepPresenceForOnlineUsers() {
   const guildsToCheck = guildId
     ? [client.guilds.cache.get(guildId)].filter(Boolean)
     : [...client.guilds.cache.values()];
@@ -143,9 +168,13 @@ function sweepLastSeenForOnlineUsers() {
     if (!presences) continue;
     for (const presence of presences.values()) {
       if (presence.status && presence.status !== "offline") {
-        if (guildId && presence.guild?.id !== guild.id) continue;
         const uid = presence.userId ?? presence.user?.id;
         if (uid) {
+          const presenceKey = PRESENCE_KEY_PREFIX + uid;
+          const value = serializePresence(presence);
+          redis.setex(presenceKey, PRESENCE_TTL_SECONDS, value).catch((err) => {
+            console.error("[Redis] presence sweep", uid, err?.message ?? err);
+          });
           const lastSeenKey = LASTSEEN_KEY_PREFIX + uid;
           redis.setex(lastSeenKey, LASTSEEN_TTL_SECONDS, now).catch((err) => {
             console.error("[Redis] lastseen sweep", uid, err?.message ?? err);
@@ -156,21 +185,33 @@ function sweepLastSeenForOnlineUsers() {
     }
   }
   if (count > 0) {
-    console.log(`[Discord] Sweep: updated lastSeen for ${count} online user(s)`);
+    console.log(`[Discord] Sweep: refreshed presence + lastSeen for ${count} online user(s)`);
   }
 }
 
-client.on("clientReady", () => {
+client.on("clientReady", async () => {
   console.log(`[Discord] Logged in as ${client.user?.tag ?? "?"}`);
+  // Explicit online + activity so the bot doesn’t sit “invisible” in the member list (gateway alone may not show green).
+  const activityName = process.env.DISCORD_BOT_ACTIVITY?.trim() || "dread.lol";
+  try {
+    await client.user?.setPresence({
+      status: "online",
+      activities: [{ name: activityName, type: ActivityType.Watching }],
+    });
+  } catch (err) {
+    console.error("[Discord] setPresence failed:", err?.message ?? err);
+  }
   if (guildId) {
     const guild = client.guilds.cache.get(guildId);
     console.log(`[Discord] Watching guild: ${guild?.name ?? guildId}`);
   } else {
     console.log("[Discord] Watching all guilds (set DISCORD_GUILD_ID to limit)");
   }
+  writeHeartbeat();
+  setInterval(writeHeartbeat, HEARTBEAT_INTERVAL_MS);
   // Initial sweep after a short delay (let presence cache populate)
-  setTimeout(sweepLastSeenForOnlineUsers, 30_000);
-  setInterval(sweepLastSeenForOnlineUsers, LASTSEEN_SWEEP_INTERVAL_MS);
+  setTimeout(sweepPresenceForOnlineUsers, 30_000);
+  setInterval(sweepPresenceForOnlineUsers, PRESENCE_SWEEP_INTERVAL_MS);
 });
 
 client.on("error", (err) => console.error("[Discord]", err.message));

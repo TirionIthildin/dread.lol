@@ -45,7 +45,7 @@ import type { VouchedByUser } from "@/lib/member-profiles";
 import { getBirthdayCountdown } from "@/lib/birthday-countdown";
 import { formatLastSeen } from "@/lib/format-last-seen";
 import { SITE_URL } from "@/lib/site";
-import { isDiscordCdnHttpsUrl } from "@/lib/url-validation";
+import { isDiscordCdnHttpsUrl, isHttpOrRelativePathForMedia } from "@/lib/url-validation";
 import {
   CUSTOM_BADGE_COLORS,
   BANNER_STYLES,
@@ -56,8 +56,15 @@ import {
 function resolveMediaUrl(url: string): string {
   if (!url?.trim()) return "";
   const u = url.trim();
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  if (u.startsWith("/")) return `${SITE_URL.replace(/\/$/, "")}${u}`;
+  if (u.startsWith("/") && !u.startsWith("//")) {
+    return `${SITE_URL.replace(/\/$/, "")}${u}`;
+  }
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return u;
+  } catch {
+    /* ignore */
+  }
   return u;
 }
 
@@ -247,7 +254,7 @@ function ProfileSection({
                     const preset = !isHex && b.color ? CUSTOM_BADGE_COLORS[b.color] : null;
                     const className = preset ? `inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${preset}` : "inline-flex items-center gap-1 rounded-md bg-[var(--accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--accent)]";
                     const style = isHex && b.color ? { backgroundColor: `${b.color}20`, color: b.color } : undefined;
-                    return <span key={b.id} className={className} style={style} title={b.description || b.label}>{b.imageUrl && (b.imageUrl.startsWith("/") || b.imageUrl.startsWith("http")) ? <Image src={b.imageUrl} alt="" width={14} height={14} className="shrink-0 object-contain inline-block align-middle" unoptimized /> : b.iconName ? <Suspense fallback={null}><BadgeIconServer iconName={b.iconName} /></Suspense> : null}{b.label}</span>;
+                    return <span key={b.id} className={className} style={style} title={b.description || b.label}>{b.imageUrl && isHttpOrRelativePathForMedia(b.imageUrl) ? <Image src={b.imageUrl} alt="" width={14} height={14} className="shrink-0 object-contain inline-block align-middle" unoptimized /> : b.iconName ? <Suspense fallback={null}><BadgeIconServer iconName={b.iconName} /></Suspense> : null}{b.label}</span>;
                   })}
                   {profile.discordBadges?.map((key) => {
                     const info = getDiscordBadgeInfo(key);
@@ -495,7 +502,7 @@ export default function ProfileContent({ profile, vouches, similarProfiles, mutu
         />
       )}
     <div
-      className={`relative z-10 w-full min-w-0 max-w-2xl max-h-[calc(100vh-3rem)] overflow-auto shrink-0 ${themeClass} ${fontClass}${profile.cardEffectTilt ? " px-2 sm:px-3" : ""}`}
+      className={`relative z-10 w-full min-w-0 max-w-2xl max-h-[calc(100vh-3rem)] overflow-x-clip overflow-y-auto shrink-0 ${themeClass} ${fontClass}${profile.cardEffectTilt ? " px-2 sm:px-3" : ""}`}
     >
       <ProfileCardEffect
         tiltEnabled={profile.cardEffectTilt}

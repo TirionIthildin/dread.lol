@@ -23,6 +23,11 @@ export async function requireAdmin(): Promise<string | null> {
   return null;
 }
 
+/** Same as requireAdmin — staff tools use `isAdmin` on the user document. */
+export async function requireStaff(): Promise<string | null> {
+  return requireAdmin();
+}
+
 export async function setUserBadgesAction(
   userId: string,
   badges: { verified?: boolean; staff?: boolean; premiumGranted?: boolean; verifiedCreator?: boolean }
@@ -33,7 +38,7 @@ export async function setUserBadgesAction(
   if (!id) return { error: "Missing user" };
   const ok = await setUserBadges(id, badges);
   if (!ok) return { error: "User not found" };
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   revalidatePath("/dashboard");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
@@ -47,7 +52,7 @@ export async function setUserRestrictedAction(userId: string, restricted: boolea
   if (!id) return { error: "Missing user" };
   const ok = await setUserRestricted(id, restricted);
   if (!ok) return { error: "User not found" };
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   revalidatePath("/dashboard");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
@@ -71,7 +76,7 @@ export async function createBadgeAction(data: {
   if (!key || !label) return { error: "Key and label required" };
   const result = await createBadge({ ...data, key, label });
   if (!result) return { error: "Failed to create badge" };
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   return { id: result.id };
 }
 
@@ -91,7 +96,7 @@ export async function updateBadgeAction(
   const err = await requireAdmin();
   if (err) return { error: err };
   await updateBadge(id, data);
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   return {};
 }
 
@@ -100,7 +105,7 @@ export async function deleteBadgeAction(id: string): Promise<{ error?: string }>
   if (err) return { error: err };
   const ok = await deleteBadge(id);
   if (!ok) return { error: "Badge not found" };
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   return {};
 }
 
@@ -110,7 +115,7 @@ export async function setUserCustomBadgesAction(userId: string, badgeIds: string
   const id = userId?.trim();
   if (!id) return { error: "Missing user" };
   await setUserCustomBadges(id, badgeIds);
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
   return {};
@@ -127,7 +132,7 @@ export async function setCustomBadgeVouchersAction(
   if (!id) return { error: "Missing user" };
   const ok = await setCustomBadgeVouchers(id, count);
   if (!ok) return { error: "User not found" };
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   revalidatePath("/dashboard/badges");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);
@@ -143,7 +148,7 @@ export async function wipeUserSubscriptionAction(
   const id = userId?.trim();
   if (!id) return { error: "Missing user" };
   const result = await wipeUserSubscriptionData(id);
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   revalidatePath("/dashboard/premium");
   const slug = await getProfileSlugByUserId(id);
   if (slug) revalidatePath(`/${slug}`);

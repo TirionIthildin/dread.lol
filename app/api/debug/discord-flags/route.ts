@@ -11,7 +11,7 @@ import {
   getDiscordFlagsFromRedis,
   getDiscordPremiumFromRedis,
   fetchDiscordUserFromApi,
-  getDiscordApiUserUrl,
+  getDiscordApiUserUrlObject,
   setDiscordFlagsInRedis,
   setDiscordPremiumInRedis,
 } from "@/lib/discord-flags";
@@ -84,11 +84,11 @@ export async function GET(request: Request) {
     apiTrace.note = "DISCORD_BOT_TOKEN not set, skipping API fetch";
   } else {
     try {
-      const apiUrl = getDiscordApiUserUrl(discordUserId);
-      if (!apiUrl) {
+      const userUrl = getDiscordApiUserUrlObject(discordUserId);
+      if (!userUrl) {
         apiTrace.error = "Invalid Discord user id for API URL";
       } else {
-      const res = await fetch(apiUrl, {
+      const res = await fetch(userUrl, {
         headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN!}` },
       });
       const body = await res.text();

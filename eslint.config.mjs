@@ -6,6 +6,12 @@ const config = [
   ...coreWebVitals,
   ...typescript,
   {
+    name: "dread/next-image",
+    rules: {
+      "@next/next/no-img-element": "error",
+    },
+  },
+  {
     name: "dread/react-hooks-pragmatic",
     rules: {
       // React Compiler rules: too noisy for common patterns (effects syncing state, nested UI components).

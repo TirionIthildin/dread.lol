@@ -20,6 +20,7 @@ export { createProfileAliasAction, deleteProfileAliasAction } from "./actions/pr
 
 export {
   requireAdmin,
+  requireStaff,
   setUserBadgesAction,
   setUserRestrictedAction,
   createBadgeAction,

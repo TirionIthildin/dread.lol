@@ -40,6 +40,7 @@ import {
 import CopyButton from "@/app/components/CopyButton";
 import { resolveLinkTypeFromSavedLink } from "@/lib/link-entries";
 import { shouldOpenProfileLink } from "@/lib/profile-links-display";
+import { isMailtoHref } from "@/lib/validate-url";
 import { resolveStoredIconNameToLucide } from "@/lib/resolve-stored-lucide-icon";
 
 const iconProps: LucideProps = { size: 20, className: "shrink-0 text-current" };
@@ -153,12 +154,12 @@ export default function ProfileLinks({
           ) : (
             <a
               href={websiteUrl}
-              {...(websiteUrl.trim().toLowerCase().startsWith("mailto:")
+              {...(isMailtoHref(websiteUrl)
                 ? {}
                 : { target: "_blank" as const, rel: "noopener noreferrer" as const })}
               className={portfolioClass}
               aria-label={
-                websiteUrl.trim().toLowerCase().startsWith("mailto:")
+                isMailtoHref(websiteUrl)
                   ? "Open portfolio email"
                   : "Open portfolio (opens in new tab)"
               }
@@ -185,12 +186,12 @@ export default function ProfileLinks({
           ) : (
             <a
               href={roblox}
-              {...(roblox.trim().toLowerCase().startsWith("mailto:")
+              {...(isMailtoHref(roblox)
                 ? {}
                 : { target: "_blank" as const, rel: "noopener noreferrer" as const })}
               className={chipClass}
               aria-label={
-                roblox.trim().toLowerCase().startsWith("mailto:")
+                isMailtoHref(roblox)
                   ? "Open Roblox email"
                   : "Open Roblox profile (opens in new tab)"
               }
@@ -200,7 +201,7 @@ export default function ProfileLinks({
             </a>
           ))}
         {links?.map(({ label, href, iconName }, index) => {
-          const isMailto = href.trim().toLowerCase().startsWith("mailto:");
+          const mailto = isMailtoHref(href);
           const openAsLink = shouldOpenProfileLink(href);
           const linkInner = (
             <>
@@ -224,9 +225,9 @@ export default function ProfileLinks({
             <a
               key={`${index}-${href}-${label}`}
               href={href}
-              {...(isMailto ? {} : { target: "_blank" as const, rel: "noopener noreferrer" })}
+              {...(mailto ? {} : { target: "_blank" as const, rel: "noopener noreferrer" })}
               className={chipClass}
-              aria-label={isMailto ? `Email ${label}` : `Open ${label} (opens in new tab)`}
+              aria-label={mailto ? `Email ${label}` : `Open ${label} (opens in new tab)`}
             >
               {linkInner}
             </a>

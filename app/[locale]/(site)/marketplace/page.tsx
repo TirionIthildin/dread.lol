@@ -7,6 +7,7 @@ import { getTemplateFavoriteCounts, getFavoritedTemplateIds } from "@/lib/templa
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import MarketplaceToolbar from "@/app/components/MarketplaceToolbar";
 import MarketplaceFavoriteButton from "@/app/components/MarketplaceFavoriteButton";
+import { MarketplacePreviewImage } from "@/app/components/MarketplacePreviewImage";
 
 export const dynamic = "force-dynamic";
 
@@ -98,8 +99,12 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
                           <Link href={`/marketplace/${t.id}`} className="block">
                             <div className="aspect-video bg-[var(--bg)]/80 relative">
                               {previewUrl ? (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img src={previewUrl} alt="" className="w-full h-full object-cover" />
+                                <MarketplacePreviewImage
+                                  src={previewUrl}
+                                  alt=""
+                                  fill
+                                  className="object-cover"
+                                />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[var(--muted)] text-4xl">
                                   {t.name.charAt(0)}
@@ -160,11 +165,11 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
                     <Link href={`/marketplace/${t.id}`} className="block">
                       <div className="aspect-video bg-[var(--bg)]/80 relative">
                         {previewUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
+                          <MarketplacePreviewImage
                             src={previewUrl}
                             alt=""
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[var(--muted)] text-4xl">

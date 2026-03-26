@@ -33,6 +33,15 @@ function isSafeMailtoHref(url: string): boolean {
   }
 }
 
+/** True if href uses the mailto: scheme (parsed; avoids naive substring checks). */
+export function isMailtoHref(href: string): boolean {
+  try {
+    return new URL(href.trim()).protocol.toLowerCase() === "mailto:";
+  } catch {
+    return false;
+  }
+}
+
 /** Safe for profile link buttons: http(s) URLs or single-address mailto: links. */
 export function isSafeLinkHref(href: string | null | undefined): boolean {
   if (!href || typeof href !== "string") return false;
