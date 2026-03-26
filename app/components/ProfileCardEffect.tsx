@@ -57,7 +57,7 @@ export default function ProfileCardEffect({
           setTransform({
             rotateX: -y * tiltIntensity,
             rotateY: x * tiltIntensity,
-            scale: 1.02,
+            scale: 1,
           });
         }
       });

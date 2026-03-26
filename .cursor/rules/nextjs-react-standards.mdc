@@ -1,0 +1,125 @@
+---
+description: React 19, Next.js App Router, data fetching, styling, testing, and security conventions
+globs: app/**/*.tsx,app/**/*.ts,lib/**/*.ts
+alwaysApply: false
+---
+
+# Next.js & React Standards (Dread.lol)
+
+Repo-specific: run **`npm run ci`** before merge (see `CONTRIBUTING.md`). Paths use **`app/`** and **`lib/`** (no `src/` root).
+
+## React & TypeScript
+
+- Use **function declarations** for components. Avoid `React.FC` / `React.FunctionComponent` unless a generic component requires it.
+- Prefer **named exports** for components; default exports only where the framework requires (`page.tsx`, `layout.tsx`, etc.).
+- **Never** use `any`. Prefer `unknown` plus narrowing, or proper generics.
+- Prefer **explicit return types** on exported functions and public APIs.
+- Avoid **enum** — use string unions or `as const` objects.
+- **Never** use array index as React `key` when the list can reorder; use stable IDs.
+- **Controlled inputs** — avoid mixing controlled and uncontrolled for the same field.
+- **Effects** — do not use `useEffect` for data that can be fetched on the server or derived during render.
+
+### Default props and referential stability
+
+```tsx
+// ❌ New array default each render can break memoized children
+function List({ items = [] }: Props) {}
+
+// ✅ Stable default — module-level constant or useMemo when derived
+const DEFAULT_ITEMS: Item[] = [];
+function List({ items = DEFAULT_ITEMS }: Props) {}
+```
+
+- Avoid **prop drilling** beyond ~2 levels; prefer composition, context, or a small client store when needed.
+
+## Next.js App Router
+
+- Default to **Server Components**. Add `'use client'` only for interactivity, browser APIs, or hooks.
+- Push **`'use client'`** boundaries as deep as reasonable — maximize RSC coverage.
+- Do not **`fetch` in Client Components** when a parent Server Component can fetch and pass props.
+- Use **`next/image`** for images; avoid raw `<img>` for app content.
+- Use **`next/link`** for internal navigation; avoid `<a href>` for in-app routes.
+- Implement **`generateMetadata`** for every `page.tsx` that should be publicly indexed.
+- Set **route segment config** (`dynamic`, `revalidate`, etc.) explicitly when behavior matters — do not rely only on implicit caching.
+- **Parallel / intercepting routes** — add a short comment explaining routing intent.
+- **`loading.tsx` and `error.tsx`** — add for route segments that do async work where UX needs them (align with existing app patterns).
+
+## Data fetching
+
+- Server Components may fetch directly — no API route as a middleman for data the app owns.
+- Use `fetch` with explicit **`cache` / `next.revalidate`** (or document why defaults are intentional).
+- Prefer **Server Actions** for mutations (forms → actions) unless streaming or UX requires client `fetch`.
+- Never expose **DB clients, queries, or secrets** to Client Components.
+- Validate external input at boundaries with **`zod`**; centralize shared schemas (e.g. `lib/api-schemas.ts` or colocated modules) and reuse.
+- **`route.ts`** — webhooks, third-party callbacks, and intentional public APIs; not for routine internal server → client data that RSC can carry.
+
+## State management
+
+- Prefer **URL state** (search params) for shareable UI state.
+- Prefer **Server Component props** for server-originated data.
+- **`useState` / `useReducer`** for local ephemeral UI.
+- **React Context** — low-frequency global state (theme, auth snapshot, locale). Avoid high-frequency updates in Context.
+- Complex client global state — small dedicated libraries only if needed; avoid Redux unless already standard here.
+- **No stored derived state** — compute from source during render.
+
+## Hooks
+
+- Custom hooks: name **`use*`**; colocate under the feature (e.g. `app/.../useFeature.ts`) or **`lib/`** when shared.
+- Data-fetching hooks must handle **loading, error, and empty** states.
+- Keep **domain/business logic** out of presentational components when it obscures testing — extract hooks or `lib/` helpers.
+- **`useEffect`**: always include a dependency array; add cleanup for subscriptions, timers, and listeners; prefer **`useSyncExternalStore`** for external store sync; do not use effects purely to derive state you can compute in render.
+
+## Styling
+
+- **Tailwind CSS** is primary; avoid ad-hoc CSS except globals / tokens (this repo uses Tailwind v4 — follow existing `app` CSS patterns).
+- Prefer **conditional classes** via a small helper or consistent patterns; if you introduce **`cn()`** (clsx + tailwind-merge), use it instead of string concatenation.
+- Avoid **`style={{}}`** when Tailwind can express the same.
+- **Design tokens** — centralize (e.g. theme CSS variables / shared classes); avoid one-off magic numbers where tokens exist.
+- **Variants** — prefer a single pattern (e.g. CVA) if the codebase adopts it; avoid many boolean style props.
+- **Dark mode** — Tailwind `dark:` + class strategy; avoid JS-driven style toggles except for `class` on `html`/`body`.
+
+## Error handling
+
+- No empty **`catch`** blocks.
+- **Server Actions and `route.ts`**: wrap async work in try/catch; return typed error shapes consistently.
+- Consider **`Result`-style** handling for domain failures where it clarifies control flow.
+- Use **`error.tsx`** for route errors; client **`ErrorBoundary`** for isolated UI failures.
+- Log server-side with **request/user context**; never log secrets or full raw PII.
+- User-facing errors: **clear and safe**; internal details stay server-side.
+
+## API design (`route.ts`)
+
+- End-to-end typing; validate bodies and query params with **`zod`**.
+- Consistent shapes: e.g. `{ data: T }` vs `{ error: { message, code } }` — match existing API patterns in the repo.
+- Correct **HTTP status codes** (400 client, 401/403 auth, 404, 500 server).
+- **Authenticate and authorize** before business logic on protected routes.
+- **Rate-limit** public or abuse-prone endpoints where applicable.
+
+## Authentication and security
+
+- No JWTs in **`localStorage`** — sessions via **httpOnly** cookies (this app uses server-side sessions).
+- Secrets only in **environment variables**; never commit `.env` files.
+- Validate and sanitize **server-side**; never trust client-only checks for security.
+- **Server Actions** that mutate protected data must verify the session / authorization first.
+- **Security headers** — configure in Next config as needed (`CSP`, `X-Frame-Options`, etc.).
+- **Parameterized queries** only — never concatenate untrusted input into queries.
+
+## Performance
+
+- Periodically check bundle size (e.g. analyzer in CI or locally) before large client additions.
+- **`next/dynamic`** for heavy client-only chunks not needed on first paint.
+- **`next/image`**: explicit dimensions or `fill` + positioned parent to limit CLS.
+- **`React.memo` / `useMemo` / `useCallback`** — use when profiling shows benefit or stable references are required for children; avoid blanket memoization.
+- Long lists — virtualize when needed (e.g. **@tanstack/virtual**).
+
+## Testing
+
+- **Vitest** — unit tests for pure logic and hooks.
+- **React Testing Library** — components: behavior and a11y, not implementation details.
+- **Playwright** — `test:e2e` for critical flows (`*.spec.ts` under e2e conventions).
+- Prefer **MSW** at the network boundary over deep module mocks when feasible.
+- Avoid **snapshot-only** UI tests as the primary guard.
+
+## CI (this repo)
+
+Before merge, **`npm run ci`** must pass: typecheck, ESLint, Stylelint, TSQLLint, CSSLint, JSHint (see `CONTRIBUTING.md`), Vitest, i18n check. Run **`npm run build`** when changing imports, RSC boundaries, or routing.

@@ -7,6 +7,7 @@ import {
   getFavoriteTemplateIds,
 } from "@/lib/template-favorites";
 import { getTemplateById } from "@/lib/marketplace-templates";
+import { marketplaceFavoriteBodySchema } from "@/lib/api-schemas";
 
 /** GET: List user's favorited templates. */
 export async function GET() {
@@ -39,16 +40,18 @@ export async function POST(request: NextRequest) {
   }
   await getOrCreateUser(session);
 
-  let body: { templateId?: string };
+  let raw: unknown;
   try {
-    body = await request.json();
+    raw = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const templateId = body.templateId?.trim();
-  if (!templateId) {
-    return NextResponse.json({ error: "templateId required" }, { status: 400 });
+  const parsed = marketplaceFavoriteBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Invalid request";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
+  const templateId = parsed.data.templateId;
 
   const template = await getTemplateById(templateId);
   if (!template || template.status !== "published") {
@@ -69,16 +72,18 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { templateId?: string };
+  let raw: unknown;
   try {
-    body = await request.json();
+    raw = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const templateId = body.templateId?.trim();
-  if (!templateId) {
-    return NextResponse.json({ error: "templateId required" }, { status: 400 });
+  const parsed = marketplaceFavoriteBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Invalid request";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
+  const templateId = parsed.data.templateId;
 
   await removeTemplateFavorite(session.sub, templateId);
   return NextResponse.json({ ok: true });

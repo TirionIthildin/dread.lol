@@ -13,14 +13,23 @@ const FLAGS_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 const DISCORD_API_ORIGIN = "https://discord.com";
 
 /**
+ * Parsed Discord REST user URL (fixed origin + path). Prefer passing this to `fetch()` so
+ * static analysis does not treat the request destination as user-controlled.
+ */
+export function getDiscordApiUserUrlObject(discordUserId: string): URL | null {
+  if (!/^\d{17,20}$/.test(discordUserId)) return null;
+  const u = new URL(`/api/v10/users/${discordUserId}`, DISCORD_API_ORIGIN);
+  if (u.origin !== DISCORD_API_ORIGIN) return null;
+  return u;
+}
+
+/**
  * Build a fixed Discord REST user URL. Only https://discord.com/api/v10/users/{snowflake}.
  * Satisfies static analysis that outbound requests are not SSRF to arbitrary hosts.
  */
 export function getDiscordApiUserUrl(discordUserId: string): string | null {
-  if (!/^\d{17,20}$/.test(discordUserId)) return null;
-  const u = new URL(`/api/v10/users/${discordUserId}`, DISCORD_API_ORIGIN);
-  if (u.origin !== DISCORD_API_ORIGIN) return null;
-  return u.href;
+  const u = getDiscordApiUserUrlObject(discordUserId);
+  return u ? u.href : null;
 }
 
 function debug(...args: unknown[]) {
@@ -101,11 +110,11 @@ export async function fetchDiscordUserFromApi(
     debug("API skip: DISCORD_BOT_TOKEN not set");
     return null;
   }
-  const url = getDiscordApiUserUrl(discordUserId);
-  if (!url) return null;
-  debug("API fetch", { userId: discordUserId, url });
+  const userUrl = getDiscordApiUserUrlObject(discordUserId);
+  if (!userUrl) return null;
+  debug("API fetch", { userId: discordUserId, url: userUrl.href });
   try {
-    const res = await fetch(url, {
+    const res = await fetch(userUrl, {
       headers: { Authorization: `Bot ${token}` },
     });
     const body = await res.text();

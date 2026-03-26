@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: `Two-factor sign-in — ${SITE_NAME}`,
   description: `Complete two-factor authentication for ${SITE_NAME}.`,
   alternates: { canonical: `${SITE_URL}/mfa` },
+  robots: { index: false, follow: false },
 };
 
 export default function MfaLayout({ children }: { children: React.ReactNode }) {

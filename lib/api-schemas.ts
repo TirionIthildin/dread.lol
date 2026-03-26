@@ -20,6 +20,11 @@ export const marketplaceApplySchema = z.object({
     .optional(),
 });
 
+/** Body for POST/DELETE /api/marketplace/favorites */
+export const marketplaceFavoriteBodySchema = z.object({
+  templateId: z.string().trim().min(1).max(32),
+});
+
 const MAX_TEMPLATE_DATA_BYTES = 500_000;
 
 /** Optional schema for template data structure. Used for docs; actual sanitization is in sanitizeTemplateData. */

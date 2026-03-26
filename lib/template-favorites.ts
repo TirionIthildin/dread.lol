@@ -147,3 +147,18 @@ export async function getFavoriteTemplateIds(userId: string): Promise<string[]> 
     .toArray();
   return docs.map((d) => (d as unknown as { templateId: ObjectId }).templateId.toString());
 }
+
+/** Published templates the user has favorited (same logic as GET /api/marketplace/favorites). */
+export async function listFavoritePublishedTemplatesForUser(userId: string) {
+  const { getTemplateById } = await import("@/lib/marketplace-templates");
+  const ids = await getFavoriteTemplateIds(userId);
+  if (ids.length === 0) return [];
+  const items = [];
+  for (const id of ids) {
+    const t = await getTemplateById(id);
+    if (t && t.status === "published") {
+      items.push(t);
+    }
+  }
+  return items;
+}

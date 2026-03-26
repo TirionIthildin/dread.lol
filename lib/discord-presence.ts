@@ -1,11 +1,11 @@
 /**
  * Discord presence (status + Rich Presence) stored in Redis by the presence bot.
- * Keys: discord:presence:{discordUserId}, TTL 5 minutes (bot refreshes on PRESENCE_UPDATE).
+ * Keys: discord:presence:{discordUserId}, TTL 10 minutes (presence bot refreshes on PRESENCE_UPDATE and periodic sweep).
  */
 import { getValkey } from "@/lib/valkey";
 
 const PRESENCE_KEY_PREFIX = "discord:presence:";
-const PRESENCE_TTL_SECONDS = 300; // 5 minutes
+const PRESENCE_TTL_SECONDS = 600; // 10 minutes — keep in sync with scripts/discord-presence-bot.mjs
 
 export type DiscordPresenceStatus = "online" | "idle" | "dnd" | "offline";
 
