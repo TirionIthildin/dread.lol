@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getLeaderboardTopVouches, getLeaderboardTopViews } from "@/lib/member-profiles";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -71,12 +72,10 @@ export default async function DashboardLeaderboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Leaderboard</h1>
-        <p className="text-sm text-[var(--muted)] mt-1">
-          Top vouched and most viewed profiles. Vouches reset monthly; views are all-time.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Leaderboard"
+        description="Top vouched and most viewed profiles. Vouches reset monthly; views are all-time."
+      />
 
       <section className="space-y-3">
         <h2 className="text-base font-medium text-[var(--foreground)]">Top vouches this month</h2>

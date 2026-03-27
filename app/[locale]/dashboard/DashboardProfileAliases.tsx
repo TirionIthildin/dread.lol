@@ -14,6 +14,7 @@ import {
   PROFILE_ALIAS_MAX_FREE,
   PROFILE_ALIAS_MAX_PREMIUM,
 } from "@/lib/premium-features";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 interface DashboardProfileAliasesProps {
   profile: ProfileRow;
@@ -38,38 +39,44 @@ export default function DashboardProfileAliases({
   const atLimit = aliases.length >= maxAliases;
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">
-          <span className="text-[var(--terminal)]">$</span> Profile aliases
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Extra URLs like{" "}
-          <code className="rounded bg-[var(--surface)] px-1">/{`{alias}`}</code> that show the same
-          profile as{" "}
-          <code className="rounded bg-[var(--surface)] px-1">/{profile.slug}</code>. Different from{" "}
-          <Link href="/dashboard/short" className="text-[var(--accent)] hover:underline">
-            short links
-          </Link>{" "}
-          (those redirect to external sites).
-        </p>
-        <p className="mt-2 text-xs text-[var(--muted)]">
-          {hasPremiumAccess ? (
-            <>
-              Premium: up to {PROFILE_ALIAS_MAX_PREMIUM} aliases ({aliases.length}/{maxAliases} used).
-            </>
-          ) : (
-            <>
-              Free: {PROFILE_ALIAS_MAX_FREE} alias ({aliases.length}/{maxAliases} used). Upgrade to
-              Premium for {PROFILE_ALIAS_MAX_PREMIUM} slots on the{" "}
-              <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">
-                Premium
+    <div className="max-w-2xl space-y-6">
+      <DashboardPageHeader
+        title={
+          <>
+            <span className="text-[var(--terminal)]">$</span> Profile aliases
+          </>
+        }
+        description={
+          <>
+            <p>
+              Extra URLs like{" "}
+              <code className="rounded bg-[var(--surface)] px-1">/{`{alias}`}</code> that show the same
+              profile as{" "}
+              <code className="rounded bg-[var(--surface)] px-1">/{profile.slug}</code>. Different from{" "}
+              <Link href="/dashboard/short" className="text-[var(--accent)] hover:underline">
+                short links
               </Link>{" "}
-              page.
-            </>
-          )}
-        </p>
-      </div>
+              (those redirect to external sites).
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {hasPremiumAccess ? (
+                <>
+                  Premium: up to {PROFILE_ALIAS_MAX_PREMIUM} aliases ({aliases.length}/{maxAliases} used).
+                </>
+              ) : (
+                <>
+                  Free: {PROFILE_ALIAS_MAX_FREE} alias ({aliases.length}/{maxAliases} used). Upgrade to
+                  Premium for {PROFILE_ALIAS_MAX_PREMIUM} slots on the{" "}
+                  <Link href="/dashboard/premium" className="text-[var(--accent)] hover:underline">
+                    Premium
+                  </Link>{" "}
+                  page.
+                </>
+              )}
+            </p>
+          </>
+        }
+      />
 
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)]">

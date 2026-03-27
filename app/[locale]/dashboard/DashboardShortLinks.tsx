@@ -10,6 +10,7 @@ import {
 } from "@/app/[locale]/dashboard/actions";
 import type { ProfileRow } from "@/lib/db/schema";
 import type { ProfileShortLink } from "@/lib/member-profiles";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 interface DashboardShortLinksProps {
   profile: ProfileRow;
@@ -29,26 +30,25 @@ export default function DashboardShortLinks({
   const [shortLinkDeleting, setShortLinkDeleting] = useState(false);
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">
-          <span className="text-[var(--terminal)]">$</span> Short links
-        </h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Create short redirect URLs like{" "}
-          <code className="rounded bg-[var(--surface)] px-1">
-            /{profile.slug}/twitch
-          </code>{" "}
-          → your Twitch. These appear on your{" "}
-          <Link
-            href={`/${profile.slug}`}
-            className="text-[var(--accent)] hover:underline"
-          >
-            public profile
-          </Link>
-          .
-        </p>
-      </div>
+    <div className="max-w-2xl space-y-6">
+      <DashboardPageHeader
+        title={
+          <>
+            <span className="text-[var(--terminal)]">$</span> Short links
+          </>
+        }
+        description={
+          <>
+            Create short redirect URLs like{" "}
+            <code className="rounded bg-[var(--surface)] px-1">/{profile.slug}/twitch</code> → your Twitch.
+            These appear on your{" "}
+            <Link href={`/${profile.slug}`} className="text-[var(--accent)] hover:underline">
+              public profile
+            </Link>
+            .
+          </>
+        }
+      />
 
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)]">

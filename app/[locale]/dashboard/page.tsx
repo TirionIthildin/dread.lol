@@ -13,6 +13,7 @@ import { getGithubWidgetData } from "@/lib/github-widgets";
 import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardMyProfile from "@/app/[locale]/dashboard/DashboardMyProfile";
+import { DashboardHomeHub } from "@/app/[locale]/dashboard/DashboardHomeHub";
 import { LocalPasskeyEnroll } from "@/app/[locale]/dashboard/LocalPasskeyEnroll";
 
 export const metadata: Metadata = {
@@ -91,26 +92,38 @@ async function MemberProfileSection({
     if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
     if (cryptoWidgetData && cryptoWidgetData.length > 0) baseProfileForPreview.cryptoWidgets = { wallets: cryptoWidgetData };
     return (
-      <Suspense
-        fallback={
-          <div className="min-h-[50vh] rounded-xl border border-[var(--border)] bg-[var(--surface)]/50 flex items-center justify-center text-sm text-[var(--muted)]">
-            Loading profile editor…
-          </div>
-        }
-      >
-        <DashboardMyProfile
-          profile={profile}
-          baseProfileForPreview={baseProfileForPreview}
-          versions={versions}
-          discordAvatarUrl={session.picture ?? undefined}
-          availableDiscordBadges={availableDiscordBadges}
-          widgetPreviewData={widgetPreviewData}
-          cryptoWidgetPreviewData={cryptoWidgetData}
-          githubWidgetPreviewData={githubWidgetPreviewData}
-          robloxLinked={robloxLinked}
-          hasPremiumAccess={premiumAccess.hasAccess}
+      <div className="space-y-10">
+        <DashboardHomeHub
+          profileSlug={resolvedProfile.slug}
+          displayName={name}
+          hasPremium={premiumAccess.hasAccess}
         />
-      </Suspense>
+        <section id="profile-editor" className="scroll-mt-8 space-y-4" aria-labelledby="profile-editor-heading">
+          <h2 id="profile-editor-heading" className="text-lg font-semibold text-[var(--foreground)]">
+            Profile editor
+          </h2>
+          <Suspense
+            fallback={
+              <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 text-sm text-[var(--muted)]">
+                Loading profile editor…
+              </div>
+            }
+          >
+            <DashboardMyProfile
+              profile={profile}
+              baseProfileForPreview={baseProfileForPreview}
+              versions={versions}
+              discordAvatarUrl={session.picture ?? undefined}
+              availableDiscordBadges={availableDiscordBadges}
+              widgetPreviewData={widgetPreviewData}
+              cryptoWidgetPreviewData={cryptoWidgetData}
+              githubWidgetPreviewData={githubWidgetPreviewData}
+              robloxLinked={robloxLinked}
+              hasPremiumAccess={premiumAccess.hasAccess}
+            />
+          </Suspense>
+        </section>
+      </div>
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

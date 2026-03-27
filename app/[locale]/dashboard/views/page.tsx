@@ -21,6 +21,7 @@ import {
 import { getPremiumAccess } from "@/lib/premium-permissions";
 import { slugFromUsername } from "@/lib/slug";
 import DashboardViewsClient from "./DashboardViewsClient";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -60,7 +61,10 @@ export default async function DashboardAnalyticsPage() {
   if (!premiumAccess.hasAccess) {
     return (
       <div className="space-y-8">
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Analytics</h1>
+        <DashboardPageHeader
+          title="Analytics"
+          description="See who viewed your profile, traffic sources, views over time, and more with Premium."
+        />
         <div className="rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent)]/5 p-8 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/20 mb-4">
             <ChartLine size={32} strokeWidth={1.25} className="text-[var(--accent)]" />
@@ -85,8 +89,10 @@ export default async function DashboardAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Analytics</h1>
+      <DashboardPageHeader
+        title="Analytics"
+        description="Profile views, sources, devices, and recent visitors."
+      >
         <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
           <span>Your page:</span>
           <Link
@@ -100,7 +106,7 @@ export default async function DashboardAnalyticsPage() {
           </Link>
           <DashboardViewsClient slug={profile.slug} />
         </div>
-      </div>
+      </DashboardPageHeader>
 
       {!showViews ? (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">

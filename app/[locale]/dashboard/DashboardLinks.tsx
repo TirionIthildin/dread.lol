@@ -19,6 +19,7 @@ import {
   linkEntriesToFormPayload,
   type LinkEntry,
 } from "@/lib/link-entries";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 interface DashboardLinksProps {
   profile: ProfileRow;
@@ -95,20 +96,22 @@ export default function DashboardLinks({
   return (
     <div className="space-y-6 max-w-2xl">
       {!embedded && (
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--foreground)]">Links</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Manage your profile buttons. These appear on your{" "}
-            <Link href={`/${profile.slug}`} className="text-[var(--accent)] hover:underline">
-              public profile
-            </Link>
-            . For short redirect URLs, see{" "}
-            <Link href="/dashboard/short" className="text-[var(--accent)] hover:underline">
-              Short links
-            </Link>
-            .
-          </p>
-        </div>
+        <DashboardPageHeader
+          title="Links"
+          description={
+            <>
+              Manage your profile buttons. These appear on your{" "}
+              <Link href={`/${profile.slug}`} className="text-[var(--accent)] hover:underline">
+                public profile
+              </Link>
+              . For short redirect URLs, see{" "}
+              <Link href="/dashboard/short" className="text-[var(--accent)] hover:underline">
+                Short links
+              </Link>
+              .
+            </>
+          }
+        />
       )}
 
       <form id={formId} action={formAction} className="space-y-6">

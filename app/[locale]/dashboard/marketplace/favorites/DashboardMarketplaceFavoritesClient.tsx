@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Heart, Store } from "lucide-react";
 import type { TemplateRow } from "@/lib/marketplace-templates";
 import { MarketplacePreviewImage } from "@/app/components/MarketplacePreviewImage";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 const iconProps = { size: 18 };
 
@@ -20,8 +21,7 @@ export default function DashboardMarketplaceFavoritesClient({
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">My favorites</h1>
+      <DashboardPageHeader title="My favorites" description="Templates you saved from the marketplace.">
         <Link
           href="/marketplace"
           className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
@@ -29,7 +29,7 @@ export default function DashboardMarketplaceFavoritesClient({
           <Store {...iconProps} />
           Browse marketplace
         </Link>
-      </div>
+      </DashboardPageHeader>
 
       {initialItems.length === 0 ? (
         <div className="rounded-xl border border-[var(--border)] border-dashed p-8 text-center">

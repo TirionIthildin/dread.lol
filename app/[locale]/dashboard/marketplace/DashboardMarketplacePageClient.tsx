@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Rocket, Ban, Trash, Pencil, Store } from "lucide-react";
 import { toast } from "sonner";
 import type { TemplateRow } from "@/lib/marketplace-templates";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 const iconProps = { size: 18, className: "shrink-0" };
 
@@ -87,27 +88,27 @@ export default function DashboardMarketplacePageClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">My templates</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/marketplace"
-            className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
-          >
-            <Store {...iconProps} />
-            Browse marketplace
-          </Link>
-          <button
-            type="button"
-            onClick={createFromProfile}
-            disabled={creating}
-            className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
-          >
-            <Plus {...iconProps} />
-            {creating ? "Creating…" : "Create from my profile"}
-          </button>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="My templates"
+        description="Publish profile layouts for others to install from the marketplace."
+      >
+        <Link
+          href="/marketplace"
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
+        >
+          <Store {...iconProps} />
+          Browse marketplace
+        </Link>
+        <button
+          type="button"
+          onClick={createFromProfile}
+          disabled={creating}
+          className="inline-flex items-center gap-2 rounded-lg border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-3 py-2 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/20 disabled:opacity-50"
+        >
+          <Plus {...iconProps} />
+          {creating ? "Creating…" : "Create from my profile"}
+        </button>
+      </DashboardPageHeader>
 
       {templates.length === 0 ? (
         <div className="rounded-xl border border-[var(--border)] border-dashed p-8 text-center">

@@ -7,6 +7,7 @@ import { getBillingSettings } from "@/lib/settings";
 import { getProductsWithTypes, formatPrice } from "@/lib/polar-products";
 import { hasCustomBadgeAddon, getCustomBadgeAddonCount } from "@/lib/custom-badge-addon";
 import DashboardBadgesClient from "@/app/[locale]/dashboard/DashboardBadgesClient";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 export const metadata: Metadata = {
   title: "Badges",
@@ -44,12 +45,10 @@ export default async function BadgesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Custom badges</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Create badges with label, color, icon, or image. They appear on your profile.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Custom badges"
+        description="Create badges with label, color, icon, or image. They appear on your profile."
+      />
       <DashboardBadgesClient
         hasAddon={hasAddon}
         slotCount={slotCount}
