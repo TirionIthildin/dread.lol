@@ -8,6 +8,7 @@ import { getPremiumAccess } from "@/lib/premium-permissions";
 import { getProductsWithTypes, formatPrice, type PolarProductPrice } from "@/lib/polar-products";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import DashboardPremiumClient from "@/app/[locale]/dashboard/DashboardPremiumClient";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 export const metadata: Metadata = {
   title: "Premium",
@@ -62,6 +63,10 @@ export default async function PremiumPage() {
 
   return (
     <div className="space-y-8">
+      <DashboardPageHeader
+        title="Premium"
+        description="Unlock profile effects, analytics, gallery, and more."
+      />
       <DashboardPremiumClient
         billingEnabled={billing.enabled}
         tierName={billing.tierName}

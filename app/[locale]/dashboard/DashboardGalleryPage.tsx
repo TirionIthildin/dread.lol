@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Images, Plus } from "lucide-react";
 import DashboardGallery from "@/app/[locale]/dashboard/DashboardGallery";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 import type { GalleryItem } from "@/lib/member-profiles";
 
 type GalleryAddonProduct = { id: string; name: string; priceFormatted: string | null };
@@ -27,12 +28,10 @@ export default function DashboardGalleryPage({
   if (!hasGalleryAccess) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--foreground)]">Gallery</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Add and manage images shown on your profile. Premium includes gallery, or get the addon.
-          </p>
-        </div>
+        <DashboardPageHeader
+          title="Gallery"
+          description="Add and manage images shown on your profile. Premium includes gallery, or get the addon."
+        />
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-8 md:p-12 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/10">
             <Images size={32} className="text-[var(--accent)]" />
@@ -67,12 +66,10 @@ export default function DashboardGalleryPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Gallery</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Add and manage images shown on your profile.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Gallery"
+        description="Add and manage images shown on your profile."
+      />
       <DashboardGallery
         profileId={profileId}
         profileSlug={profileSlug}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getOrCreateUser, getOrCreateMemberProfile } from "@/lib/member-profiles";
@@ -38,16 +39,23 @@ export default async function BlogPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Blog</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Write short posts in markdown. They appear on your profile at{" "}
-          <Link href={`/${profile.slug}/blog`} className="text-[var(--accent)] hover:underline" target="_blank" rel="noopener noreferrer">
-            /{profile.slug}/blog
-          </Link>
-          .
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Blog"
+        description={
+          <>
+            Write short posts in markdown. They appear on your profile at{" "}
+            <Link
+              href={`/${profile.slug}/blog`}
+              className="text-[var(--accent)] hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              /{profile.slug}/blog
+            </Link>
+            .
+          </>
+        }
+      />
       <DashboardBlog
         profileSlug={profile.slug}
         initialPosts={posts}

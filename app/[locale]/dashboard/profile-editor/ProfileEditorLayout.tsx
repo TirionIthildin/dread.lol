@@ -47,7 +47,7 @@ export function ProfileEditorLayout({
   }, [panelEntryAnimationDone]);
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col overflow-hidden xl:h-[calc(100vh-6rem)]">
+    <div className="flex h-[calc(100vh-11rem)] min-h-0 flex-col overflow-hidden xl:h-[calc(100vh-10rem)]">
       <nav
         className="xl:hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden shrink-0 mb-4"
         aria-label="Profile editor"

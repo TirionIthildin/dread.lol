@@ -5,6 +5,7 @@ import { getOrCreateUser } from "@/lib/member-profiles";
 import { canUseDashboard } from "@/lib/dashboard-access";
 import { isVerifiedCreator } from "@/lib/creator-program";
 import CreatorSpaceClient from "@/app/[locale]/dashboard/CreatorSpaceClient";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 export const metadata: Metadata = {
   title: "Creator",
@@ -25,10 +26,10 @@ export default async function CreatorPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">Creator</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">Your program badge and share link.</p>
-      </div>
+      <DashboardPageHeader
+        title="Creator"
+        description="Your program badge and share link."
+      />
       <CreatorSpaceClient />
     </div>
   );

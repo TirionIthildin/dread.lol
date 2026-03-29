@@ -101,8 +101,6 @@ export default function DashboardPremiumClient({
 
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-[var(--foreground)]">Premium</h1>
-
       {/* Premium hero */}
       <div
         className={`relative overflow-hidden rounded-2xl border p-6 md:p-8 transition-colors ${

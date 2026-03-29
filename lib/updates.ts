@@ -11,6 +11,12 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Dashboard home and navigation",
+    description:
+      "The member dashboard has a new home hub with quick links and shortcuts, a mobile-friendly navigation menu, and more consistent layout styling across dashboard pages.",
+  },
+  {
+    date: "2026-03",
     title: "Lucide icons across the site",
     description:
       "Badges, dashboards, and custom link icons now use the Lucide icon set (with automatic mapping for older saved names).",

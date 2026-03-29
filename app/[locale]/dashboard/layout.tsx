@@ -32,6 +32,12 @@ export default async function DashboardLayout({
       >
         Skip to content
       </a>
+      <a
+        href="#dashboard-sidebar"
+        className="sr-only focus:fixed focus:left-4 focus:top-20 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-lg focus:bg-[var(--accent)] focus:px-3 focus:py-2 focus:text-[var(--bg)] focus:font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:[clip:auto] focus:[margin:0]"
+      >
+        Skip to navigation
+      </a>
       <div
         className="fixed inset-0 -z-10 overflow-hidden pointer-events-none page-theme-minimalist-hide-ornament"
         aria-hidden
@@ -55,7 +61,11 @@ export default async function DashboardLayout({
         />
       </div>
 
-      <aside className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-64 md:max-h-screen">
+      <aside
+        id="dashboard-sidebar"
+        tabIndex={-1}
+        className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-64 md:max-h-screen outline-none"
+      >
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <DashboardSidebar isAdmin={isAdmin} verifiedCreator={verifiedCreator} session={session} />
         </div>

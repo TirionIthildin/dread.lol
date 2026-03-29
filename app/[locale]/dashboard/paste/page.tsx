@@ -4,6 +4,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { getBillingSettings } from "@/lib/settings";
 import { getPremiumAccess } from "@/lib/premium-permissions";
+import { DashboardPageHeader } from "@/app/[locale]/dashboard/components/DashboardPageHeader";
 
 export const metadata: Metadata = {
   title: "Paste",
@@ -22,16 +23,18 @@ export default async function DashboardPastePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">
-          <span className="text-[var(--terminal)]">$</span> paste
-        </h1>
-        <p className="text-sm text-[var(--muted)] mt-1">
-          {canCreatePaste
+      <DashboardPageHeader
+        title={
+          <>
+            <span className="text-[var(--terminal)]">$</span> paste
+          </>
+        }
+        description={
+          canCreatePaste
             ? "Create and share pastes."
-            : "Paste requires Premium. Log in and upgrade at Premium to create pastes."}
-        </p>
-      </div>
+            : "Paste requires Premium. Log in and upgrade at Premium to create pastes."
+        }
+      />
 
       <PasteSection isLoggedIn={!!session} canCreatePaste={canCreatePaste} />
     </div>
