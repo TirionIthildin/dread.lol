@@ -51,8 +51,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/content ./content
 COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/package.json /app/package-lock.json* ./
-RUN npm install discord.js ioredis mongodb --omit=dev --ignore-scripts && npm cache clean --force
+COPY --from=builder /app/package.json /app/package-lock.json ./
+# Full production install from the lockfile. A partial `npm install <pkgs>` merges badly with
+# Next.js standalone's traced node_modules and can drop nested deps (e.g. @swc/helpers) or
+# leave packages half-installed (e.g. ioredis).
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 RUN chmod +x scripts/entrypoint.sh
 
 # Entrypoint runs as root to chown FILE_STORAGE_PATH on the mounted volume, then drops to nextjs via su-exec.
