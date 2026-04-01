@@ -25,7 +25,7 @@ A terminal-themed member profile site in the spirit of [Ithildin](https://ithild
 - **TypeScript** (strict)
 - **Node.js** ≥ 20 (CI uses Node 22)
 
-Backend-adjacent: **MongoDB**, **Valkey** (Redis-compatible sessions), **Discord OAuth**, optional **Polar** billing, file uploads on disk under `FILE_STORAGE_PATH`.
+Backend-adjacent: **MongoDB**, **Valkey** (Redis-compatible sessions), **Discord OAuth**, optional **Polar** billing, file uploads on **S3** (production) or local disk (`FILE_STORAGE_PATH` for dev).
 
 ## Quick start
 
@@ -54,7 +54,7 @@ Member profiles, sessions, and Discord login need MongoDB, Valkey, and environme
 
    - `DATABASE_URL` — e.g. `mongodb://dread:dread@localhost:27017/dread?authSource=admin`
    - `VALKEY_URL` — e.g. `redis://localhost:6379`
-   - `FILE_STORAGE_PATH` — e.g. `./data/uploads` for local uploads
+   - `S3_BUCKET` + `AWS_REGION` for production uploads, or `FILE_STORAGE_PATH` (e.g. `./data/uploads`) for local dev without S3
    - Discord OAuth: create an app at the [Discord Developer Portal](https://discord.com/developers/applications), then set `DISCORD_OAUTH_CLIENT_ID`, `DISCORD_OAUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URI` (e.g. `http://localhost:3000/api/auth/discord/callback`), and `AUTH_SECRET` (e.g. `openssl rand -base64 32`).
    - **Local accounts** (optional): `RESEND_API_KEY` and `EMAIL_FROM` for verification email. Set `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` if passkeys should use an explicit RP (defaults are derived from `SITE_URL`).
 

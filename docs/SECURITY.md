@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and local file storage on a Docker volume (`FILE_STORAGE_PATH`). This document summarizes security posture and deployment guidance.
+Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and object storage for user uploads (Amazon S3 or compatible API in production; optional local `FILE_STORAGE_PATH` for development). This document summarizes security posture and deployment guidance.
 
 ## Reporting a vulnerability
 
@@ -44,6 +44,11 @@ Next.js adds the following headers globally:
 | `NEXT_PUBLIC_*` | No | Exposed to client |
 | `SECURE_COOKIE` | No | Optional `true`/`false` to force session cookie `Secure` or disable it (default: secure in production) |
 | `NEXT_PUBLIC_SITE_DOMAIN` | No | Apex host without subdomain (e.g. `dread.lol`); sets cookie `Domain` for `*.dread.lol` |
+| `S3_BUCKET` | No | Production uploads; pair with `AWS_REGION` or `S3_REGION` |
+| `AWS_REGION` / `S3_REGION` | No | AWS SDK region for S3 |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Yes | Optional if the runtime supplies IAM (e.g. task role) |
+| `S3_ENDPOINT` | No | Optional; S3-compatible services (R2, MinIO) |
+| `FILE_STORAGE_PATH` | No | Local disk uploads when S3 is not configured |
 
 ## Trusted Proxy Headers
 
@@ -51,11 +56,13 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 
 ## File Access
 
-`/api/files/[id]` serves user-uploaded files from disk under `FILE_STORAGE_PATH`. File ids (UUID or legacy Seaweed-style `volumeId,fileId` if present on disk) are public once generated—do not store sensitive content if exposure is a concern.
+`/api/files/[id]` streams user-uploaded files from **S3** when `S3_BUCKET` and `AWS_REGION` (or `S3_REGION`) are set, otherwise from **`FILE_STORAGE_PATH`** on disk. While migrating, the app may try S3, then disk, then optional SeaweedFS (`SEAWEED_MASTER_URL`). File ids (UUID or legacy Seaweed-style `volumeId,fileId`) are public once generated—do not store sensitive content if exposure is a concern.
 
-**Docker:** The container entrypoint runs as root to `chown` `FILE_STORAGE_PATH` for the `nextjs` user (uid 1001), then the app process runs as `nextjs`.
+**S3:** Use a private bucket; the app reads objects with IAM credentials (or static keys only where roles are unavailable). Do not rely on public bucket ACLs unless you intentionally expose objects.
 
-**Backups:** Include the uploads volume in backup and restore procedures; it is the source of truth for on-disk blobs.
+**Docker / local disk:** If you use `FILE_STORAGE_PATH`, ensure the directory is writable by the app user where applicable.
+
+**Backups:** For S3, use bucket versioning/replication and lifecycle rules as needed. For disk-backed uploads, include the uploads directory in backup and restore procedures.
 
 ## Recent Security Improvements
 
@@ -68,6 +75,7 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 ## Deployment Checklist
 
 - [ ] Set `DATABASE_URL` in production (app will not start without it)
+- [ ] Set `S3_BUCKET` and `AWS_REGION` (or `S3_REGION`) for uploads, with IAM or keys allowing read/write on the bucket (see [migrations/volume-to-s3.md](migrations/volume-to-s3.md) when moving from disk)
 - [ ] Use strong `AUTH_SECRET` (32+ bytes)
 - [ ] Ensure reverse proxy strips/overrides forwarded headers from clients
 - [ ] Run `npm audit` and address vulnerabilities

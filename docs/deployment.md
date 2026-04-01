@@ -36,7 +36,7 @@ Production layout is in [`docker-compose.coolify.yml`](../docker-compose.coolify
 
 **Validate locally:** `MONGO_PASSWORD=… docker compose -f docker-compose.coolify.yml config` (syntax and interpolation).
 
-**Requirements:** `MONGO_PASSWORD` must be set in the environment (Coolify secrets). The `dread` service uses `user: "0:0"` so the container entrypoint can `chown` the uploads volume before the app runs as `nextjs`; do not override the service user to a non-root uid in Coolify or uploads will stay unavailable. `FILE_STORAGE_PATH=/data/uploads` is paired with the `uploads_data` volume; `read_only: true` plus `tmpfs` for `/tmp`, `/var/tmp`, and `/app/.next/cache` matches the production image.
+**Requirements:** `MONGO_PASSWORD` must be set in the environment (Coolify secrets). Set `S3_BUCKET` and `AWS_REGION` (see [`docker-compose.coolify.yml`](../docker-compose.coolify.yml)) with credentials or an IAM role that can read/write the bucket. The `dread` service uses `user: "0:0"` for image entrypoint compatibility; `read_only: true` plus `tmpfs` for `/tmp`, `/var/tmp`, and `/app/.next/cache` matches the production image. Migrating from a disk volume is documented in [migrations/volume-to-s3.md](migrations/volume-to-s3.md).
 
 ## Further reading
 

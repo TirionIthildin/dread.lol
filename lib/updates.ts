@@ -11,6 +11,12 @@ export interface FeatureUpdate {
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
     date: "2026-03",
+    title: "Upload storage on S3",
+    description:
+      "Profile media is stored in Amazon S3 (or compatible object storage) in production—same /api/files URLs, no change to how you embed images.",
+  },
+  {
+    date: "2026-03",
     title: "Dashboard home and navigation",
     description:
       "The member dashboard has a new home hub with quick links and shortcuts, a mobile-friendly navigation menu, and more consistent layout styling across dashboard pages.",
