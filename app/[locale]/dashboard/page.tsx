@@ -3,16 +3,9 @@ import { Suspense } from "react";
 import { SITE_NAME } from "@/lib/site";
 import { getSession } from "@/lib/auth/session";
 import { PolarSuccessHandler } from "@/app/[locale]/dashboard/PolarSuccessHandler";
-import { getOrCreateUser, getOrCreateMemberProfile, getUserDiscordBadgeData, resolveProfileAvatar, memberProfileToProfile } from "@/lib/member-profiles";
+import { getOrCreateUser, getOrCreateMemberProfile, resolveProfileAvatar } from "@/lib/member-profiles";
 import { getPremiumAccess } from "@/lib/premium-permissions";
-import { decodeDiscordPublicFlags, getPremiumBadgeKeys } from "@/lib/discord-badges";
-import { getDiscordWidgetData } from "@/lib/discord-widgets";
-import { getRobloxWidgetData, hasRobloxLinked } from "@/lib/roblox-widgets";
-import { getCryptoWidgetData } from "@/lib/crypto-widgets";
-import { getGithubWidgetData } from "@/lib/github-widgets";
-import { getProfileVersions } from "@/lib/profile-versions";
 import { slugFromUsername } from "@/lib/slug";
-import DashboardMyProfile from "@/app/[locale]/dashboard/DashboardMyProfile";
 import { DashboardHomeHub } from "@/app/[locale]/dashboard/DashboardHomeHub";
 import { LocalPasskeyEnroll } from "@/app/[locale]/dashboard/LocalPasskeyEnroll";
 
@@ -58,72 +51,14 @@ async function MemberProfileSection({
       slug,
       avatarUrl: session.picture ?? undefined,
     });
-    const [discordBadgeData, premiumAccess, widgetPreviewData, versions, robloxLinked, robloxWidgetData, cryptoWidgetData, githubWidgetPreviewData] =
-      await Promise.all([
-        getUserDiscordBadgeData(userId),
-        getPremiumAccess(userId),
-        getDiscordWidgetData(
-          profile.userId,
-          ["accountAge", "joined", "serverCount", "serverInvite"],
-          profile.discordInviteUrl,
-          profile.createdAt
-        ).catch(() => null),
-        getProfileVersions(userId),
-        hasRobloxLinked(userId),
-        getRobloxWidgetData(userId, ["accountAge", "profile"]).catch(() => null),
-        getCryptoWidgetData({
-          cryptoWalletEthereum: (profile as { cryptoWalletEthereum?: string | null }).cryptoWalletEthereum,
-          cryptoWalletBitcoin: (profile as { cryptoWalletBitcoin?: string | null }).cryptoWalletBitcoin,
-          cryptoWalletSolana: (profile as { cryptoWalletSolana?: string | null }).cryptoWalletSolana,
-          cryptoWalletChain: (profile as { cryptoWalletChain?: string | null }).cryptoWalletChain,
-          cryptoWalletAddress: (profile as { cryptoWalletAddress?: string | null }).cryptoWalletAddress,
-        }).catch(() => null),
-        getGithubWidgetData(
-          (profile as { githubUsername?: string | null }).githubUsername,
-          (profile as { showGithubWidgets?: string | null }).showGithubWidgets
-        ).catch(() => null),
-      ]);
-    const availableDiscordBadges = [
-      ...decodeDiscordPublicFlags(discordBadgeData.flags ?? 0),
-      ...getPremiumBadgeKeys(discordBadgeData.premiumType),
-    ];
+    const premiumAccess = await getPremiumAccess(userId);
     const resolvedProfile = await resolveProfileAvatar(profile);
-    const baseProfileForPreview = memberProfileToProfile(resolvedProfile, undefined, discordBadgeData, undefined, premiumAccess.hasAccess);
-    if (robloxWidgetData) baseProfileForPreview.robloxWidgets = robloxWidgetData;
-    if (cryptoWidgetData && cryptoWidgetData.length > 0) baseProfileForPreview.cryptoWidgets = { wallets: cryptoWidgetData };
     return (
-      <div className="space-y-10">
-        <DashboardHomeHub
-          profileSlug={resolvedProfile.slug}
-          displayName={name}
-          hasPremium={premiumAccess.hasAccess}
-        />
-        <section id="profile-editor" className="scroll-mt-8 space-y-4" aria-labelledby="profile-editor-heading">
-          <h2 id="profile-editor-heading" className="text-lg font-semibold text-[var(--foreground)]">
-            Profile editor
-          </h2>
-          <Suspense
-            fallback={
-              <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 text-sm text-[var(--muted)]">
-                Loading profile editor…
-              </div>
-            }
-          >
-            <DashboardMyProfile
-              profile={profile}
-              baseProfileForPreview={baseProfileForPreview}
-              versions={versions}
-              discordAvatarUrl={session.picture ?? undefined}
-              availableDiscordBadges={availableDiscordBadges}
-              widgetPreviewData={widgetPreviewData}
-              cryptoWidgetPreviewData={cryptoWidgetData}
-              githubWidgetPreviewData={githubWidgetPreviewData}
-              robloxLinked={robloxLinked}
-              hasPremiumAccess={premiumAccess.hasAccess}
-            />
-          </Suspense>
-        </section>
-      </div>
+      <DashboardHomeHub
+        profileSlug={resolvedProfile.slug}
+        displayName={name}
+        hasPremium={premiumAccess.hasAccess}
+      />
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and object storage for user uploads (Amazon S3 or compatible API in production; optional local `FILE_STORAGE_PATH` for development). This document summarizes security posture and deployment guidance.
+Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and user uploads on **S3-compatible storage** when configured (`S3_BUCKET`, `AWS_REGION` / `S3_REGION`, credentials, etc.) or on disk under `FILE_STORAGE_PATH`. This document summarizes security posture and deployment guidance.
 
 ## Reporting a vulnerability
 
@@ -56,13 +56,13 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 
 ## File Access
 
-`/api/files/[id]` streams user-uploaded files from **S3** when `S3_BUCKET` and `AWS_REGION` (or `S3_REGION`) are set, otherwise from **`FILE_STORAGE_PATH`** on disk. While migrating, the app may try S3, then disk, then optional SeaweedFS (`SEAWEED_MASTER_URL`). File ids (UUID or legacy Seaweed-style `volumeId,fileId`) are public once generated—do not store sensitive content if exposure is a concern.
+`/api/files/[id]` streams user-uploaded files from **S3** when configured, then from **`FILE_STORAGE_PATH`** on disk, then optional **SeaweedFS** during migration (`SEAWEED_MASTER_URL`). File ids (UUID or legacy Seaweed-style `volumeId,fileId`) are public once generated—do not store sensitive content if exposure is a concern.
 
-**S3:** Use a private bucket; the app reads objects with IAM credentials (or static keys only where roles are unavailable). Do not rely on public bucket ACLs unless you intentionally expose objects.
+**S3:** Use scoped IAM (or R2 API tokens) with least privilege for object APIs (`s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` on `bucket/your-prefix/*`). The readiness check uses Put/Delete on a probe key, not HeadBucket. Do not commit access keys.
 
-**Docker / local disk:** If you use `FILE_STORAGE_PATH`, ensure the directory is writable by the app user where applicable.
+**Docker (local disk):** The container entrypoint runs as root to `chown` `FILE_STORAGE_PATH` for the `nextjs` user (uid 1001) when that path is mounted.
 
-**Backups:** For S3, use bucket versioning/replication and lifecycle rules as needed. For disk-backed uploads, include the uploads directory in backup and restore procedures.
+**Backups:** For S3, use versioning/replication as needed. For disk-backed uploads, include the volume in backup procedures.
 
 ## Recent Security Improvements
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Link as I18nLink } from "@/i18n/navigation";
 import type { AnimationEvent, ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Eye, ExternalLink } from "lucide-react";
@@ -9,6 +10,8 @@ import { TabButton } from "./TabButton";
 import type { EditorSectionId } from "./types";
 
 export function ProfileEditorLayout({
+  layoutVariant = "default",
+  externalSectionNav = false,
   tab,
   setTab,
   activeEditorSection,
@@ -19,6 +22,10 @@ export function ProfileEditorLayout({
   editorHeaderHint,
   editorScrollChildren,
 }: {
+  /** `fullPage` uses more vertical space when the editor is the primary dashboard view. */
+  layoutVariant?: "default" | "fullPage";
+  /** When true, section buttons live in the dashboard left rail on md+; inner nav stays for small screens. */
+  externalSectionNav?: boolean;
   tab: "editor" | "preview";
   setTab: (t: "editor" | "preview") => void;
   activeEditorSection: EditorSectionId;
@@ -46,8 +53,13 @@ export function ProfileEditorLayout({
     return () => window.clearTimeout(id);
   }, [panelEntryAnimationDone]);
 
+  const heightClass =
+    layoutVariant === "fullPage"
+      ? "h-[calc(100dvh-5.25rem)] sm:h-[calc(100dvh-5.5rem)] md:h-[calc(100dvh-6rem)] xl:h-[calc(100dvh-5.5rem)]"
+      : "h-[calc(100vh-11rem)] min-h-0 xl:h-[calc(100vh-10rem)]";
+
   return (
-    <div className="flex h-[calc(100vh-11rem)] min-h-0 flex-col overflow-hidden xl:h-[calc(100vh-10rem)]">
+    <div className={`flex min-h-0 flex-col overflow-hidden ${heightClass}`}>
       <nav
         className="xl:hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden shrink-0 mb-4"
         aria-label="Profile editor"
@@ -76,6 +88,14 @@ export function ProfileEditorLayout({
         >
           <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg)]/80 shrink-0">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
+              {externalSectionNav ? (
+                <I18nLink
+                  href="/dashboard"
+                  className="mr-1 inline-flex shrink-0 items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--foreground)] hover:border-[var(--accent)]/40 md:hidden"
+                >
+                  ← Dashboard
+                </I18nLink>
+              ) : null}
               <Pencil size={18} strokeWidth={1.5} className="text-[var(--accent)] shrink-0" aria-hidden />
               <span className="text-sm font-medium text-[var(--foreground)]">Editor</span>
               <span className="text-xs text-[var(--muted)] hidden sm:inline">— edit your profile</span>
@@ -91,9 +111,15 @@ export function ProfileEditorLayout({
               Preview in new tab
             </Link>
           </div>
-          <div className="grid min-h-0 flex-1 grid-cols-[14rem_1fr] xl:grid-cols-[14rem_1fr]">
+          <div
+            className={`grid min-h-0 flex-1 ${
+              externalSectionNav ? "grid-cols-[14rem_1fr] md:grid-cols-1" : "grid-cols-[14rem_1fr] xl:grid-cols-[14rem_1fr]"
+            }`}
+          >
             <nav
-              className="flex w-52 flex-col gap-1 overflow-hidden border-r border-[var(--border)] bg-[var(--bg)]/50 p-3 xl:w-56"
+              className={`flex w-52 flex-col gap-1 overflow-hidden border-r border-[var(--border)] bg-[var(--bg)]/50 p-3 xl:w-56 ${
+                externalSectionNav ? "md:hidden" : ""
+              }`}
               aria-label="Editor sections"
             >
               {EDITOR_SECTIONS.map(({ id, label, icon }) => (

@@ -12,7 +12,7 @@ const FONT_MIME_TYPES = new Set([
 ]);
 
 /**
- * GET /api/files/{id} – stream from S3, local disk, or SeaweedFS (legacy migration).
+ * GET /api/files/{id} – stream from S3 (when configured), local disk, or SeaweedFS (legacy migration).
  * Supports ?type= for font files to ensure correct MIME type (e.g. ?type=font/woff2).
  *
  * ACCESS CONTROL: Files are public once uploaded. Ids are not secret; do not store

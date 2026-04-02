@@ -1,209 +1,271 @@
 /**
- * S3-compatible object storage for user uploads (same key layout as disk: id/blob, id/meta.json).
+ * S3-compatible object storage for user uploads (AWS S3, Cloudflare R2, MinIO, etc.).
+ * Configure S3_BUCKET + region; optional S3_ENDPOINT. Use S3_UPLOAD_PREFIX or S3_KEY_PREFIX
+ * for a path prefix inside the bucket (default: uploads).
  */
 
 import {
-  DeleteObjectsCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
-  HeadBucketCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { parseRangeHeader } from "@/lib/file-range";
+import { Readable } from "stream";
+import type { FileUploadResult } from "@/lib/file-storage-types";
 import { normalizeFileId } from "@/lib/file-id";
-
-const BUCKET = process.env.S3_BUCKET?.trim() ?? "";
-const REGION =
-  process.env.AWS_REGION?.trim() || process.env.S3_REGION?.trim() || "";
-const KEY_PREFIX = (process.env.S3_KEY_PREFIX?.trim() ?? "").replace(
-  /^\/+|\/+$/g,
-  ""
-);
-const ENDPOINT = process.env.S3_ENDPOINT?.trim();
-const FORCE_PATH_STYLE =
-  process.env.S3_FORCE_PATH_STYLE === "1" ||
-  process.env.S3_FORCE_PATH_STYLE?.toLowerCase() === "true";
+import { logger } from "@/lib/logger";
+import { parseRangeHeader } from "@/lib/file-range";
 
 let client: S3Client | null = null;
 
-function s3Client(): S3Client {
-  if (!client) {
-    client = new S3Client({
-      region: REGION,
-      ...(ENDPOINT
-        ? { endpoint: ENDPOINT, forcePathStyle: FORCE_PATH_STYLE }
-        : {}),
-    });
-  }
-  return client;
+function bucket(): string {
+  return process.env.S3_BUCKET?.trim() ?? "";
+}
+
+function region(): string {
+  return (
+    process.env.S3_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    ""
+  );
+}
+
+/** Prefer S3_UPLOAD_PREFIX; S3_KEY_PREFIX is an alias (main branch name). */
+function uploadPrefix(): string {
+  const p =
+    process.env.S3_UPLOAD_PREFIX?.trim() ||
+    process.env.S3_KEY_PREFIX?.trim() ||
+    "uploads";
+  return p.replace(/\/+$/, "");
 }
 
 export function isS3Configured(): boolean {
-  return BUCKET.length > 0 && REGION.length > 0;
+  return bucket().length > 0 && region().length > 0;
 }
 
-function prefixKey(rel: string): string {
-  return KEY_PREFIX ? `${KEY_PREFIX}/${rel}` : rel;
+function getS3Client(): S3Client {
+  if (client) return client;
+  const endpoint = process.env.S3_ENDPOINT?.trim() || undefined;
+  const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+  client = new S3Client({
+    region: region(),
+    endpoint,
+    forcePathStyle,
+    ...(accessKeyId && secretAccessKey
+      ? {
+          credentials: {
+            accessKeyId,
+            secretAccessKey,
+          },
+        }
+      : {}),
+  });
+  return client;
 }
 
-function blobObjectKey(fileId: string): string {
-  return prefixKey(`${normalizeFileId(fileId)}/blob`);
+export function objectKeyForFileId(fileId: string): string {
+  return `${uploadPrefix()}/${normalizeFileId(fileId)}/blob`;
 }
 
-function metaObjectKey(fileId: string): string {
-  return prefixKey(`${normalizeFileId(fileId)}/meta.json`);
+function isNotFound(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return (
+    e.name === "NoSuchKey" ||
+    e.name === "NotFound" ||
+    e.$metadata?.httpStatusCode === 404
+  );
 }
 
+function summarizeS3Error(e: unknown): Record<string, unknown> {
+  if (typeof e !== "object" || e === null) {
+    return { message: String(e) };
+  }
+  const err = e as {
+    name?: string;
+    message?: string;
+    $metadata?: { httpStatusCode?: number; requestId?: string };
+  };
+  return {
+    name: err.name,
+    message: err.message?.slice(0, 400),
+    httpStatusCode: err.$metadata?.httpStatusCode,
+    requestId: err.$metadata?.requestId,
+  };
+}
+
+/**
+ * Verify PutObject + DeleteObject on the upload prefix (matches real upload IAM; avoids HeadBucket-only policies).
+ */
 export async function ensureS3Ready(): Promise<boolean> {
   if (!isS3Configured()) return false;
+
+  const b = bucket();
+  const probeKey = `${uploadPrefix()}/.probe/${crypto.randomUUID()}`;
+  logger.debug("FILE_STORAGE", "S3 readiness probe starting", {
+    bucket: b,
+    region: region(),
+    endpointConfigured: Boolean(process.env.S3_ENDPOINT?.trim()),
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+    hasExplicitCredentials: Boolean(
+      process.env.AWS_ACCESS_KEY_ID?.trim() &&
+        process.env.AWS_SECRET_ACCESS_KEY?.trim()
+    ),
+    probeKeySuffix: probeKey.split("/").slice(-2).join("/"),
+  });
+
   try {
-    await s3Client().send(new HeadBucketCommand({ Bucket: BUCKET }));
+    await getS3Client().send(
+      new PutObjectCommand({
+        Bucket: b,
+        Key: probeKey,
+        Body: Buffer.from("1"),
+        ContentLength: 1,
+        ContentType: "application/octet-stream",
+      })
+    );
+    await getS3Client().send(
+      new DeleteObjectCommand({
+        Bucket: b,
+        Key: probeKey,
+      })
+    );
+    logger.debug("FILE_STORAGE", "S3 readiness probe succeeded", { bucket: b });
     return true;
-  } catch {
+  } catch (e) {
+    logger.warn("FILE_STORAGE", "S3 readiness probe failed", {
+      bucket: b,
+      region: region(),
+      ...summarizeS3Error(e),
+    });
     return false;
   }
 }
 
-interface FileMetaParsed {
-  contentType: string;
-  size: number;
-}
-
-async function readMetaFromS3(fileId: string): Promise<FileMetaParsed | null> {
-  try {
-    const res = await s3Client().send(
-      new GetObjectCommand({
-        Bucket: BUCKET,
-        Key: metaObjectKey(fileId),
-      })
-    );
-    const body = res.Body;
-    if (!body) return null;
-    const raw = await body.transformToString();
-    const parsed = JSON.parse(raw) as {
-      contentType?: unknown;
-      size?: unknown;
-    };
-    const contentType =
-      typeof parsed.contentType === "string"
-        ? parsed.contentType
-        : "application/octet-stream";
-    const size = typeof parsed.size === "number" ? parsed.size : 0;
-    return { contentType, size };
-  } catch (e: unknown) {
-    if (isNotFoundError(e)) return null;
-    throw e;
-  }
-}
-
-function isNotFoundError(e: unknown): boolean {
-  if (!e || typeof e !== "object") return false;
-  const name = "name" in e && typeof e.name === "string" ? e.name : "";
-  return name === "NoSuchKey" || name === "NotFound";
-}
-
-export async function uploadFileToS3(
-  fileId: string,
+export async function uploadToS3(
   buffer: Buffer,
   contentType: string
-): Promise<void> {
-  const ct =
-    contentType?.trim() || "application/octet-stream";
+): Promise<FileUploadResult> {
+  const fid = crypto.randomUUID();
+  const key = objectKeyForFileId(fid);
+  const ct = contentType?.trim() || "application/octet-stream";
   const size = buffer.length;
-  const c = s3Client();
-  await c.send(
+  await getS3Client().send(
     new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: blobObjectKey(fileId),
+      Bucket: bucket(),
+      Key: key,
       Body: buffer,
       ContentType: ct,
+      CacheControl: "public, max-age=31536000, immutable",
     })
   );
-  await c.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: metaObjectKey(fileId),
-      Body: JSON.stringify({ contentType: ct, size }, null, 0),
-      ContentType: "application/json",
-    })
-  );
+  return {
+    fid,
+    path: `/api/files/${fid}`,
+    size,
+  };
 }
 
-/**
- * Stream file from S3, or return null if missing. Supports Range like disk storage.
- */
-export async function getFileFromS3(
+export async function getFromS3(
   fileId: string,
   rangeHeader?: string | null
 ): Promise<Response | null> {
-  const meta = await readMetaFromS3(fileId);
-  if (!meta) return null;
+  if (!isS3Configured()) return null;
+  const key = objectKeyForFileId(fileId);
+  try {
+    const hasRange =
+      typeof rangeHeader === "string" && rangeHeader.startsWith("bytes=");
 
-  const fileSize = meta.size;
-  const contentType = meta.contentType || "application/octet-stream";
-  const parsed = parseRangeHeader(rangeHeader ?? null, fileSize);
+    if (!hasRange) {
+      const full = await getS3Client().send(
+        new GetObjectCommand({ Bucket: bucket(), Key: key })
+      );
+      if (!full.Body) return null;
+      const fileSize = full.ContentLength ?? 0;
+      const baseContentType =
+        full.ContentType?.trim() || "application/octet-stream";
+      const stream = Readable.toWeb(full.Body as Readable) as ReadableStream;
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          "content-type": baseContentType,
+          "content-length": String(fileSize),
+          "accept-ranges": "bytes",
+          "cache-control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
 
-  if (!parsed.ok) {
-    const res = await s3Client().send(
+    const head = await getS3Client().send(
+      new HeadObjectCommand({ Bucket: bucket(), Key: key })
+    );
+    const fileSize = head.ContentLength ?? 0;
+    const baseContentType =
+      head.ContentType?.trim() || "application/octet-stream";
+
+    const parsed = parseRangeHeader(rangeHeader ?? null, fileSize);
+
+    if (!parsed.ok) {
+      const full = await getS3Client().send(
+        new GetObjectCommand({ Bucket: bucket(), Key: key })
+      );
+      if (!full.Body) return null;
+      const stream = Readable.toWeb(full.Body as Readable) as ReadableStream;
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          "content-type": baseContentType,
+          "content-length": String(fileSize),
+          "accept-ranges": "bytes",
+          "cache-control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
+    const { start, end } = parsed;
+    const ranged = await getS3Client().send(
       new GetObjectCommand({
-        Bucket: BUCKET,
-        Key: blobObjectKey(fileId),
+        Bucket: bucket(),
+        Key: key,
+        Range: `bytes=${start}-${end}`,
       })
     );
-    const body = res.Body;
-    if (!body) return null;
-    const web = body.transformToWebStream();
-    return new Response(web, {
-      status: 200,
+    if (!ranged.Body) return null;
+    const chunkSize = end - start + 1;
+    const stream = Readable.toWeb(ranged.Body as Readable) as ReadableStream;
+    const contentRange =
+      ranged.ContentRange ?? `bytes ${start}-${end}/${fileSize}`;
+    return new Response(stream, {
+      status: 206,
       headers: {
-        "content-type": contentType,
-        "content-length": String(fileSize),
+        "content-type": baseContentType,
+        "content-length": String(chunkSize),
+        "content-range": contentRange,
         "accept-ranges": "bytes",
         "cache-control": "public, max-age=31536000, immutable",
       },
     });
+  } catch (e) {
+    if (isNotFound(e)) return null;
+    throw e;
   }
-
-  const { start, end } = parsed;
-  const chunkSize = end - start + 1;
-  const rangeVal = `bytes=${start}-${end}`;
-  const res = await s3Client().send(
-    new GetObjectCommand({
-      Bucket: BUCKET,
-      Key: blobObjectKey(fileId),
-      Range: rangeVal,
-    })
-  );
-  const body = res.Body;
-  if (!body) return null;
-  const web = body.transformToWebStream();
-
-  return new Response(web, {
-    status: 206,
-    headers: {
-      "content-type": contentType,
-      "content-length": String(chunkSize),
-      "content-range": `bytes ${start}-${end}/${fileSize}`,
-      "accept-ranges": "bytes",
-      "cache-control": "public, max-age=31536000, immutable",
-    },
-  });
 }
 
-export async function deleteFileFromS3(fileId: string): Promise<void> {
+export async function deleteFromS3(fileId: string): Promise<void> {
+  if (!isS3Configured()) return;
+  const key = objectKeyForFileId(fileId);
   try {
-    await s3Client().send(
-      new DeleteObjectsCommand({
-        Bucket: BUCKET,
-        Delete: {
-          Objects: [
-            { Key: blobObjectKey(fileId) },
-            { Key: metaObjectKey(fileId) },
-          ],
-        },
+    await getS3Client().send(
+      new DeleteObjectCommand({
+        Bucket: bucket(),
+        Key: key,
       })
     );
   } catch (e) {
-    console.error(`S3 delete failed for ${fileId}:`, e);
+    if (isNotFound(e)) return;
+    throw e;
   }
 }

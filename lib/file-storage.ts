@@ -1,25 +1,28 @@
 /**
- * User uploads: S3 when configured, else local directory (Docker volume). Public URLs stay /api/files/{id}.
- * Optional SeaweedFS read fallback for legacy ids during migration.
+ * User uploads: S3-compatible storage when configured, else local directory (Docker volume).
+ * Public URLs stay /api/files/{id}. New ids are UUIDs; legacy Seaweed-style fids may exist on disk
+ * or SeaweedFS during migration.
  */
 
 import { createReadStream } from "fs";
 import fs from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
+import type { FileMeta, FileUploadResult } from "@/lib/file-storage-types";
 import { parseRangeHeader } from "@/lib/file-range";
 import {
   fileIdFromPath,
   isValidFileId,
   normalizeFileId,
 } from "@/lib/file-id";
+import { logger } from "@/lib/logger";
 import { getFile as getFileFromSeaweed, isSeaweedConfigured } from "@/lib/seaweed";
 import {
-  deleteFileFromS3,
+  deleteFromS3,
   ensureS3Ready,
-  getFileFromS3,
+  getFromS3,
   isS3Configured,
-  uploadFileToS3,
+  uploadToS3,
 } from "@/lib/s3-storage";
 
 const STORAGE_ROOT = process.env.FILE_STORAGE_PATH?.trim() ?? "";
@@ -31,16 +34,7 @@ export {
   normalizeFileId,
 } from "@/lib/file-id";
 
-export interface FileMeta {
-  contentType: string;
-  size: number;
-}
-
-export interface FileUploadResult {
-  fid: string;
-  path: string;
-  size: number;
-}
+export type { FileMeta, FileUploadResult } from "@/lib/file-storage-types";
 
 function isDiskConfigured(): boolean {
   return STORAGE_ROOT.length > 0;
@@ -50,17 +44,49 @@ export function isStorageConfigured(): boolean {
   return isS3Configured() || isDiskConfigured();
 }
 
-/** True when the active write backend is reachable (S3 HeadBucket or local dir writable). */
+/** True when S3 probe passes, or local path exists / can be created and is writable. */
 export async function ensureStorageReady(): Promise<boolean> {
+  logger.debug("FILE_STORAGE", "ensureStorageReady", {
+    mode: isS3Configured()
+      ? "s3"
+      : isDiskConfigured()
+        ? "disk"
+        : "none",
+    fileStoragePath: isDiskConfigured() ? STORAGE_ROOT : "(unset)",
+    s3BucketSet: Boolean(process.env.S3_BUCKET?.trim()),
+    s3RegionSet: Boolean(
+      process.env.S3_REGION?.trim() || process.env.AWS_REGION?.trim()
+    ),
+  });
+
   if (isS3Configured()) {
-    return ensureS3Ready();
+    const ok = await ensureS3Ready();
+    if (ok) {
+      logger.debug("FILE_STORAGE", "Storage ready (S3)");
+    }
+    return ok;
   }
-  if (!isDiskConfigured()) return false;
+
+  if (!isDiskConfigured()) {
+    logger.warn(
+      "FILE_STORAGE",
+      "Storage not ready: set FILE_STORAGE_PATH or S3_BUCKET + S3_REGION (or AWS_REGION)"
+    );
+    return false;
+  }
+
   try {
     await fs.mkdir(STORAGE_ROOT, { recursive: true });
     await fs.access(STORAGE_ROOT, fs.constants.W_OK);
+    logger.debug("FILE_STORAGE", "Storage ready (disk)", { path: STORAGE_ROOT });
     return true;
-  } catch {
+  } catch (e) {
+    const errno = e instanceof Error ? (e as NodeJS.ErrnoException).code : undefined;
+    logger.warn("FILE_STORAGE", "Disk storage not ready", {
+      path: STORAGE_ROOT,
+      errno,
+      message: e instanceof Error ? e.message.slice(0, 400) : String(e),
+    });
     return false;
   }
 }
@@ -89,20 +115,14 @@ async function blobPath(fileId: string): Promise<string> {
   return path.join(dirForId(fileId), "blob");
 }
 
-export async function uploadFile(
+async function uploadFileToDisk(
   file: Blob | Buffer,
-  _fileName?: string,
   contentType?: string
 ): Promise<FileUploadResult> {
-  if (!isStorageConfigured()) {
-    throw new Error("File storage is not configured");
-  }
-  const ready = await ensureStorageReady();
-  if (!ready) {
-    throw new Error("File storage is not available");
-  }
-
   const fid = crypto.randomUUID();
+  const dir = dirForId(fid);
+  await fs.mkdir(dir, { recursive: true });
+
   const buffer = Buffer.isBuffer(file)
     ? file
     : Buffer.from(await (file as Blob).arrayBuffer());
@@ -112,26 +132,47 @@ export async function uploadFile(
     (file instanceof Blob && file.type ? file.type : "") ||
     "application/octet-stream";
 
-  if (isS3Configured()) {
-    await uploadFileToS3(fid, buffer, ct);
-  } else {
-    const dir = dirForId(fid);
-    await fs.mkdir(dir, { recursive: true });
-    const blobFile = path.join(dir, "blob");
-    const metaFile = path.join(dir, "meta.json");
-    await fs.writeFile(blobFile, buffer);
-    await fs.writeFile(
-      metaFile,
-      JSON.stringify({ contentType: ct, size }, null, 0),
-      "utf8"
-    );
-  }
+  const blobFile = path.join(dir, "blob");
+  const metaFile = path.join(dir, "meta.json");
+
+  await fs.writeFile(blobFile, buffer);
+  await fs.writeFile(
+    metaFile,
+    JSON.stringify({ contentType: ct, size }, null, 0),
+    "utf8"
+  );
 
   return {
     fid,
     path: `/api/files/${fid}`,
     size,
   };
+}
+
+export async function uploadFile(
+  file: Blob | Buffer,
+  _fileName?: string,
+  contentType?: string
+): Promise<FileUploadResult> {
+  if (isS3Configured()) {
+    const buffer = Buffer.isBuffer(file)
+      ? file
+      : Buffer.from(await (file as Blob).arrayBuffer());
+    const ct =
+      contentType?.trim() ||
+      (file instanceof Blob && file.type ? file.type : "") ||
+      "application/octet-stream";
+    return uploadToS3(buffer, ct);
+  }
+
+  if (!STORAGE_ROOT.length) {
+    throw new Error("FILE_STORAGE_PATH is not set and S3 is not configured");
+  }
+  const ready = await ensureStorageReady();
+  if (!ready) {
+    throw new Error("FILE_STORAGE_PATH is not writable");
+  }
+  return uploadFileToDisk(file, contentType);
 }
 
 async function getFileFromDisk(
@@ -188,14 +229,14 @@ async function getFileFromDisk(
 }
 
 /**
- * Stream file from S3, then disk, then SeaweedFS when configured and previous misses.
+ * Stream from S3, then local disk, then SeaweedFS when configured.
  */
 export async function getFile(
   fileId: string,
   rangeHeader?: string | null
 ): Promise<Response> {
   if (isS3Configured()) {
-    const fromS3 = await getFileFromS3(fileId, rangeHeader);
+    const fromS3 = await getFromS3(fileId, rangeHeader);
     if (fromS3) return fromS3;
   }
   if (isDiskConfigured()) {
@@ -211,14 +252,18 @@ export async function getFile(
 export async function deleteFile(fileId: string): Promise<void> {
   if (!isValidFileId(fileId)) return;
   if (isS3Configured()) {
-    await deleteFileFromS3(fileId);
+    try {
+      await deleteFromS3(fileId);
+    } catch (e) {
+      logger.error("FileStorage", "S3 delete failed:", e);
+    }
   }
   if (!isDiskConfigured()) return;
   const dir = dirForId(fileId);
   try {
     await fs.rm(dir, { recursive: true, force: true });
   } catch (e) {
-    console.error(`File storage delete failed for ${fileId}:`, e);
+    logger.error("FileStorage", `Disk delete failed for ${fileId}:`, e);
   }
 }
 

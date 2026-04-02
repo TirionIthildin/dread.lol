@@ -1,5 +1,6 @@
 # Production stack for Coolify (or docker compose -f docker-compose.coolify.yml).
-# Set MONGO_PASSWORD in the environment (required). User uploads use S3 (S3_BUCKET + AWS_REGION).
+# Set MONGO_PASSWORD in the environment (required). Keep dread user root (0:0) so the image
+# entrypoint can chown FILE_STORAGE_PATH on the named volume before dropping to nextjs.
 services:
   mongodb:
     image: 'mongo:8'
@@ -52,13 +53,17 @@ services:
       - 'NEXT_PUBLIC_SITE_DOMAIN=${NEXT_PUBLIC_SITE_DOMAIN:-dread.lol}'
       - 'DATABASE_URL=mongodb://${MONGO_USER:-dread}:${MONGO_PASSWORD:?MONGO_PASSWORD must be set in Coolify}@mongodb:27017/${MONGO_DB:-dread}?authSource=admin'
       - 'VALKEY_URL=redis://valkey:6379'
-      - 'S3_BUCKET=${S3_BUCKET:?S3_BUCKET must be set in Coolify}'
-      - 'AWS_REGION=${AWS_REGION:?AWS_REGION must be set in Coolify}'
+      # Uploads: S3/R2 when bucket + region set; FILE_STORAGE_PATH for legacy disk reads or hybrid.
+      - 'S3_BUCKET=${S3_BUCKET:-}'
+      - 'S3_REGION=${S3_REGION:-}'
+      - 'AWS_REGION=${AWS_REGION:-}'
+      - 'S3_ENDPOINT=${S3_ENDPOINT:-}'
+      - 'S3_UPLOAD_PREFIX=${S3_UPLOAD_PREFIX:-}'
+      - 'S3_KEY_PREFIX=${S3_KEY_PREFIX:-}'
+      - 'S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-}'
       - 'AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}'
       - 'AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}'
-      - 'S3_ENDPOINT=${S3_ENDPOINT:-}'
-      - 'S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-}'
-      - 'S3_KEY_PREFIX=${S3_KEY_PREFIX:-}'
+      - 'FILE_STORAGE_PATH=${FILE_STORAGE_PATH:-/data/uploads}'
       - 'DISCORD_OAUTH_CLIENT_ID=${DISCORD_OAUTH_CLIENT_ID:-}'
       - 'DISCORD_OAUTH_CLIENT_SECRET=${DISCORD_OAUTH_CLIENT_SECRET:-}'
       - 'AUTH_REDIRECT_URI=${AUTH_REDIRECT_URI:-}'
@@ -102,6 +107,9 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+    volumes:
+      - 'uploads_data:/data/uploads'
 volumes:
   mongodb_data: {}
   valkey_data: {}
+  uploads_data: {}

@@ -9,6 +9,7 @@ import {
   Waypoints,
   Medal,
   Pen,
+  Pencil,
   Shield,
   Settings,
   Store,
@@ -18,6 +19,7 @@ import {
 
 export const mainNavItems = [
   { href: "/dashboard", label: "My profile", icon: User },
+  { href: "/dashboard/profile-editor", label: "Profile editor", icon: Pencil },
   { href: "/dashboard/security", label: "Security", icon: Shield },
   { href: "/dashboard/marketplace", label: "Marketplace", icon: Store },
   { href: "/dashboard/premium", label: "Premium", icon: CreditCard },
