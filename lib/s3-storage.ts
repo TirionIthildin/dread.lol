@@ -6,7 +6,6 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
-  HeadBucketCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -76,16 +75,69 @@ function isNotFound(err: unknown): boolean {
   );
 }
 
-/** Verify bucket exists and credentials work. */
+function summarizeS3Error(e: unknown): Record<string, unknown> {
+  if (typeof e !== "object" || e === null) {
+    return { message: String(e) };
+  }
+  const err = e as {
+    name?: string;
+    message?: string;
+    $metadata?: { httpStatusCode?: number; requestId?: string };
+  };
+  return {
+    name: err.name,
+    message: err.message?.slice(0, 400),
+    httpStatusCode: err.$metadata?.httpStatusCode,
+    requestId: err.$metadata?.requestId,
+  };
+}
+
+/**
+ * Verify we can write and delete under the upload prefix (same permissions as real uploads).
+ * HeadBucket is skipped: many minimal IAM policies allow s3:PutObject/DeleteObject on bucket/*
+ * but not s3:ListBucket on the bucket, which HeadBucket requires.
+ */
 export async function ensureS3Ready(): Promise<boolean> {
   if (!isS3Configured()) return false;
+
+  const b = bucket();
+  const probeKey = `${uploadPrefix()}/.probe/${crypto.randomUUID()}`;
+  logger.debug("FILE_STORAGE", "S3 readiness probe starting", {
+    bucket: b,
+    region: region(),
+    endpointConfigured: Boolean(process.env.S3_ENDPOINT?.trim()),
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+    hasExplicitCredentials: Boolean(
+      process.env.AWS_ACCESS_KEY_ID?.trim() &&
+        process.env.AWS_SECRET_ACCESS_KEY?.trim()
+    ),
+    probeKeySuffix: probeKey.split("/").slice(-2).join("/"),
+  });
+
   try {
     await getS3Client().send(
-      new HeadBucketCommand({ Bucket: bucket() })
+      new PutObjectCommand({
+        Bucket: b,
+        Key: probeKey,
+        Body: Buffer.from("1"),
+        ContentLength: 1,
+        ContentType: "application/octet-stream",
+      })
     );
+    await getS3Client().send(
+      new DeleteObjectCommand({
+        Bucket: b,
+        Key: probeKey,
+      })
+    );
+    logger.debug("FILE_STORAGE", "S3 readiness probe succeeded", { bucket: b });
     return true;
   } catch (e) {
-    logger.error("S3Storage", "HeadBucket failed:", e);
+    logger.warn("FILE_STORAGE", "S3 readiness probe failed", {
+      bucket: b,
+      region: region(),
+      ...summarizeS3Error(e),
+    });
     return false;
   }
 }

@@ -41,15 +41,47 @@ export function isStorageConfigured(): boolean {
 
 /** True when S3 is ready, or local path exists / can be created and is writable. */
 export async function ensureStorageReady(): Promise<boolean> {
+  logger.debug("FILE_STORAGE", "ensureStorageReady", {
+    mode: isS3Configured()
+      ? "s3"
+      : STORAGE_ROOT.length > 0
+        ? "disk"
+        : "none",
+    fileStoragePath: STORAGE_ROOT.length > 0 ? STORAGE_ROOT : "(unset)",
+    s3BucketSet: Boolean(process.env.S3_BUCKET?.trim()),
+    s3RegionSet: Boolean(
+      process.env.S3_REGION?.trim() || process.env.AWS_REGION?.trim()
+    ),
+  });
+
   if (isS3Configured()) {
-    return ensureS3Ready();
+    const ok = await ensureS3Ready();
+    if (ok) {
+      logger.debug("FILE_STORAGE", "Storage ready (S3)");
+    }
+    return ok;
   }
-  if (STORAGE_ROOT.length === 0) return false;
+
+  if (STORAGE_ROOT.length === 0) {
+    logger.warn(
+      "FILE_STORAGE",
+      "Storage not ready: set FILE_STORAGE_PATH or S3_BUCKET + S3_REGION (or AWS_REGION)"
+    );
+    return false;
+  }
+
   try {
     await fs.mkdir(STORAGE_ROOT, { recursive: true });
     await fs.access(STORAGE_ROOT, fs.constants.W_OK);
+    logger.debug("FILE_STORAGE", "Storage ready (disk)", { path: STORAGE_ROOT });
     return true;
-  } catch {
+  } catch (e) {
+    const errno = e instanceof Error ? (e as NodeJS.ErrnoException).code : undefined;
+    logger.warn("FILE_STORAGE", "Disk storage not ready", {
+      path: STORAGE_ROOT,
+      errno,
+      message: e instanceof Error ? e.message.slice(0, 400) : String(e),
+    });
     return false;
   }
 }
