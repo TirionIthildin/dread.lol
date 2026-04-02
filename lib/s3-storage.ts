@@ -98,6 +98,22 @@ function summarizeS3Error(e: unknown): Record<string, unknown> {
 }
 
 /**
+ * Prefer AWS SDK's transformToWebStream for GetObject bodies; Readable.toWeb(sdkStream)
+ * can throw TypeError: controller[kState].transformAlgorithm is not a function in Node/Next.
+ */
+function sdkBodyToWebStream(body: unknown): ReadableStream<Uint8Array> {
+  if (
+    body &&
+    typeof body === "object" &&
+    typeof (body as { transformToWebStream?: () => ReadableStream<Uint8Array> })
+      .transformToWebStream === "function"
+  ) {
+    return (body as { transformToWebStream: () => ReadableStream<Uint8Array> }).transformToWebStream();
+  }
+  return Readable.toWeb(body as Readable) as ReadableStream<Uint8Array>;
+}
+
+/**
  * Verify PutObject + DeleteObject on the upload prefix (matches real upload IAM; avoids HeadBucket-only policies).
  */
 export async function ensureS3Ready(): Promise<boolean> {
@@ -136,10 +152,16 @@ export async function ensureS3Ready(): Promise<boolean> {
     logger.debug("FILE_STORAGE", "S3 readiness probe succeeded", { bucket: b });
     return true;
   } catch (e) {
+    const summary = summarizeS3Error(e);
     logger.warn("FILE_STORAGE", "S3 readiness probe failed", {
       bucket: b,
       region: region(),
-      ...summarizeS3Error(e),
+      ...summary,
+      ...(summary.name === "LocationConstraintConflict"
+        ? {
+            hint: "Region must match your provider (e.g. Hetzner: fsn1/nbg1/hel1 from the bucket endpoint, not AWS names like eu-central).",
+          }
+        : {}),
     });
     return false;
   }
@@ -187,7 +209,7 @@ export async function getFromS3(
       const fileSize = full.ContentLength ?? 0;
       const baseContentType =
         full.ContentType?.trim() || "application/octet-stream";
-      const stream = Readable.toWeb(full.Body as Readable) as ReadableStream;
+      const stream = sdkBodyToWebStream(full.Body);
       return new Response(stream, {
         status: 200,
         headers: {
@@ -213,7 +235,7 @@ export async function getFromS3(
         new GetObjectCommand({ Bucket: bucket(), Key: key })
       );
       if (!full.Body) return null;
-      const stream = Readable.toWeb(full.Body as Readable) as ReadableStream;
+      const stream = sdkBodyToWebStream(full.Body);
       return new Response(stream, {
         status: 200,
         headers: {
@@ -235,7 +257,7 @@ export async function getFromS3(
     );
     if (!ranged.Body) return null;
     const chunkSize = end - start + 1;
-    const stream = Readable.toWeb(ranged.Body as Readable) as ReadableStream;
+    const stream = sdkBodyToWebStream(ranged.Body);
     const contentRange =
       ranged.ContentRange ?? `bytes ${start}-${end}/${fileSize}`;
     return new Response(stream, {

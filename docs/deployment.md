@@ -38,7 +38,7 @@ Production layout is in [`docker-compose.coolify.yml`](../docker-compose.coolify
 
 **Requirements:** `MONGO_PASSWORD` must be set in the environment (Coolify secrets). The `dread` service uses `user: "0:0"` so the entrypoint can `chown` `FILE_STORAGE_PATH` on the uploads volume before the app runs as `nextjs`; do not override the service user to a non-root uid in Coolify or local-disk uploads can fail.
 
-**Uploads:** Set `S3_BUCKET` and `S3_REGION` or `AWS_REGION` (see [`docker-compose.coolify.yml`](../docker-compose.coolify.yml)) with credentials or an IAM role that can read/write objects under your prefix. Optional `S3_ENDPOINT` for R2/MinIO. `FILE_STORAGE_PATH=/data/uploads` with the `uploads_data` volume supports legacy disk reads or hybrid setups. The image uses `read_only: true` plus `tmpfs` for `/tmp`, `/var/tmp`, and `/app/.next/cache`. Migrating from a disk volume: [migrations/volume-to-s3.md](migrations/volume-to-s3.md).
+**Uploads:** Set `S3_BUCKET` and `S3_REGION` or `AWS_REGION` (see [`docker-compose.coolify.yml`](../docker-compose.coolify.yml)) with credentials or an IAM role that can read/write objects under your prefix. Optional `S3_ENDPOINT` for R2/MinIO. **Hetzner Object Storage:** use the location code `fsn1`, `nbg1`, or `hel1` as region and `https://<code>.your-objectstorage.com` as endpoint — see the [Hetzner Object Storage overview](https://docs.hetzner.com/storage/object-storage/overview/). `FILE_STORAGE_PATH=/data/uploads` with the `uploads_data` volume supports legacy disk reads or hybrid setups. The image uses `read_only: true` plus `tmpfs` for `/tmp`, `/var/tmp`, and `/app/.next/cache`. Migrating from a disk volume: [migrations/volume-to-s3.md](migrations/volume-to-s3.md).
 
 ## Further reading
 
