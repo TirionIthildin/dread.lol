@@ -50,10 +50,25 @@ function getS3Client(): S3Client {
   const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true";
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+  /**
+   * Custom endpoints (Hetzner, R2, MinIO, etc.) often reject PutObject when the SDK
+   * sends default flexible checksum headers (SDK default WHEN_SUPPORTED). Use WHEN_REQUIRED
+   * so checksums are only sent when the API requires them.
+   */
+  const compat =
+    process.env.S3_DISABLE_FLEXIBLE_CHECKSUMS === "1" ||
+    process.env.S3_DISABLE_FLEXIBLE_CHECKSUMS === "true" ||
+    Boolean(endpoint);
   client = new S3Client({
     region: region(),
     endpoint,
     forcePathStyle,
+    ...(compat
+      ? {
+          requestChecksumCalculation: "WHEN_REQUIRED" as const,
+          responseChecksumValidation: "WHEN_REQUIRED" as const,
+        }
+      : {}),
     ...(accessKeyId && secretAccessKey
       ? {
           credentials: {
@@ -160,6 +175,13 @@ export async function ensureS3Ready(): Promise<boolean> {
       ...(summary.name === "LocationConstraintConflict"
         ? {
             hint: "Region must match your provider (e.g. Hetzner: fsn1/nbg1/hel1 from the bucket endpoint, not AWS names like eu-central).",
+          }
+        : {}),
+      ...(summary.name === "InvalidArgument" &&
+      typeof summary.message === "string" &&
+      summary.message.includes("not valid")
+        ? {
+            hint: "Often fixed by disabling AWS SDK flexible checksums for S3-compatible APIs (set S3_ENDPOINT, or S3_DISABLE_FLEXIBLE_CHECKSUMS=1).",
           }
         : {}),
     });
