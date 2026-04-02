@@ -20,7 +20,7 @@ From the project root:
 docker compose up -d
 ```
 
-This starts MongoDB (`27017`) and Valkey (`6379`). Copy `.env.example` to `.env` and set `DATABASE_URL`, `VALKEY_URL`, and `FILE_STORAGE_PATH` (for example `./data/uploads`).
+This starts MongoDB (`27017`) and Valkey (`6379`). Copy `.env.example` to `.env` and set `DATABASE_URL`, `VALKEY_URL`, and either `FILE_STORAGE_PATH` (for example `./data/uploads`) or S3 variables if you want uploads against a dev bucket.
 
 ## Discord OAuth
 

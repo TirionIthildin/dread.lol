@@ -1,10 +1,11 @@
-type ParsedRange =
+/**
+ * Shared Range header parsing for disk and S3 file streaming.
+ */
+
+export type ParsedRange =
   | { ok: true; start: number; end: number }
   | { ok: false };
 
-/**
- * Parse RFC 7233 Range header for a single byte range (first range only).
- */
 export function parseRangeHeader(
   rangeHeader: string | null | undefined,
   fileSize: number

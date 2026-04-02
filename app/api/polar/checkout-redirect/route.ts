@@ -5,7 +5,6 @@
  * ?prefer=recurring - use first subscription product (auto-detected from Polar API)
  * ?prefer=one_time - use first one-time product
  *
- * Debug: set DEBUG_CHECKOUT=1 to log (do not use in production—may log sensitive data).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";

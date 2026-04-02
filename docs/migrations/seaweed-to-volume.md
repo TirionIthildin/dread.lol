@@ -1,6 +1,6 @@
 # Historical: migrating uploads from SeaweedFS to `FILE_STORAGE_PATH`
 
-**Status:** The app no longer reads from SeaweedFS. Legacy blobs must exist on disk under `FILE_STORAGE_PATH` (same layout as below) or `/api/files/...` will 404.
+**Status:** Production uses S3 (see [volume-to-s3.md](volume-to-s3.md)). Optional `SEAWEED_MASTER_URL` still allows read fallback for legacy ids. Otherwise blobs must exist on S3 or disk under the layout below.
 
 Previously, production could have profile URLs like `/api/files/3,0123456789` backed only by SeaweedFS. Operators copied those blobs onto the volume before removing Seaweed.
 
@@ -15,7 +15,7 @@ Previously, production could have profile URLs like `/api/files/3,0123456789` ba
 
 ## Reference steps (completed migration)
 
-1. Deploy with `FILE_STORAGE_PATH` set and the uploads volume mounted (see `docker-compose.coolify.yml`).
+1. Deploy with `FILE_STORAGE_PATH` set (and uploads volume if on disk) or target S3 with the same key layout (see [volume-to-s3.md](volume-to-s3.md)).
 2. Inventory unique `/api/files/...` paths from MongoDB (profiles, `gallery_items`, `profile_templates`, `profile_versions`, badges, etc.).
 3. For each id, copy bytes into `blob` and write `meta.json` under `{FILE_STORAGE_PATH}/{normalizedId}/` (see `normalizeFileId` in `lib/file-id.ts`).
 4. Verify URLs return `200` with correct `Content-Type`.

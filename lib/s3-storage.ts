@@ -1,6 +1,7 @@
 /**
  * S3-compatible object storage for user uploads (AWS S3, Cloudflare R2, MinIO, etc.).
- * Configure S3_BUCKET + region; optional S3_ENDPOINT for non-AWS providers.
+ * Configure S3_BUCKET + region; optional S3_ENDPOINT. Use S3_UPLOAD_PREFIX or S3_KEY_PREFIX
+ * for a path prefix inside the bucket (default: uploads).
  */
 
 import {
@@ -14,7 +15,7 @@ import { Readable } from "stream";
 import type { FileUploadResult } from "@/lib/file-storage-types";
 import { normalizeFileId } from "@/lib/file-id";
 import { logger } from "@/lib/logger";
-import { parseRangeHeader } from "@/lib/parse-http-range";
+import { parseRangeHeader } from "@/lib/file-range";
 
 let client: S3Client | null = null;
 
@@ -30,8 +31,12 @@ function region(): string {
   );
 }
 
+/** Prefer S3_UPLOAD_PREFIX; S3_KEY_PREFIX is an alias (main branch name). */
 function uploadPrefix(): string {
-  const p = process.env.S3_UPLOAD_PREFIX?.trim() ?? "uploads";
+  const p =
+    process.env.S3_UPLOAD_PREFIX?.trim() ||
+    process.env.S3_KEY_PREFIX?.trim() ||
+    "uploads";
   return p.replace(/\/+$/, "");
 }
 
@@ -93,9 +98,7 @@ function summarizeS3Error(e: unknown): Record<string, unknown> {
 }
 
 /**
- * Verify we can write and delete under the upload prefix (same permissions as real uploads).
- * HeadBucket is skipped: many minimal IAM policies allow s3:PutObject/DeleteObject on bucket/*
- * but not s3:ListBucket on the bucket, which HeadBucket requires.
+ * Verify PutObject + DeleteObject on the upload prefix (matches real upload IAM; avoids HeadBucket-only policies).
  */
 export async function ensureS3Ready(): Promise<boolean> {
   if (!isS3Configured()) return false;

@@ -1,7 +1,7 @@
 /**
- * User uploads: S3-compatible object storage when configured, else local directory
- * (Docker volume). Public URLs stay /api/files/{id}. New ids are UUIDs; legacy
- * Seaweed-style fids may still be valid ids on disk.
+ * User uploads: S3-compatible storage when configured, else local directory (Docker volume).
+ * Public URLs stay /api/files/{id}. New ids are UUIDs; legacy Seaweed-style fids may exist on disk
+ * or SeaweedFS during migration.
  */
 
 import { createReadStream } from "fs";
@@ -9,13 +9,14 @@ import fs from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 import type { FileMeta, FileUploadResult } from "@/lib/file-storage-types";
+import { parseRangeHeader } from "@/lib/file-range";
 import {
   fileIdFromPath,
   isValidFileId,
   normalizeFileId,
 } from "@/lib/file-id";
 import { logger } from "@/lib/logger";
-import { parseRangeHeader } from "@/lib/parse-http-range";
+import { getFile as getFileFromSeaweed, isSeaweedConfigured } from "@/lib/seaweed";
 import {
   deleteFromS3,
   ensureS3Ready,
@@ -35,19 +36,23 @@ export {
 
 export type { FileMeta, FileUploadResult } from "@/lib/file-storage-types";
 
-export function isStorageConfigured(): boolean {
-  return isS3Configured() || STORAGE_ROOT.length > 0;
+function isDiskConfigured(): boolean {
+  return STORAGE_ROOT.length > 0;
 }
 
-/** True when S3 is ready, or local path exists / can be created and is writable. */
+export function isStorageConfigured(): boolean {
+  return isS3Configured() || isDiskConfigured();
+}
+
+/** True when S3 probe passes, or local path exists / can be created and is writable. */
 export async function ensureStorageReady(): Promise<boolean> {
   logger.debug("FILE_STORAGE", "ensureStorageReady", {
     mode: isS3Configured()
       ? "s3"
-      : STORAGE_ROOT.length > 0
+      : isDiskConfigured()
         ? "disk"
         : "none",
-    fileStoragePath: STORAGE_ROOT.length > 0 ? STORAGE_ROOT : "(unset)",
+    fileStoragePath: isDiskConfigured() ? STORAGE_ROOT : "(unset)",
     s3BucketSet: Boolean(process.env.S3_BUCKET?.trim()),
     s3RegionSet: Boolean(
       process.env.S3_REGION?.trim() || process.env.AWS_REGION?.trim()
@@ -62,7 +67,7 @@ export async function ensureStorageReady(): Promise<boolean> {
     return ok;
   }
 
-  if (STORAGE_ROOT.length === 0) {
+  if (!isDiskConfigured()) {
     logger.warn(
       "FILE_STORAGE",
       "Storage not ready: set FILE_STORAGE_PATH or S3_BUCKET + S3_REGION (or AWS_REGION)"
@@ -223,7 +228,9 @@ async function getFileFromDisk(
   });
 }
 
-/** Stream file from S3 (preferred) or local volume (legacy). */
+/**
+ * Stream from S3, then local disk, then SeaweedFS when configured.
+ */
 export async function getFile(
   fileId: string,
   rangeHeader?: string | null
@@ -232,9 +239,12 @@ export async function getFile(
     const fromS3 = await getFromS3(fileId, rangeHeader);
     if (fromS3) return fromS3;
   }
-  if (STORAGE_ROOT.length > 0) {
+  if (isDiskConfigured()) {
     const fromDisk = await getFileFromDisk(fileId, rangeHeader);
     if (fromDisk) return fromDisk;
+  }
+  if (isSeaweedConfigured()) {
+    return getFileFromSeaweed(fileId, rangeHeader);
   }
   throw new Error("File not found");
 }
@@ -248,13 +258,12 @@ export async function deleteFile(fileId: string): Promise<void> {
       logger.error("FileStorage", "S3 delete failed:", e);
     }
   }
-  if (STORAGE_ROOT.length > 0) {
-    const dir = dirForId(fileId);
-    try {
-      await fs.rm(dir, { recursive: true, force: true });
-    } catch (e) {
-      logger.error("FileStorage", `Disk delete failed for ${fileId}:`, e);
-    }
+  if (!isDiskConfigured()) return;
+  const dir = dirForId(fileId);
+  try {
+    await fs.rm(dir, { recursive: true, force: true });
+  } catch (e) {
+    logger.error("FileStorage", `Disk delete failed for ${fileId}:`, e);
   }
 }
 

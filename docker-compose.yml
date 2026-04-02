@@ -4,7 +4,7 @@
 # In .env set:
 #   DATABASE_URL=mongodb://dread:dread@localhost:27017/dread?authSource=admin
 #   VALKEY_URL=redis://localhost:6379
-#   FILE_STORAGE_PATH=./data/uploads   # or use S3_* + AWS_* in .env when testing uploads against object storage
+#   FILE_STORAGE_PATH=./data/uploads   # local disk; or configure S3_* + AWS_* for object storage (see .env.example)
 #   DISCORD_OAUTH_*, AUTH_*
 #   POLAR_ACCESS_TOKEN, POLAR_WEBHOOK_SECRET (optional: POLAR_SANDBOX). Product IDs via Admin → Billing.
 
