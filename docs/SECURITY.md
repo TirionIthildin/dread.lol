@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and local file storage on a Docker volume (`FILE_STORAGE_PATH`). This document summarizes security posture and deployment guidance.
+Dread.lol uses Discord OAuth, Valkey-backed sessions, MongoDB, and user uploads on **S3-compatible storage** when configured (`S3_BUCKET`, credentials, etc.) or on disk under `FILE_STORAGE_PATH`. This document summarizes security posture and deployment guidance.
 
 ## Reporting a vulnerability
 
@@ -51,11 +51,13 @@ The app trusts `x-forwarded-for`, `x-original-host`, `x-forwarded-host` for IP a
 
 ## File Access
 
-`/api/files/[id]` serves user-uploaded files from disk under `FILE_STORAGE_PATH`. File ids (UUID or legacy Seaweed-style `volumeId,fileId` if present on disk) are public once generated—do not store sensitive content if exposure is a concern.
+`/api/files/[id]` streams user-uploaded files from the configured bucket (S3) or from disk under `FILE_STORAGE_PATH` (legacy or hybrid). File ids (UUID or legacy Seaweed-style `volumeId,fileId` if present on disk) are public once generated—do not store sensitive content if exposure is a concern.
 
-**Docker:** The container entrypoint runs as root to `chown` `FILE_STORAGE_PATH` for the `nextjs` user (uid 1001), then the app process runs as `nextjs`.
+**S3:** Use scoped IAM (or R2 API tokens) with least privilege (`s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` / `HeadBucket` as needed for your provider). Do not commit access keys.
 
-**Backups:** Include the uploads volume in backup and restore procedures; it is the source of truth for on-disk blobs.
+**Docker (local disk):** The container entrypoint runs as root to `chown` `FILE_STORAGE_PATH` for the `nextjs` user (uid 1001), then the app process runs as `nextjs`.
+
+**Backups:** For disk-backed uploads, include the volume in backup procedures. For S3, follow your provider’s backup/versioning policy.
 
 ## Recent Security Improvements
 

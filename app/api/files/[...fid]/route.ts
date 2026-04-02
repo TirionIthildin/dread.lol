@@ -11,7 +11,7 @@ const FONT_MIME_TYPES = new Set([
 ]);
 
 /**
- * GET /api/files/{id} – stream file from local volume (FILE_STORAGE_PATH).
+ * GET /api/files/{id} – stream file from S3 (when configured) or local volume (FILE_STORAGE_PATH).
  * Supports ?type= for font files to ensure correct MIME type (e.g. ?type=font/woff2).
  *
  * ACCESS CONTROL: Files are public once uploaded. Ids are not secret; do not store

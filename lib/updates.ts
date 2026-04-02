@@ -10,6 +10,12 @@ export interface FeatureUpdate {
 
 export const FEATURE_UPDATES: FeatureUpdate[] = [
   {
+    date: "2026-04",
+    title: "S3-backed uploads",
+    description:
+      "Production can store avatars, backgrounds, and gallery media on S3-compatible storage (including Cloudflare R2) instead of only a local volume.",
+  },
+  {
     date: "2026-03",
     title: "Dashboard home and navigation",
     description:

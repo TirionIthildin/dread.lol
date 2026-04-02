@@ -4,6 +4,7 @@ import SiteNoticeBanner from "@/app/components/SiteNoticeBanner";
 import { getOrCreateUser } from "@/lib/member-profiles";
 import { isVerifiedCreator } from "@/lib/creator-program";
 import DashboardSidebar from "@/app/[locale]/dashboard/DashboardSidebar";
+import { DashboardShell } from "@/app/[locale]/dashboard/components/DashboardShell";
 import { getSiteNoticeSettings } from "@/lib/site-notice-settings";
 import { getSiteNoticeDisplay } from "@/lib/site-notice-settings-shared";
 
@@ -24,20 +25,12 @@ export default async function DashboardLayout({
   const noticeSettings = await getSiteNoticeSettings();
   const dashboardNotice = getSiteNoticeDisplay("dashboard", noticeSettings);
 
+  const dashboardNoticeEl = dashboardNotice.show ? (
+    <SiteNoticeBanner message={dashboardNotice.message} variant={dashboardNotice.variant} />
+  ) : null;
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row grid-bg scanlines">
-      <a
-        href="#main-content"
-        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-lg focus:bg-[var(--accent)] focus:px-3 focus:py-2 focus:text-[var(--bg)] focus:font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:[clip:auto] focus:[margin:0]"
-      >
-        Skip to content
-      </a>
-      <a
-        href="#dashboard-sidebar"
-        className="sr-only focus:fixed focus:left-4 focus:top-20 focus:z-[100] focus:block focus:h-auto focus:w-auto focus:overflow-visible focus:rounded-lg focus:bg-[var(--accent)] focus:px-3 focus:py-2 focus:text-[var(--bg)] focus:font-medium focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:[clip:auto] focus:[margin:0]"
-      >
-        Skip to navigation
-      </a>
       <div
         className="fixed inset-0 -z-10 overflow-hidden pointer-events-none page-theme-minimalist-hide-ornament"
         aria-hidden
@@ -61,28 +54,12 @@ export default async function DashboardLayout({
         />
       </div>
 
-      <aside
-        id="dashboard-sidebar"
-        tabIndex={-1}
-        className="sticky top-0 z-40 shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl font-mono md:w-56 lg:w-64 md:max-h-screen outline-none"
+      <DashboardShell
+        dashboardNotice={dashboardNoticeEl}
+        sidebar={<DashboardSidebar isAdmin={isAdmin} verifiedCreator={verifiedCreator} session={session} />}
       >
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <DashboardSidebar isAdmin={isAdmin} verifiedCreator={verifiedCreator} session={session} />
-        </div>
-      </aside>
-
-      <main
-        id="main-content"
-        className="flex-1 min-w-0 flex flex-col content-container py-4 md:py-6 md:!max-w-[96rem]"
-        tabIndex={-1}
-      >
-        {dashboardNotice.show ? (
-          <div className="mb-4 shrink-0">
-            <SiteNoticeBanner message={dashboardNotice.message} variant={dashboardNotice.variant} />
-          </div>
-        ) : null}
         {children}
-      </main>
+      </DashboardShell>
     </div>
   );
 }

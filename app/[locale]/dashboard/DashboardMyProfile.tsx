@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useCallback, useEffect, useRef, useMemo, useDeferredValue } from "react";
+import { useActionState, useState, useCallback, useEffect, useRef, useMemo, useDeferredValue, useContext } from "react";
 import { extractFileIdFromFilesUrl } from "@/lib/file-id";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -33,7 +33,8 @@ import { ProfileEditorFormFields } from "@/app/[locale]/dashboard/profile-editor
 import { ProfileEditorOnboarding } from "@/app/[locale]/dashboard/profile-editor/ProfileEditorOnboarding";
 import { SectionTip } from "@/app/[locale]/dashboard/profile-editor/SectionTip";
 import { editorSectionAriaLabel, useEditorSectionFocus } from "@/app/[locale]/dashboard/profile-editor/useEditorSectionFocus";
-interface DashboardMyProfileProps {
+import { ProfileEditorSectionContext } from "@/app/[locale]/dashboard/profile-editor/ProfileEditorSectionContext";
+export interface DashboardMyProfileProps {
   profile: ProfileRow;
   /** Base profile for live preview (from memberProfileToProfile). */
   baseProfileForPreview?: Profile;
@@ -53,6 +54,10 @@ interface DashboardMyProfileProps {
   robloxLinked?: boolean;
   /** Whether the user has Premium (for gating effects, colors, analytics). */
   hasPremiumAccess?: boolean;
+  /** Taller layout when the editor is the only main content (dedicated profile editor page). */
+  layoutVariant?: "default" | "fullPage";
+  /** Section nav is shown in the dashboard left rail (desktop); inner nav stays on small screens. */
+  externalSectionNav?: boolean;
 }
 
 type DashboardTab = "editor" | "preview";
@@ -68,6 +73,8 @@ export default function DashboardMyProfile({
   githubWidgetPreviewData = null,
   robloxLinked = false,
   hasPremiumAccess = false,
+  layoutVariant = "default",
+  externalSectionNav = true,
 }: DashboardMyProfileProps) {
   const [tab, setTab] = useState<DashboardTab>("editor");
   const [state, formAction] = useActionState<ProfileFormState, FormData>(
@@ -86,7 +93,10 @@ export default function DashboardMyProfile({
   const [bannerValue, setBannerValue] = useState(profile.banner ?? "");
   const [avatarUrlValue, setAvatarUrlValue] = useState(profile.avatarUrl ?? "");
   const [slugCheck, setSlugCheck] = useState<"idle" | "checking" | "available" | "taken">("idle");
-  const [activeEditorSection, setActiveEditorSection] = useState<EditorSectionId>("basics");
+  const profileEditorSectionCtx = useContext(ProfileEditorSectionContext);
+  const [activeEditorSectionLocal, setActiveEditorSectionLocal] = useState<EditorSectionId>("basics");
+  const activeEditorSection = profileEditorSectionCtx?.activeEditorSection ?? activeEditorSectionLocal;
+  const setActiveEditorSection = profileEditorSectionCtx?.setActiveEditorSection ?? setActiveEditorSectionLocal;
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
@@ -744,6 +754,8 @@ export default function DashboardMyProfile({
 
   return (
     <ProfileEditorLayout
+      externalSectionNav={externalSectionNav}
+      layoutVariant={layoutVariant}
       tab={tab}
       setTab={setTab}
       activeEditorSection={activeEditorSection}

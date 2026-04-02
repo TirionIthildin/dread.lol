@@ -25,7 +25,7 @@ export function DashboardHomeHub({ profileSlug, displayName, hasPremium }: Dashb
           Welcome back{displayName ? `, ${displayName}` : ""}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Jump to common tasks or scroll down to edit your full profile, links, and appearance.
+          Jump to common tasks or open the profile editor to change your links, theme, and appearance.
         </p>
       </div>
 
@@ -40,15 +40,15 @@ export function DashboardHomeHub({ profileSlug, displayName, hasPremium }: Dashb
           </span>
         </Link>
 
-        <a href="#profile-editor" className={quickCardClass}>
+        <Link href="/dashboard/profile-editor" className={quickCardClass}>
           <span className={quickIcon} aria-hidden>
             <Pencil size={18} />
           </span>
           <span className="min-w-0 text-left">
             <span className="block text-sm font-medium text-[var(--foreground)]">Profile editor</span>
-            <span className="block text-xs text-[var(--muted)]">Jump to editor below</span>
+            <span className="block text-xs text-[var(--muted)]">Full-page editor & preview</span>
           </span>
-        </a>
+        </Link>
 
         <Link href="/dashboard/security" className={quickCardClass}>
           <span className={quickIcon} aria-hidden>

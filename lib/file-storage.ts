@@ -1,17 +1,28 @@
 /**
- * User uploads on a local directory (Docker volume in production).
- * Public URLs stay /api/files/{id}. New ids are UUIDs; legacy Seaweed-style fids may still be valid ids if copied to disk.
+ * User uploads: S3-compatible object storage when configured, else local directory
+ * (Docker volume). Public URLs stay /api/files/{id}. New ids are UUIDs; legacy
+ * Seaweed-style fids may still be valid ids on disk.
  */
 
 import { createReadStream } from "fs";
 import fs from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
+import type { FileMeta, FileUploadResult } from "@/lib/file-storage-types";
 import {
   fileIdFromPath,
   isValidFileId,
   normalizeFileId,
 } from "@/lib/file-id";
+import { logger } from "@/lib/logger";
+import { parseRangeHeader } from "@/lib/parse-http-range";
+import {
+  deleteFromS3,
+  ensureS3Ready,
+  getFromS3,
+  isS3Configured,
+  uploadToS3,
+} from "@/lib/s3-storage";
 
 const STORAGE_ROOT = process.env.FILE_STORAGE_PATH?.trim() ?? "";
 
@@ -22,24 +33,18 @@ export {
   normalizeFileId,
 } from "@/lib/file-id";
 
-export interface FileMeta {
-  contentType: string;
-  size: number;
-}
-
-export interface FileUploadResult {
-  fid: string;
-  path: string;
-  size: number;
-}
+export type { FileMeta, FileUploadResult } from "@/lib/file-storage-types";
 
 export function isStorageConfigured(): boolean {
-  return STORAGE_ROOT.length > 0;
+  return isS3Configured() || STORAGE_ROOT.length > 0;
 }
 
-/** True if FILE_STORAGE_PATH is set and the directory exists or can be created. */
+/** True when S3 is ready, or local path exists / can be created and is writable. */
 export async function ensureStorageReady(): Promise<boolean> {
-  if (!isStorageConfigured()) return false;
+  if (isS3Configured()) {
+    return ensureS3Ready();
+  }
+  if (STORAGE_ROOT.length === 0) return false;
   try {
     await fs.mkdir(STORAGE_ROOT, { recursive: true });
     await fs.access(STORAGE_ROOT, fs.constants.W_OK);
@@ -73,19 +78,10 @@ async function blobPath(fileId: string): Promise<string> {
   return path.join(dirForId(fileId), "blob");
 }
 
-export async function uploadFile(
+async function uploadFileToDisk(
   file: Blob | Buffer,
-  _fileName?: string,
   contentType?: string
 ): Promise<FileUploadResult> {
-  if (!isStorageConfigured()) {
-    throw new Error("FILE_STORAGE_PATH is not set");
-  }
-  const ready = await ensureStorageReady();
-  if (!ready) {
-    throw new Error("FILE_STORAGE_PATH is not writable");
-  }
-
   const fid = crypto.randomUUID();
   const dir = dirForId(fid);
   await fs.mkdir(dir, { recursive: true });
@@ -116,50 +112,30 @@ export async function uploadFile(
   };
 }
 
-type ParsedRange =
-  | { ok: true; start: number; end: number }
-  | { ok: false };
-
-function parseRangeHeader(
-  rangeHeader: string | null | undefined,
-  fileSize: number
-): ParsedRange {
-  if (!rangeHeader || !rangeHeader.startsWith("bytes=") || fileSize <= 0) {
-    return { ok: false };
-  }
-  const part = rangeHeader.slice(6).split(",")[0]?.trim();
-  if (!part) return { ok: false };
-
-  if (part.startsWith("-")) {
-    const suffix = Number.parseInt(part.slice(1), 10);
-    if (!Number.isFinite(suffix) || suffix <= 0) return { ok: false };
-    const start = Math.max(0, fileSize - suffix);
-    return { ok: true, start, end: fileSize - 1 };
+export async function uploadFile(
+  file: Blob | Buffer,
+  _fileName?: string,
+  contentType?: string
+): Promise<FileUploadResult> {
+  if (isS3Configured()) {
+    const buffer = Buffer.isBuffer(file)
+      ? file
+      : Buffer.from(await (file as Blob).arrayBuffer());
+    const ct =
+      contentType?.trim() ||
+      (file instanceof Blob && file.type ? file.type : "") ||
+      "application/octet-stream";
+    return uploadToS3(buffer, ct);
   }
 
-  const dash = part.indexOf("-");
-  if (dash === -1) return { ok: false };
-  const startStr = part.slice(0, dash);
-  const endStr = part.slice(dash + 1);
-
-  if (startStr === "") {
-    return { ok: false };
+  if (!STORAGE_ROOT.length) {
+    throw new Error("FILE_STORAGE_PATH is not set and S3 is not configured");
   }
-  const start = Number.parseInt(startStr, 10);
-  if (!Number.isFinite(start) || start < 0 || start >= fileSize) {
-    return { ok: false };
+  const ready = await ensureStorageReady();
+  if (!ready) {
+    throw new Error("FILE_STORAGE_PATH is not writable");
   }
-
-  let end: number;
-  if (endStr === "") {
-    end = fileSize - 1;
-  } else {
-    end = Number.parseInt(endStr, 10);
-    if (!Number.isFinite(end) || end < start) return { ok: false };
-    end = Math.min(end, fileSize - 1);
-  }
-
-  return { ok: true, start, end };
+  return uploadFileToDisk(file, contentType);
 }
 
 async function getFileFromDisk(
@@ -215,12 +191,16 @@ async function getFileFromDisk(
   });
 }
 
-/** Stream file from disk under FILE_STORAGE_PATH. */
+/** Stream file from S3 (preferred) or local volume (legacy). */
 export async function getFile(
   fileId: string,
   rangeHeader?: string | null
 ): Promise<Response> {
-  if (isStorageConfigured()) {
+  if (isS3Configured()) {
+    const fromS3 = await getFromS3(fileId, rangeHeader);
+    if (fromS3) return fromS3;
+  }
+  if (STORAGE_ROOT.length > 0) {
     const fromDisk = await getFileFromDisk(fileId, rangeHeader);
     if (fromDisk) return fromDisk;
   }
@@ -229,12 +209,20 @@ export async function getFile(
 
 export async function deleteFile(fileId: string): Promise<void> {
   if (!isValidFileId(fileId)) return;
-  if (!isStorageConfigured()) return;
-  const dir = dirForId(fileId);
-  try {
-    await fs.rm(dir, { recursive: true, force: true });
-  } catch (e) {
-    console.error(`File storage delete failed for ${fileId}:`, e);
+  if (isS3Configured()) {
+    try {
+      await deleteFromS3(fileId);
+    } catch (e) {
+      logger.error("FileStorage", "S3 delete failed:", e);
+    }
+  }
+  if (STORAGE_ROOT.length > 0) {
+    const dir = dirForId(fileId);
+    try {
+      await fs.rm(dir, { recursive: true, force: true });
+    } catch (e) {
+      logger.error("FileStorage", `Disk delete failed for ${fileId}:`, e);
+    }
   }
 }
 
