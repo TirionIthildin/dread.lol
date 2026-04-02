@@ -23,12 +23,42 @@ function bucket(): string {
   return process.env.S3_BUCKET?.trim() ?? "";
 }
 
+/**
+ * Hetzner Object Storage endpoints are `https://<location>.your-objectstorage.com` where
+ * `<location>` is `fsn1`, `nbg1`, or `hel1`. The AWS SDK `region` must be that code — not an
+ * AWS region name (`eu-central-1`, etc.). Those only apply to real AWS S3.
+ * @see https://docs.hetzner.com/storage/object-storage/overview/
+ */
+function hetznerLocationFromEndpoint(): string | null {
+  const endpoint = process.env.S3_ENDPOINT?.trim() ?? "";
+  if (!endpoint) return null;
+  try {
+    const withScheme = /^https?:\/\//i.test(endpoint)
+      ? endpoint
+      : `https://${endpoint}`;
+    const host = new URL(withScheme).hostname.toLowerCase();
+    const m = host.match(/^([a-z0-9]+)\.your-objectstorage\.com$/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 function region(): string {
-  return (
-    process.env.S3_REGION?.trim() ||
-    process.env.AWS_REGION?.trim() ||
-    ""
-  );
+  const fromHetzner = hetznerLocationFromEndpoint();
+  const envRegion =
+    process.env.S3_REGION?.trim() || process.env.AWS_REGION?.trim() || "";
+  if (fromHetzner) {
+    if (envRegion && envRegion !== fromHetzner) {
+      logger.debug(
+        "FILE_STORAGE",
+        "Hetzner: SDK region taken from S3_ENDPOINT hostname (not AWS_REGION/S3_REGION)",
+        { effectiveRegion: fromHetzner, ignoredEnvRegion: envRegion }
+      );
+    }
+    return fromHetzner;
+  }
+  return envRegion;
 }
 
 /** Prefer S3_UPLOAD_PREFIX; S3_KEY_PREFIX is an alias (main branch name). */
